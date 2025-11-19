@@ -64,6 +64,7 @@ export {
 	type SimulateTransactionOptions,
 	type SolanaRpcClient,
 } from './rpc/createSolanaRpcClient';
+export type { SolanaClientRuntime } from './rpc/types';
 export { bigintFromJson, bigintToJson, lamportsFromJson, lamportsToJson } from './serialization/json';
 export {
 	type ConfirmationCommitment,
@@ -109,11 +110,6 @@ export type {
 	ClientWatchers,
 	SolanaClient,
 	SolanaClientConfig,
-	WalletConnector,
-	WalletConnectorMetadata,
-	WalletRegistry,
-	WalletSession,
-	WalletStatus,
 } from './types';
 export { type AddressLike, toAddress, toAddressString } from './utils/addressLike';
 export { stableStringify } from './utils/stableStringify';
@@ -123,3 +119,10 @@ export {
 	getWalletStandardConnectors,
 	watchWalletStandardConnectors,
 } from './wallet/standard';
+export type {
+	WalletConnector,
+	WalletConnectorMetadata,
+	WalletRegistry,
+	WalletSession,
+	WalletStatus,
+} from './wallet/types';

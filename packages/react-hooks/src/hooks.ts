@@ -232,6 +232,7 @@ export function useSplToken(
 	options: UseSplTokenOptions = {},
 ): Readonly<{
 	balance: SplTokenBalanceResult | null;
+	decimals: number | null;
 	error: unknown;
 	helper: SplTokenHelper;
 	isFetching: boolean;
@@ -331,6 +332,7 @@ export function useSplToken(
 
 	return {
 		balance: data ?? null,
+		decimals: data?.decimals ?? null,
 		error: error ?? null,
 		helper,
 		isFetching: Boolean(owner) && (isLoading || isValidating),

@@ -15,6 +15,7 @@ export function SplTokenPanel() {
 	const [amount, setAmount] = useState(defaultAmount);
 	const {
 		balance,
+		decimals,
 		error,
 		isFetching,
 		isSending,
@@ -63,7 +64,7 @@ export function SplTokenPanel() {
 
 	const isWalletConnected = Boolean(owner);
 
-	const amountStep = computeSplAmountStep(balance?.decimals);
+	const amountStep = computeSplAmountStep(decimals);
 
 	return (
 		<Card aria-disabled={!isWalletConnected}>

@@ -259,19 +259,6 @@ importers:
         specifier: ^24
         version: 24.10.0
 
-  packages/web3-compat-parity-tests:
-    dependencies:
-      '@solana/web3-compat':
-        specifier: workspace:*
-        version: link:../web3-compat
-      '@solana/web3.js':
-        specifier: ^1.95.3
-        version: 1.98.4(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)
-    devDependencies:
-      '@types/node':
-        specifier: ^24
-        version: 24.10.0
-
   tests/types-smoke:
     dependencies:
       '@solana/client':
@@ -293,6 +280,19 @@ importers:
       typescript:
         specifier: ^5.6.3
         version: 5.9.3
+
+  tests/web3-compat-parity-tests:
+    dependencies:
+      '@solana/web3-compat':
+        specifier: workspace:*
+        version: link:../../packages/web3-compat
+      '@solana/web3.js':
+        specifier: ^1.95.3
+        version: 1.98.4(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)
+    devDependencies:
+      '@types/node':
+        specifier: ^24
+        version: 24.10.0
 
 packages:
 

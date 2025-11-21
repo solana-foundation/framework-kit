@@ -7,14 +7,14 @@ export type RpcCall = {
 
 export type ProviderContext = {
 	connection: {
-		getLatestBlockhash: (...args: any[]) => Promise<any>;
-		getBalance: (...args: any[]) => Promise<any>;
-		getAccountInfo: (...args: any[]) => Promise<any>;
-		getProgramAccounts: (...args: any[]) => Promise<any>;
-		getSignatureStatuses: (...args: any[]) => Promise<any>;
-		sendRawTransaction: (...args: any[]) => Promise<any>;
-		confirmTransaction: (...args: any[]) => Promise<any>;
-		simulateTransaction: (...args: any[]) => Promise<any>;
+		getLatestBlockhash: (...args: unknown[]) => Promise<unknown>;
+		getBalance: (...args: unknown[]) => Promise<unknown>;
+		getAccountInfo: (...args: unknown[]) => Promise<unknown>;
+		getProgramAccounts: (...args: unknown[]) => Promise<unknown>;
+		getSignatureStatuses: (...args: unknown[]) => Promise<unknown>;
+		sendRawTransaction: (...args: unknown[]) => Promise<unknown>;
+		confirmTransaction: (...args: unknown[]) => Promise<unknown>;
+		simulateTransaction: (...args: unknown[]) => Promise<unknown>;
 	};
 	PublicKey: typeof import('@solana/web3.js').PublicKey;
 	Keypair: typeof import('@solana/web3.js').Keypair;
@@ -80,14 +80,14 @@ const clientCoreMocks = vi.hoisted(() => ({
 
 vi.mock('@solana/client', () => clientCoreMocks);
 
-function parseRpcRequest(init?: RequestInit): { id: unknown; method: string; params: any[] } {
+function parseRpcRequest(init?: RequestInit): { id: unknown; method: string; params: unknown[] } {
 	const rawBody = init?.body;
 	const body =
 		typeof rawBody === 'string'
 			? rawBody
 			: rawBody instanceof Uint8Array
 				? Buffer.from(rawBody).toString('utf8')
-				: rawBody?.toString?.() ?? '';
+				: (rawBody?.toString?.() ?? '');
 	const parsed = body ? JSON.parse(body) : {};
 	return { id: parsed.id, method: parsed.method, params: parsed.params ?? [] };
 }
@@ -300,10 +300,12 @@ export function createProviders(): Provider[] {
 				);
 				const removeSignatureListener = vi.fn(async () => {});
 				(connection as unknown as { onSignature: typeof onSignature }).onSignature = onSignature;
-				(connection as unknown as { _onSubscriptionStateChange: typeof subscriptionStateChange })._onSubscriptionStateChange =
-					subscriptionStateChange;
-				(connection as unknown as { removeSignatureListener: typeof removeSignatureListener }).removeSignatureListener =
-					removeSignatureListener;
+				(
+					connection as unknown as { _onSubscriptionStateChange: typeof subscriptionStateChange }
+				)._onSubscriptionStateChange = subscriptionStateChange;
+				(
+					connection as unknown as { removeSignatureListener: typeof removeSignatureListener }
+				).removeSignatureListener = removeSignatureListener;
 				return {
 					connection,
 					Keypair: web3.Keypair,
@@ -358,7 +360,7 @@ export function createProviders(): Provider[] {
 
 export function withProviders(title: string, register: (getCtx: () => ProviderContext) => void) {
 	const providers = createProviders();
-	describe.each(providers)(`%s ${title}`, ({ name, setup }) => {
+	describe.each(providers)(`%s ${title}`, ({ name: _name, setup }) => {
 		let ctx: ProviderContext | undefined;
 
 		const getCtx = () => {

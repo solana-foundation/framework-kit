@@ -13,13 +13,13 @@ export default defineConfig({
 			['packages/react-hooks/**', 'jsdom'],
 			['examples/**', 'jsdom'],
 		],
-		include: ['{packages,examples}/**/*.{test,spec}.{ts,tsx}'],
+		include: ['{packages,examples,tests}/**/*.{test,spec}.{ts,tsx}'],
 		setupFiles: './vitest.setup.ts',
 		passWithNoTests: true,
 		coverage: {
 			reporter: ['text', 'lcov'],
 			reportsDirectory: './coverage',
-			include: ['packages/**/*.{ts,tsx}', 'examples/**/*.{ts,tsx}'],
+			include: ['packages/**/*.{ts,tsx}', 'examples/**/*.{ts,tsx}', 'tests/**/*.{ts,tsx}'],
 		},
 	},
 	resolve: {

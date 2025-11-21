@@ -1,6 +1,6 @@
 import { createSolanaRpcClient, type SolanaClientConfig } from '@solana/client';
 import { SolanaProvider, useWalletStandardConnectors } from '@solana/react-hooks';
-import { useMemo } from 'react';
+import { Suspense, useMemo } from 'react';
 
 import { AccountInspectorCard } from './components/AccountInspectorCard.tsx';
 import { AirdropCard } from './components/AirdropCard.tsx';
@@ -84,30 +84,44 @@ function DemoApp() {
 						<TabsTrigger value="queries">Queries &amp; Diagnostics</TabsTrigger>
 					</TabsList>
 					<TabsContent value="state">
-						<div className="grid gap-6 lg:grid-cols-2">
-							<ClusterStatusCard />
-							<WalletControls />
-							<BalanceCard />
-							<AccountInspectorCard />
-							<AirdropCard />
-							<StoreInspectorCard />
-						</div>
+						<Suspense
+							fallback={
+								<div className="log-panel text-sm text-muted-foreground">Loading wallet and state…</div>
+							}
+						>
+							<div className="grid gap-6 lg:grid-cols-2">
+								<ClusterStatusCard />
+								<WalletControls />
+								<BalanceCard />
+								<AccountInspectorCard />
+								<AirdropCard />
+								<StoreInspectorCard />
+							</div>
+						</Suspense>
 					</TabsContent>
 					<TabsContent value="transactions">
-						<div className="grid gap-6 lg:grid-cols-2">
-							<SolTransferForm />
-							<SendTransactionCard />
-							<SplTokenPanel />
-							<TransactionPoolPanel />
-						</div>
+						<Suspense
+							fallback={<div className="log-panel text-sm text-muted-foreground">Loading transfers…</div>}
+						>
+							<div className="grid gap-6 lg:grid-cols-2">
+								<SolTransferForm />
+								<SendTransactionCard />
+								<SplTokenPanel />
+								<TransactionPoolPanel />
+							</div>
+						</Suspense>
 					</TabsContent>
 					<TabsContent value="queries">
-						<div className="grid gap-6 lg:grid-cols-2">
-							<LatestBlockhashCard />
-							<ProgramAccountsCard />
-							<SimulateTransactionCard />
-							<SignatureWatcherCard />
-						</div>
+						<Suspense
+							fallback={<div className="log-panel text-sm text-muted-foreground">Loading queries…</div>}
+						>
+							<div className="grid gap-6 lg:grid-cols-2">
+								<LatestBlockhashCard />
+								<ProgramAccountsCard />
+								<SimulateTransactionCard />
+								<SignatureWatcherCard />
+							</div>
+						</Suspense>
 					</TabsContent>
 				</Tabs>
 			</div>

@@ -1,7 +1,7 @@
 {
 	"$schema": "https://json.schemastore.org/tsconfig",
 	"display": "web3-compat parity tests",
-	"extends": "../tsconfig/base.json",
+	"extends": "../../packages/tsconfig/base.json",
 	"compilerOptions": {
 		"lib": ["DOM", "ES2020"]
 	},

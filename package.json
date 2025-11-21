@@ -15,7 +15,7 @@
 		"prepare": "husky",
 		"changeset": "changeset",
 		"version:packages": "changeset version",
-		"publish-packages": "changeset publish"
+		"publish-packages": "changeset publish --filter @solana/client --filter @solana/react-hooks"
 	},
 	"devDependencies": {
 		"@changesets/changelog-github": "^0.5.1",

@@ -49,6 +49,7 @@ import useSWR from 'swr';
 import { useSolanaClient } from './context';
 import { type SolanaQueryResult, type UseSolanaRpcQueryOptions, useSolanaRpcQuery } from './query';
 import { type LatestBlockhashQueryResult, type UseLatestBlockhashOptions, useLatestBlockhash } from './queryHooks';
+import { useQuerySuspensePreference } from './querySuspenseContext';
 import { useClientStore } from './useClientStore';
 
 type ClusterState = ClientState['cluster'];
@@ -93,6 +94,53 @@ function createWalletSelector(): (state: ClientState) => WalletStatus {
 
 function createAccountSelector(key?: string) {
 	return (state: ClientState): AccountCacheEntry | undefined => (key ? state.accounts[key] : undefined);
+}
+
+type SuspensePromiseRef = {
+	key: string | null;
+	promise: Promise<unknown>;
+};
+
+function useSuspenseFetcher(
+	config: Readonly<{
+		enabled: boolean;
+		fetcher: () => Promise<unknown>;
+		key: string | null;
+		ready: boolean;
+	}>,
+) {
+	const preference = useQuerySuspensePreference();
+	const suspenseEnabled = Boolean(preference) && config.enabled;
+	const pendingRef = useRef<SuspensePromiseRef | null>(null);
+
+	useEffect(() => {
+		if (!suspenseEnabled) {
+			pendingRef.current = null;
+			return;
+		}
+		if (pendingRef.current && pendingRef.current.key !== config.key) {
+			pendingRef.current = null;
+		}
+	}, [config.key, suspenseEnabled]);
+
+	if (pendingRef.current && pendingRef.current.key !== config.key) {
+		pendingRef.current = null;
+	}
+
+	if (suspenseEnabled && config.key && !config.ready) {
+		if (!pendingRef.current) {
+			const promise = config.fetcher();
+			pendingRef.current = {
+				key: config.key,
+				promise: promise.finally(() => {
+					if (pendingRef.current?.promise === promise) {
+						pendingRef.current = null;
+					}
+				}),
+			};
+		}
+		throw pendingRef.current.promise;
+	}
 }
 
 /**
@@ -248,6 +296,7 @@ export function useSplToken(
 }> {
 	const client = useSolanaClient();
 	const session = useWalletSession();
+	const suspense = Boolean(useQuerySuspensePreference());
 
 	const normalizedMint = useMemo(() => String(mint), [mint]);
 
@@ -276,6 +325,7 @@ export function useSplToken(
 
 	const { data, error, isLoading, isValidating, mutate } = useSWR<SplTokenBalanceResult>(balanceKey, fetchBalance, {
 		revalidateOnFocus: options.revalidateOnFocus ?? false,
+		suspense,
 	});
 
 	const sessionRef = useRef(session);
@@ -363,12 +413,24 @@ export function useAccount(addressLike?: AddressLike, options: UseAccountOptions
 	const selector = useMemo(() => createAccountSelector(accountKey), [accountKey]);
 	const account = useClientStore(selector);
 
+	useSuspenseFetcher({
+		enabled: options.fetch !== false && !shouldSkip && Boolean(address),
+		fetcher: () => {
+			if (!address) {
+				throw new Error('Provide an address before fetching account data.');
+			}
+			return client.actions.fetchAccount(address, options.commitment);
+		},
+		key: accountKey ?? null,
+		ready: account !== undefined,
+	});
+
 	useEffect(() => {
 		if (!address) {
 			return;
 		}
 		const commitment = options.commitment;
-		if (options.fetch !== false) {
+		if (options.fetch !== false && account === undefined) {
 			void client.actions.fetchAccount(address, commitment).catch(() => undefined);
 		}
 		if (options.watch) {
@@ -378,7 +440,7 @@ export function useAccount(addressLike?: AddressLike, options: UseAccountOptions
 			};
 		}
 		return undefined;
-	}, [address, client, options.commitment, options.fetch, options.watch]);
+	}, [account, address, client, options.commitment, options.fetch, options.watch]);
 
 	return account;
 }
@@ -417,12 +479,24 @@ export function useBalance(
 	const selector = useMemo(() => createAccountSelector(accountKey), [accountKey]);
 	const account = useClientStore(selector);
 
+	useSuspenseFetcher({
+		enabled: mergedOptions.fetch !== false && !shouldSkip && Boolean(address),
+		fetcher: () => {
+			if (!address) {
+				throw new Error('Provide an address before fetching balance.');
+			}
+			return client.actions.fetchBalance(address, mergedOptions.commitment);
+		},
+		key: accountKey ?? null,
+		ready: account !== undefined,
+	});
+
 	useEffect(() => {
 		if (!address) {
 			return;
 		}
 		const commitment = mergedOptions.commitment;
-		if (mergedOptions.fetch !== false) {
+		if (mergedOptions.fetch !== false && account === undefined) {
 			void client.actions.fetchBalance(address, commitment).catch(() => undefined);
 		}
 		if (mergedOptions.watch) {
@@ -432,7 +506,7 @@ export function useBalance(
 			};
 		}
 		return undefined;
-	}, [address, client, mergedOptions.commitment, mergedOptions.fetch, mergedOptions.watch]);
+	}, [account, address, client, mergedOptions.commitment, mergedOptions.fetch, mergedOptions.watch]);
 
 	const lamports = account?.lamports ?? null;
 	const fetching = account?.fetching ?? false;

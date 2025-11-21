@@ -2,6 +2,7 @@
 
 export { SolanaClientProvider, useSolanaClient } from './context';
 export {
+	type SplTokenMetadata,
 	useAccount,
 	useBalance,
 	useClusterState,

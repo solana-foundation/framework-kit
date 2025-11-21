@@ -15,10 +15,10 @@ export function SplTokenPanel() {
 	const [amount, setAmount] = useState(defaultAmount);
 	const {
 		balance,
-		decimals,
 		error,
 		isFetching,
 		isSending,
+		metadata,
 		owner,
 		refresh,
 		refreshing,
@@ -64,7 +64,7 @@ export function SplTokenPanel() {
 
 	const isWalletConnected = Boolean(owner);
 
-	const amountStep = computeSplAmountStep(decimals);
+	const amountStep = computeSplAmountStep(metadata?.decimals);
 
 	return (
 		<Card aria-disabled={!isWalletConnected}>
@@ -86,6 +86,27 @@ export function SplTokenPanel() {
 						<span className="font-medium text-foreground">Owner:</span>{' '}
 						{owner ? <code className="break-all">{owner}</code> : 'Connect a wallet'}
 					</div>
+					{metadata && (
+						<>
+							<div>
+								<span className="font-medium text-foreground">Decimals:</span> {metadata?.decimals}
+							</div>
+							<div>
+								<span className="font-medium text-foreground">Token Program:</span>{' '}
+								<code className="break-all text-xs">{metadata?.tokenProgram}</code>
+							</div>
+							<div>
+								<span className="font-medium text-foreground">Token Type:</span>{' '}
+								{metadata?.isToken2022 ? 'Token-2022' : 'Token Program'}
+							</div>
+							{metadata?.associatedTokenProgram && (
+								<div>
+									<span className="font-medium text-foreground">ATA Program:</span>{' '}
+									<code className="break-all text-xs">{metadata?.associatedTokenProgram}</code>
+								</div>
+							)}
+						</>
+					)}
 				</div>
 				<div className="flex flex-wrap gap-2">
 					<Button

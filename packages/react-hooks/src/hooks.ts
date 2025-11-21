@@ -224,6 +224,14 @@ type UseSplTokenOptions = Readonly<{
 	revalidateOnFocus?: boolean;
 }>;
 
+export type SplTokenMetadata = Readonly<{
+	associatedTokenProgram: string | null;
+	decimals: number;
+	isToken2022: boolean;
+	mint: string;
+	tokenProgram: string;
+}>;
+
 /**
  * Simplified SPL token hook that scopes helpers by mint and manages balance state.
  */
@@ -232,11 +240,11 @@ export function useSplToken(
 	options: UseSplTokenOptions = {},
 ): Readonly<{
 	balance: SplTokenBalanceResult | null;
-	decimals: number | null;
 	error: unknown;
 	helper: SplTokenHelper;
 	isFetching: boolean;
 	isSending: boolean;
+	metadata: SplTokenMetadata | null;
 	owner: string | null;
 	refresh(): Promise<SplTokenBalanceResult | undefined>;
 	refreshing: boolean;
@@ -330,13 +338,28 @@ export function useSplToken(
 	const status: 'disconnected' | 'error' | 'loading' | 'ready' =
 		owner === null ? 'disconnected' : error ? 'error' : isLoading && !data ? 'loading' : 'ready';
 
+	const metadata = useMemo<SplTokenMetadata | null>(() => {
+		if (!data) {
+			return null;
+		}
+		const tokenProgram = helperConfig.tokenProgram ?? 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
+		const isToken2022 = tokenProgram === 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb';
+		return {
+			associatedTokenProgram: helperConfig.associatedTokenProgram ?? null,
+			decimals: data.decimals,
+			isToken2022,
+			mint: normalizedMint,
+			tokenProgram,
+		};
+	}, [data, helperConfig.associatedTokenProgram, helperConfig.tokenProgram, normalizedMint]);
+
 	return {
 		balance: data ?? null,
-		decimals: data?.decimals ?? null,
 		error: error ?? null,
 		helper,
 		isFetching: Boolean(owner) && (isLoading || isValidating),
 		isSending: sendState.status === 'loading',
+		metadata,
 		owner,
 		refresh,
 		refreshing: Boolean(owner) && isValidating,

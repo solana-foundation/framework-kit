@@ -13,6 +13,7 @@ import { SignatureWatcherCard } from './components/SignatureWatcherCard.tsx';
 import { SimulateTransactionCard } from './components/SimulateTransactionCard.tsx';
 import { SolTransferForm } from './components/SolTransferForm.tsx';
 import { SplTokenPanel } from './components/SplTokenPanel.tsx';
+import { StakePanel } from './components/StakePanel.tsx';
 import { StoreInspectorCard } from './components/StoreInspectorCard.tsx';
 import { TransactionPoolPanel } from './components/TransactionPoolPanel.tsx';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs.tsx';
@@ -22,8 +23,8 @@ const LAST_CONNECTOR_STORAGE_KEY = 'solana:last-connector';
 
 const DEFAULT_CLIENT_CONFIG: SolanaClientConfig = {
 	commitment: 'confirmed',
-	endpoint: 'https://api.devnet.solana.com',
-	websocketEndpoint: 'wss://api.devnet.solana.com',
+	endpoint: 'https://mainnet.helius-rpc.com/?api-key=22a5a327-77fd-4021-b6d3-2d1ccb26fb18',
+	websocketEndpoint: 'wss://mainnet.helius-rpc.com/?api-key=22a5a327-77fd-4021-b6d3-2d1ccb26fb18',
 };
 
 export default function App() {
@@ -98,6 +99,7 @@ function DemoApp() {
 							<SolTransferForm />
 							<SendTransactionCard />
 							<SplTokenPanel />
+							<StakePanel />
 							<TransactionPoolPanel />
 						</div>
 					</TabsContent>

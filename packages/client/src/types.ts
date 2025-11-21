@@ -12,6 +12,7 @@ import type { TransactionWithLastValidBlockHeight } from '@solana/transaction-co
 import type { StoreApi } from 'zustand/vanilla';
 import type { SolTransferHelper } from './features/sol';
 import type { SplTokenHelper, SplTokenHelperConfig } from './features/spl';
+import type { StakeHelper } from './features/stake';
 import type { TransactionHelper } from './features/transactions';
 import type { SolanaRpcClient } from './rpc/createSolanaRpcClient';
 import type { PrepareTransactionMessage, PrepareTransactionOptions } from './transactions/prepareTransaction';
@@ -217,6 +218,7 @@ export type ClientWatchers = Readonly<{
 export type ClientHelpers = Readonly<{
 	solTransfer: SolTransferHelper;
 	splToken(config: SplTokenHelperConfig): SplTokenHelper;
+	stake: StakeHelper;
 	transaction: TransactionHelper;
 	prepareTransaction<TMessage extends PrepareTransactionMessage>(
 		config: PrepareTransactionOptions<TMessage>,
@@ -242,6 +244,7 @@ export type SolanaClient = Readonly<{
 	splToken(config: SplTokenHelperConfig): SplTokenHelper;
 	SplToken(config: SplTokenHelperConfig): SplTokenHelper;
 	SplHelper(config: SplTokenHelperConfig): SplTokenHelper;
+	stake: StakeHelper;
 	transaction: TransactionHelper;
 	prepareTransaction: ClientHelpers['prepareTransaction'];
 }>;

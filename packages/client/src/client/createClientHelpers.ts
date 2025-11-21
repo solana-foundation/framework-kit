@@ -2,6 +2,7 @@ import type { Commitment } from '@solana/kit';
 
 import { createSolTransferHelper, type SolTransferHelper } from '../features/sol';
 import { createSplTokenHelper, type SplTokenHelper, type SplTokenHelperConfig } from '../features/spl';
+import { createStakeHelper, type StakeHelper } from '../features/stake';
 import { createTransactionHelper, type TransactionHelper } from '../features/transactions';
 import {
 	type PrepareTransactionMessage,
@@ -55,6 +56,14 @@ function wrapSplTokenHelper(
 	};
 }
 
+function wrapStakeHelper(helper: StakeHelper, getFallback: () => Commitment): StakeHelper {
+	return {
+		prepareStake: (config) => helper.prepareStake(withDefaultCommitment(config, getFallback)),
+		sendPreparedStake: helper.sendPreparedStake,
+		sendStake: (config, options) => helper.sendStake(withDefaultCommitment(config, getFallback), options),
+	};
+}
+
 function normaliseConfigValue(value: unknown): string | undefined {
 	if (value === null || value === undefined) {
 		return undefined;
@@ -82,6 +91,7 @@ export function createClientHelpers(runtime: SolanaClientRuntime, store: ClientS
 	const getFallbackCommitment = () => store.getState().cluster.commitment;
 	const splTokenCache = new Map<string, SplTokenCacheEntry>();
 	let solTransfer: SolTransferHelper | undefined;
+	let stake: StakeHelper | undefined;
 	let transaction: TransactionHelper | undefined;
 
 	const getSolTransfer = () => {
@@ -89,6 +99,13 @@ export function createClientHelpers(runtime: SolanaClientRuntime, store: ClientS
 			solTransfer = wrapSolTransferHelper(createSolTransferHelper(runtime), getFallbackCommitment);
 		}
 		return solTransfer;
+	};
+
+	const getStake = () => {
+		if (!stake) {
+			stake = wrapStakeHelper(createStakeHelper(runtime), getFallbackCommitment);
+		}
+		return stake;
 	};
 
 	const getTransaction = () => {
@@ -126,6 +143,9 @@ export function createClientHelpers(runtime: SolanaClientRuntime, store: ClientS
 			return getSolTransfer();
 		},
 		splToken: getSplTokenHelper,
+		get stake() {
+			return getStake();
+		},
 		get transaction() {
 			return getTransaction();
 		},

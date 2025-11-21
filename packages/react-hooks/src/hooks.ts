@@ -9,6 +9,7 @@ import {
 	createInitialAsyncState,
 	createSolTransferController,
 	createSplTransferController,
+	createStakeController,
 	createTransactionPoolController,
 	deriveConfirmationStatus,
 	getWalletStandardConnectors,
@@ -25,6 +26,9 @@ import {
 	type SplTokenHelperConfig,
 	type SplTransferController,
 	type SplTransferInput,
+	type StakeHelper,
+	type StakeInput,
+	type StakeSendOptions,
 	type TransactionHelper,
 	type TransactionInstructionInput,
 	type TransactionInstructionList,
@@ -212,6 +216,65 @@ export function useSolTransfer(): Readonly<{
 		send,
 		signature: state.data ?? null,
 		status: state.status,
+	};
+}
+
+type StakeSignature = UnwrapPromise<ReturnType<StakeHelper['sendStake']>>;
+
+/**
+ * Convenience wrapper around the stake helper that tracks status and signature for native SOL staking.
+ * Allows staking SOL to a validator and returns transaction details.
+ */
+export function useStake(validatorId: AddressLike): Readonly<{
+	error: unknown;
+	helper: StakeHelper;
+	isStaking: boolean;
+	reset(): void;
+	stake(config: Omit<StakeInput, 'validatorId'>, options?: StakeSendOptions): Promise<StakeSignature>;
+	signature: StakeSignature | null;
+	status: AsyncState<StakeSignature>['status'];
+	validatorId: string;
+}> {
+	const client = useSolanaClient();
+	const session = useWalletSession();
+	const helper = client.stake;
+	const sessionRef = useRef(session);
+	const normalizedValidatorId = useMemo(() => String(validatorId), [validatorId]);
+
+	useEffect(() => {
+		sessionRef.current = session;
+	}, [session]);
+
+	const controller = useMemo(
+		() =>
+			createStakeController({
+				authorityProvider: () => sessionRef.current,
+				helper,
+			}),
+		[helper],
+	);
+
+	const state = useSyncExternalStore<AsyncState<StakeSignature>>(
+		controller.subscribe,
+		controller.getState,
+		controller.getState,
+	);
+
+	const stake = useCallback(
+		(config: Omit<StakeInput, 'validatorId'>, options?: StakeSendOptions) =>
+			controller.stake({ ...config, validatorId: normalizedValidatorId }, options),
+		[controller, normalizedValidatorId],
+	);
+
+	return {
+		error: state.error ?? null,
+		helper,
+		isStaking: state.status === 'loading',
+		reset: controller.reset,
+		stake,
+		signature: state.data ?? null,
+		status: state.status,
+		validatorId: normalizedValidatorId,
 	};
 }
 

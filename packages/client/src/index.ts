@@ -13,6 +13,12 @@ export {
 	type SplTransferInput,
 } from './controllers/splTransferController';
 export {
+	createStakeController,
+	type StakeController,
+	type StakeControllerConfig,
+	type StakeInput,
+} from './controllers/stakeController';
+export {
 	createSolTransferHelper,
 	type SolTransferHelper,
 	type SolTransferPrepareConfig,
@@ -25,6 +31,12 @@ export {
 	type SplTokenHelperConfig,
 	type SplTransferPrepareConfig,
 } from './features/spl';
+export {
+	createStakeHelper,
+	type StakeHelper,
+	type StakePrepareConfig,
+	type StakeSendOptions,
+} from './features/stake';
 export {
 	createTransactionHelper,
 	createTransactionRecipe,

@@ -87,7 +87,7 @@ function parseRpcRequest(init?: RequestInit): { id: unknown; method: string; par
 			? rawBody
 			: rawBody instanceof Uint8Array
 				? Buffer.from(rawBody).toString('utf8')
-				: rawBody?.toString?.() ?? '';
+				: (rawBody?.toString?.() ?? '');
 	const parsed = body ? JSON.parse(body) : {};
 	return { id: parsed.id, method: parsed.method, params: parsed.params ?? [] };
 }
@@ -300,10 +300,12 @@ export function createProviders(): Provider[] {
 				);
 				const removeSignatureListener = vi.fn(async () => {});
 				(connection as unknown as { onSignature: typeof onSignature }).onSignature = onSignature;
-				(connection as unknown as { _onSubscriptionStateChange: typeof subscriptionStateChange })._onSubscriptionStateChange =
-					subscriptionStateChange;
-				(connection as unknown as { removeSignatureListener: typeof removeSignatureListener }).removeSignatureListener =
-					removeSignatureListener;
+				(
+					connection as unknown as { _onSubscriptionStateChange: typeof subscriptionStateChange }
+				)._onSubscriptionStateChange = subscriptionStateChange;
+				(
+					connection as unknown as { removeSignatureListener: typeof removeSignatureListener }
+				).removeSignatureListener = removeSignatureListener;
 				return {
 					connection,
 					Keypair: web3.Keypair,

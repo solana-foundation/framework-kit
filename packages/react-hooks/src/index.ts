@@ -12,6 +12,7 @@ export {
 	useSignatureStatus,
 	useSolTransfer,
 	useSplToken,
+	useStake,
 	useTransactionPool,
 	useWaitForSignature,
 	useWallet,

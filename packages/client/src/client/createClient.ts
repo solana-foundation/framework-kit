@@ -81,6 +81,9 @@ export function createClient(config: SolanaClientConfig): SolanaClient {
 		splToken: helpers.splToken,
 		SplToken: helpers.splToken,
 		SplHelper: helpers.splToken,
+		get stake() {
+			return helpers.stake;
+		},
 		get transaction() {
 			return helpers.transaction;
 		},

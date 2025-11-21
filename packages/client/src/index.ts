@@ -33,6 +33,7 @@ export {
 } from './features/spl';
 export {
 	createStakeHelper,
+	type StakeAccount,
 	type StakeHelper,
 	type StakePrepareConfig,
 	type StakeSendOptions,

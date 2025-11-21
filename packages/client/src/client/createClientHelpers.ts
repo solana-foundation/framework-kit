@@ -58,6 +58,7 @@ function wrapSplTokenHelper(
 
 function wrapStakeHelper(helper: StakeHelper, getFallback: () => Commitment): StakeHelper {
 	return {
+		getStakeAccounts: helper.getStakeAccounts,
 		prepareStake: (config) => helper.prepareStake(withDefaultCommitment(config, getFallback)),
 		sendPreparedStake: helper.sendPreparedStake,
 		sendStake: (config, options) => helper.sendStake(withDefaultCommitment(config, getFallback), options),

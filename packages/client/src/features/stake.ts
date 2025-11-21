@@ -3,6 +3,7 @@ import {
 	type Address,
 	address,
 	appendTransactionMessageInstructions,
+	type Base58EncodedBytes,
 	type Blockhash,
 	type Commitment,
 	createTransactionMessage,
@@ -37,6 +38,39 @@ type BlockhashLifetime = Readonly<{
 type StakeAmount = bigint | number | string;
 
 type StakeAuthority = TransactionSigner<string> | WalletSession;
+
+export type StakeAccount = {
+	pubkey: Address;
+	account: {
+		data: {
+			parsed: {
+				info: {
+					stake?: {
+						delegation?: {
+							voter: string;
+							stake: string;
+							activationEpoch: string;
+							deactivationEpoch: string;
+						};
+					};
+					meta?: {
+						rentExemptReserve: string;
+						authorized: {
+							staker: string;
+							withdrawer: string;
+						};
+						lockup: {
+							unixTimestamp: number;
+							epoch: number;
+							custodian: string;
+						};
+					};
+				};
+			};
+		};
+		lamports: bigint;
+	};
+};
 
 type SignableStakeTransactionMessage = Parameters<typeof signTransactionMessageWithSigners>[0];
 
@@ -108,6 +142,7 @@ export type StakeHelper = Readonly<{
 	prepareStake(config: StakePrepareConfig): Promise<PreparedStake>;
 	sendPreparedStake(prepared: PreparedStake, options?: StakeSendOptions): Promise<ReturnType<typeof signature>>;
 	sendStake(config: StakePrepareConfig, options?: StakeSendOptions): Promise<ReturnType<typeof signature>>;
+	getStakeAccounts(wallet: Address | string, validatorId?: Address | string): Promise<StakeAccount[]>;
 }>;
 
 /** Creates helpers that build and submit native SOL staking transactions. */
@@ -230,9 +265,43 @@ export function createStakeHelper(runtime: SolanaClientRuntime): StakeHelper {
 		return await sendPreparedStake(prepared, options);
 	}
 
+	async function getStakeAccounts(wallet: Address | string, validatorId?: Address | string): Promise<StakeAccount[]> {
+		const walletAddress = typeof wallet === 'string' ? wallet : String(wallet);
+
+		const accounts = await runtime.rpc
+			.getProgramAccounts(STAKE_PROGRAM_ID, {
+				encoding: 'jsonParsed',
+				filters: [
+					{
+						memcmp: {
+							offset: 44n,
+							bytes: walletAddress as Base58EncodedBytes,
+							encoding: 'base58',
+						},
+					},
+				],
+			})
+			.send();
+
+		if (!validatorId) {
+			return accounts as StakeAccount[];
+		}
+
+		const validatorIdStr = typeof validatorId === 'string' ? validatorId : String(validatorId);
+		return accounts.filter((acc) => {
+			const data = acc.account?.data;
+			if (data && 'parsed' in data) {
+				const info = data.parsed?.info as { stake?: { delegation?: { voter?: string } } } | undefined;
+				return info?.stake?.delegation?.voter === validatorIdStr;
+			}
+			return false;
+		}) as StakeAccount[];
+	}
+
 	return {
 		prepareStake,
 		sendPreparedStake,
 		sendStake,
+		getStakeAccounts,
 	};
 }

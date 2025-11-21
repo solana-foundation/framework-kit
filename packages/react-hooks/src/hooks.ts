@@ -26,6 +26,7 @@ import {
 	type SplTokenHelperConfig,
 	type SplTransferController,
 	type SplTransferInput,
+	type StakeAccount,
 	type StakeHelper,
 	type StakeInput,
 	type StakeSendOptions,
@@ -227,6 +228,7 @@ type StakeSignature = UnwrapPromise<ReturnType<StakeHelper['sendStake']>>;
  */
 export function useStake(validatorId: AddressLike): Readonly<{
 	error: unknown;
+	getStakeAccounts(wallet: AddressLike, validatorIdFilter?: AddressLike): Promise<StakeAccount[]>;
 	helper: StakeHelper;
 	isStaking: boolean;
 	reset(): void;
@@ -266,8 +268,22 @@ export function useStake(validatorId: AddressLike): Readonly<{
 		[controller, normalizedValidatorId],
 	);
 
+	const getStakeAccounts = useCallback(
+		async (wallet: AddressLike, validatorIdFilter?: AddressLike) => {
+			const walletAddr = typeof wallet === 'string' ? wallet : String(wallet);
+			const filterAddr = validatorIdFilter
+				? typeof validatorIdFilter === 'string'
+					? validatorIdFilter
+					: String(validatorIdFilter)
+				: undefined;
+			return helper.getStakeAccounts(walletAddr, filterAddr);
+		},
+		[helper],
+	);
+
 	return {
 		error: state.error ?? null,
+		getStakeAccounts,
 		helper,
 		isStaking: state.status === 'loading',
 		reset: controller.reset,

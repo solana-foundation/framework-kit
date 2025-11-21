@@ -1,19 +1,17 @@
-import { useStake, useWallet } from '@solana/react-hooks';
-import { useState } from 'react';
+import { type StakeAccount, useStake, useWallet, useWalletSession } from '@solana/react-hooks';
+import { useCallback, useEffect, useState } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
 
-/**
- * Example component demonstrating the useStake hook for native SOL staking.
- * This component allows users to stake SOL to a validator.
- */
 export function StakePanel() {
-	// Example validator ID (Helius validator)
 	const [validatorId, setValidatorId] = useState('he1iusunGwqrNtafDtLdhsUQDFvo13z9sUa36PauBtk');
 	const [amount, setAmount] = useState('1');
+	const [stakeAccounts, setStakeAccounts] = useState<StakeAccount[]>([]);
+	const [loadingAccounts, setLoadingAccounts] = useState(false);
 
 	const wallet = useWallet();
+	const session = useWalletSession();
 	const {
 		stake,
 		signature,
@@ -21,12 +19,40 @@ export function StakePanel() {
 		error,
 		isStaking,
 		reset,
+		getStakeAccounts,
 		validatorId: currentValidatorId,
 	} = useStake(validatorId);
 
+	const handleFetchStakeAccounts = useCallback(async () => {
+		if (!session) return;
+		setLoadingAccounts(true);
+		try {
+			const accounts = await getStakeAccounts(session.account.address, validatorId);
+			setStakeAccounts(accounts);
+		} catch (err) {
+			console.error('Failed to fetch stake accounts:', err);
+		} finally {
+			setLoadingAccounts(false);
+		}
+	}, [session, validatorId, getStakeAccounts]);
+
+	useEffect(() => {
+		if (session && validatorId) {
+			handleFetchStakeAccounts();
+		}
+	}, [session, validatorId, handleFetchStakeAccounts]);
+
+	useEffect(() => {
+		if (status === 'success' && signature) {
+			const timer = setTimeout(() => {
+				handleFetchStakeAccounts();
+			}, 3000);
+			return () => clearTimeout(timer);
+		}
+	}, [status, signature, handleFetchStakeAccounts]);
+
 	const handleStake = async () => {
 		try {
-			// Convert SOL to lamports (1 SOL = 1_000_000_000 lamports)
 			const lamports = BigInt(Math.floor(parseFloat(amount) * 1_000_000_000));
 
 			const sig = await stake({
@@ -44,10 +70,12 @@ export function StakePanel() {
 	return (
 		<Card className="w-full">
 			<CardHeader>
-				<CardTitle>Stake Native SOL</CardTitle>
-				<CardDescription>
-					Stake your SOL tokens to a validator to earn rewards. This uses the useStake hook.
-				</CardDescription>
+				<div className="space-y-1.5">
+					<CardTitle>Stake Native SOL</CardTitle>
+					<CardDescription>
+						Stake your SOL tokens to a validator to earn rewards. This uses the useStake hook.
+					</CardDescription>
+				</div>
 			</CardHeader>
 			<CardContent className="space-y-4">
 				<div className="space-y-2">
@@ -136,6 +164,42 @@ export function StakePanel() {
 						<p>
 							<strong>Last Signature:</strong> {signature.slice(0, 20)}...
 						</p>
+					)}
+				</div>
+
+				<div className="mt-4 pt-4 border-t">
+					<Button
+						onClick={handleFetchStakeAccounts}
+						disabled={!isConnected || loadingAccounts}
+						variant="outline"
+						className="w-full"
+					>
+						{loadingAccounts ? 'Loading...' : 'Fetch Stake Accounts'}
+					</Button>
+
+					{stakeAccounts.length > 0 && (
+						<div className="mt-4 space-y-2">
+							<p className="text-sm font-medium">Found {stakeAccounts.length} stake account(s):</p>
+							{stakeAccounts.map((acc) => (
+								<div key={acc.pubkey} className="p-2 bg-muted rounded text-xs space-y-1">
+									<p>
+										<strong>Account:</strong> {acc.pubkey.slice(0, 20)}...
+									</p>
+									<p>
+										<strong>Stake:</strong>{' '}
+										{(
+											Number(acc.account.data.parsed.info.stake?.delegation?.stake || 0) /
+											1_000_000_000
+										).toFixed(4)}{' '}
+										SOL
+									</p>
+									<p>
+										<strong>Voter:</strong>{' '}
+										{acc.account.data.parsed.info.stake?.delegation?.voter?.slice(0, 20)}...
+									</p>
+								</div>
+							))}
+						</div>
 					)}
 				</div>
 			</CardContent>

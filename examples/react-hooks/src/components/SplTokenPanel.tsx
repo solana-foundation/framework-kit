@@ -64,7 +64,7 @@ export function SplTokenPanel() {
 
 	const isWalletConnected = Boolean(owner);
 
-	const amountStep = computeSplAmountStep(metadata?.decimals);
+	const amountStep = computeSplAmountStep(balance?.decimals);
 
 	return (
 		<Card aria-disabled={!isWalletConnected}>
@@ -89,7 +89,7 @@ export function SplTokenPanel() {
 					{metadata && (
 						<>
 							<div>
-								<span className="font-medium text-foreground">Decimals:</span> {metadata?.decimals}
+								<span className="font-medium text-foreground">Decimals:</span> {balance?.decimals}
 							</div>
 							<div>
 								<span className="font-medium text-foreground">Token Program:</span>{' '}

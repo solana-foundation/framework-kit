@@ -226,9 +226,7 @@ type UseSplTokenOptions = Readonly<{
 
 export type SplTokenMetadata = Readonly<{
 	associatedTokenProgram: string | null;
-	decimals: number;
 	isToken2022: boolean;
-	mint: string;
 	tokenProgram: string;
 }>;
 
@@ -346,12 +344,10 @@ export function useSplToken(
 		const isToken2022 = tokenProgram === 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb';
 		return {
 			associatedTokenProgram: helperConfig.associatedTokenProgram ?? null,
-			decimals: data.decimals,
 			isToken2022,
-			mint: normalizedMint,
 			tokenProgram,
 		};
-	}, [data, helperConfig.associatedTokenProgram, helperConfig.tokenProgram, normalizedMint]);
+	}, [data, helperConfig.associatedTokenProgram, helperConfig.tokenProgram]);
 
 	return {
 		balance: data ?? null,

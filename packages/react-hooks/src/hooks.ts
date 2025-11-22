@@ -224,6 +224,12 @@ type UseSplTokenOptions = Readonly<{
 	revalidateOnFocus?: boolean;
 }>;
 
+export type SplTokenMetadata = Readonly<{
+	associatedTokenProgram: string | null;
+	isToken2022: boolean;
+	tokenProgram: string;
+}>;
+
 /**
  * Simplified SPL token hook that scopes helpers by mint and manages balance state.
  */
@@ -236,6 +242,7 @@ export function useSplToken(
 	helper: SplTokenHelper;
 	isFetching: boolean;
 	isSending: boolean;
+	metadata: SplTokenMetadata | null;
 	owner: string | null;
 	refresh(): Promise<SplTokenBalanceResult | undefined>;
 	refreshing: boolean;
@@ -329,12 +336,26 @@ export function useSplToken(
 	const status: 'disconnected' | 'error' | 'loading' | 'ready' =
 		owner === null ? 'disconnected' : error ? 'error' : isLoading && !data ? 'loading' : 'ready';
 
+	const metadata = useMemo<SplTokenMetadata | null>(() => {
+		if (!data) {
+			return null;
+		}
+		const tokenProgram = helperConfig.tokenProgram ?? 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
+		const isToken2022 = tokenProgram === 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb';
+		return {
+			associatedTokenProgram: helperConfig.associatedTokenProgram ?? null,
+			isToken2022,
+			tokenProgram,
+		};
+	}, [data, helperConfig.associatedTokenProgram, helperConfig.tokenProgram]);
+
 	return {
 		balance: data ?? null,
 		error: error ?? null,
 		helper,
 		isFetching: Boolean(owner) && (isLoading || isValidating),
 		isSending: sendState.status === 'loading',
+		metadata,
 		owner,
 		refresh,
 		refreshing: Boolean(owner) && isValidating,

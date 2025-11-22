@@ -312,6 +312,11 @@ export function useStake(validatorId: AddressLike): Readonly<{
 
 	const getStakeAccounts = useCallback(
 		async (wallet: AddressLike, validatorIdFilter?: AddressLike) => {
+			if (!helper.getStakeAccounts) {
+				throw new Error(
+					'getStakeAccounts is not available. Make sure you have the latest version of @solana/client package.',
+				);
+			}
 			const walletAddr = typeof wallet === 'string' ? wallet : String(wallet);
 			const filterAddr = validatorIdFilter
 				? typeof validatorIdFilter === 'string'

@@ -4,11 +4,14 @@ import type {
 	StakeSendOptions,
 	UnstakePrepareConfig,
 	UnstakeSendOptions,
+	WithdrawPrepareConfig,
+	WithdrawSendOptions,
 } from '../features/stake';
 import { type AsyncState, createAsyncState, createInitialAsyncState } from '../state/asyncState';
 
 type StakeSignature = Awaited<ReturnType<StakeHelper['sendStake']>>;
 type UnstakeSignature = Awaited<ReturnType<StakeHelper['sendUnstake']>>;
+type WithdrawSignature = Awaited<ReturnType<StakeHelper['sendWithdraw']>>;
 
 type Listener = () => void;
 
@@ -25,16 +28,24 @@ export type UnstakeInput = Omit<UnstakePrepareConfig, 'authority'> & {
 	authority?: UnstakePrepareConfig['authority'];
 };
 
+export type WithdrawInput = Omit<WithdrawPrepareConfig, 'authority'> & {
+	authority?: WithdrawPrepareConfig['authority'];
+};
+
 export type StakeController = Readonly<{
 	getHelper(): StakeHelper;
 	getState(): AsyncState<StakeSignature>;
 	getUnstakeState(): AsyncState<UnstakeSignature>;
+	getWithdrawState(): AsyncState<WithdrawSignature>;
 	reset(): void;
 	resetUnstake(): void;
+	resetWithdraw(): void;
 	stake(config: StakeInput, options?: StakeSendOptions): Promise<StakeSignature>;
 	unstake(config: UnstakeInput, options?: UnstakeSendOptions): Promise<UnstakeSignature>;
+	withdraw(config: WithdrawInput, options?: WithdrawSendOptions): Promise<WithdrawSignature>;
 	subscribe(listener: Listener): () => void;
 	subscribeUnstake(listener: Listener): () => void;
+	subscribeWithdraw(listener: Listener): () => void;
 }>;
 
 function ensureAuthority(
@@ -65,13 +76,29 @@ function ensureUnstakeAuthority(
 	};
 }
 
+function ensureWithdrawAuthority(
+	input: WithdrawInput,
+	resolveDefault?: () => WithdrawPrepareConfig['authority'] | undefined,
+): WithdrawPrepareConfig {
+	const authority = input.authority ?? resolveDefault?.();
+	if (!authority) {
+		throw new Error('Connect a wallet or supply an `authority` before withdrawing SOL.');
+	}
+	return {
+		...input,
+		authority,
+	};
+}
+
 export function createStakeController(config: StakeControllerConfig): StakeController {
 	const listeners = new Set<Listener>();
 	const unstakeListeners = new Set<Listener>();
+	const withdrawListeners = new Set<Listener>();
 	const helper = config.helper;
 	const authorityProvider = config.authorityProvider;
 	let state: AsyncState<StakeSignature> = createInitialAsyncState<StakeSignature>();
 	let unstakeState: AsyncState<UnstakeSignature> = createInitialAsyncState<UnstakeSignature>();
+	let withdrawState: AsyncState<WithdrawSignature> = createInitialAsyncState<WithdrawSignature>();
 
 	function notify() {
 		for (const listener of listeners) {
@@ -85,6 +112,12 @@ export function createStakeController(config: StakeControllerConfig): StakeContr
 		}
 	}
 
+	function notifyWithdraw() {
+		for (const listener of withdrawListeners) {
+			listener();
+		}
+	}
+
 	function setState(next: AsyncState<StakeSignature>) {
 		state = next;
 		notify();
@@ -93,6 +126,11 @@ export function createStakeController(config: StakeControllerConfig): StakeContr
 	function setUnstakeState(next: AsyncState<UnstakeSignature>) {
 		unstakeState = next;
 		notifyUnstake();
+	}
+
+	function setWithdrawState(next: AsyncState<WithdrawSignature>) {
+		withdrawState = next;
+		notifyWithdraw();
 	}
 
 	async function stake(config: StakeInput, options?: StakeSendOptions): Promise<StakeSignature> {
@@ -121,6 +159,19 @@ export function createStakeController(config: StakeControllerConfig): StakeContr
 		}
 	}
 
+	async function withdraw(config: WithdrawInput, options?: WithdrawSendOptions): Promise<WithdrawSignature> {
+		const request = ensureWithdrawAuthority(config, authorityProvider);
+		setWithdrawState(createAsyncState<WithdrawSignature>('loading'));
+		try {
+			const signature = await helper.sendWithdraw(request, options);
+			setWithdrawState(createAsyncState<WithdrawSignature>('success', { data: signature }));
+			return signature;
+		} catch (error) {
+			setWithdrawState(createAsyncState<WithdrawSignature>('error', { error }));
+			throw error;
+		}
+	}
+
 	function subscribe(listener: Listener): () => void {
 		listeners.add(listener);
 		return () => {
@@ -135,6 +186,13 @@ export function createStakeController(config: StakeControllerConfig): StakeContr
 		};
 	}
 
+	function subscribeWithdraw(listener: Listener): () => void {
+		withdrawListeners.add(listener);
+		return () => {
+			withdrawListeners.delete(listener);
+		};
+	}
+
 	function reset() {
 		setState(createInitialAsyncState<StakeSignature>());
 	}
@@ -143,15 +201,23 @@ export function createStakeController(config: StakeControllerConfig): StakeContr
 		setUnstakeState(createInitialAsyncState<UnstakeSignature>());
 	}
 
+	function resetWithdraw() {
+		setWithdrawState(createInitialAsyncState<WithdrawSignature>());
+	}
+
 	return {
 		getHelper: () => helper,
 		getState: () => state,
 		getUnstakeState: () => unstakeState,
+		getWithdrawState: () => withdrawState,
 		reset,
 		resetUnstake,
+		resetWithdraw,
 		stake,
 		unstake,
+		withdraw,
 		subscribe,
 		subscribeUnstake,
+		subscribeWithdraw,
 	};
 }

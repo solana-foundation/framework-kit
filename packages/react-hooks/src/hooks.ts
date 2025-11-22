@@ -47,6 +47,8 @@ import {
 	type WalletConnector,
 	type WalletSession,
 	type WalletStatus,
+	type WithdrawInput,
+	type WithdrawSendOptions,
 	watchWalletStandardConnectors,
 } from '@solana/client';
 import type { Commitment, Lamports, Signature } from '@solana/kit';
@@ -224,6 +226,7 @@ export function useSolTransfer(): Readonly<{
 
 type StakeSignature = UnwrapPromise<ReturnType<StakeHelper['sendStake']>>;
 type UnstakeSignature = UnwrapPromise<ReturnType<StakeHelper['sendUnstake']>>;
+type WithdrawSignature = UnwrapPromise<ReturnType<StakeHelper['sendWithdraw']>>;
 
 /**
  * Convenience wrapper around the stake helper that tracks status and signature for native SOL staking.
@@ -235,15 +238,21 @@ export function useStake(validatorId: AddressLike): Readonly<{
 	helper: StakeHelper;
 	isStaking: boolean;
 	isUnstaking: boolean;
+	isWithdrawing: boolean;
 	reset(): void;
 	resetUnstake(): void;
+	resetWithdraw(): void;
 	stake(config: Omit<StakeInput, 'validatorId'>, options?: StakeSendOptions): Promise<StakeSignature>;
 	unstake(config: Omit<UnstakeInput, 'validatorId'>, options?: UnstakeSendOptions): Promise<UnstakeSignature>;
+	withdraw(config: Omit<WithdrawInput, 'validatorId'>, options?: WithdrawSendOptions): Promise<WithdrawSignature>;
 	signature: StakeSignature | null;
 	unstakeSignature: UnstakeSignature | null;
+	withdrawSignature: WithdrawSignature | null;
 	status: AsyncState<StakeSignature>['status'];
 	unstakeStatus: AsyncState<UnstakeSignature>['status'];
+	withdrawStatus: AsyncState<WithdrawSignature>['status'];
 	unstakeError: unknown;
+	withdrawError: unknown;
 	validatorId: string;
 }> {
 	const client = useSolanaClient();
@@ -277,6 +286,12 @@ export function useStake(validatorId: AddressLike): Readonly<{
 		controller.getUnstakeState,
 	);
 
+	const withdrawState = useSyncExternalStore<AsyncState<WithdrawSignature>>(
+		controller.subscribeWithdraw,
+		controller.getWithdrawState,
+		controller.getWithdrawState,
+	);
+
 	const stake = useCallback(
 		(config: Omit<StakeInput, 'validatorId'>, options?: StakeSendOptions) =>
 			controller.stake({ ...config, validatorId: normalizedValidatorId }, options),
@@ -286,6 +301,12 @@ export function useStake(validatorId: AddressLike): Readonly<{
 	const unstake = useCallback(
 		(config: Omit<UnstakeInput, 'validatorId'>, options?: UnstakeSendOptions) =>
 			controller.unstake({ ...config }, options),
+		[controller],
+	);
+
+	const withdraw = useCallback(
+		(config: Omit<WithdrawInput, 'validatorId'>, options?: WithdrawSendOptions) =>
+			controller.withdraw({ ...config }, options),
 		[controller],
 	);
 
@@ -308,15 +329,21 @@ export function useStake(validatorId: AddressLike): Readonly<{
 		helper,
 		isStaking: state.status === 'loading',
 		isUnstaking: unstakeState.status === 'loading',
+		isWithdrawing: withdrawState.status === 'loading',
 		reset: controller.reset,
 		resetUnstake: controller.resetUnstake,
+		resetWithdraw: controller.resetWithdraw,
 		stake,
 		unstake,
+		withdraw,
 		signature: state.data ?? null,
 		unstakeSignature: unstakeState.data ?? null,
+		withdrawSignature: withdrawState.data ?? null,
 		status: state.status,
 		unstakeStatus: unstakeState.status,
+		withdrawStatus: withdrawState.status,
 		unstakeError: unstakeState.error ?? null,
+		withdrawError: withdrawState.error ?? null,
 		validatorId: normalizedValidatorId,
 	};
 }

@@ -18,6 +18,7 @@ export {
 	type StakeControllerConfig,
 	type StakeInput,
 	type UnstakeInput,
+	type WithdrawInput,
 } from './controllers/stakeController';
 export {
 	createSolTransferHelper,
@@ -40,6 +41,8 @@ export {
 	type StakeSendOptions,
 	type UnstakePrepareConfig,
 	type UnstakeSendOptions,
+	type WithdrawPrepareConfig,
+	type WithdrawSendOptions,
 } from './features/stake';
 export {
 	createTransactionHelper,

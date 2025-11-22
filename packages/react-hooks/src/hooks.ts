@@ -9,6 +9,7 @@ import {
 	createInitialAsyncState,
 	createSolTransferController,
 	createSplTransferController,
+	createStakeController,
 	createTransactionPoolController,
 	deriveConfirmationStatus,
 	getWalletStandardConnectors,
@@ -25,6 +26,10 @@ import {
 	type SplTokenHelperConfig,
 	type SplTransferController,
 	type SplTransferInput,
+	type StakeAccount,
+	type StakeHelper,
+	type StakeInput,
+	type StakeSendOptions,
 	type TransactionHelper,
 	type TransactionInstructionInput,
 	type TransactionInstructionList,
@@ -37,9 +42,13 @@ import {
 	type TransactionPrepared,
 	type TransactionSendOptions,
 	toAddress,
+	type UnstakeInput,
+	type UnstakeSendOptions,
 	type WalletConnector,
 	type WalletSession,
 	type WalletStatus,
+	type WithdrawInput,
+	type WithdrawSendOptions,
 	watchWalletStandardConnectors,
 } from '@solana/client';
 import type { Commitment, Lamports, Signature } from '@solana/kit';
@@ -212,6 +221,135 @@ export function useSolTransfer(): Readonly<{
 		send,
 		signature: state.data ?? null,
 		status: state.status,
+	};
+}
+
+type StakeSignature = UnwrapPromise<ReturnType<StakeHelper['sendStake']>>;
+type UnstakeSignature = UnwrapPromise<ReturnType<StakeHelper['sendUnstake']>>;
+type WithdrawSignature = UnwrapPromise<ReturnType<StakeHelper['sendWithdraw']>>;
+
+/**
+ * Convenience wrapper around the stake helper that tracks status and signature for native SOL staking.
+ * Allows staking SOL to a validator and returns transaction details.
+ */
+export function useStake(validatorId: AddressLike): Readonly<{
+	error: unknown;
+	getStakeAccounts(wallet: AddressLike, validatorIdFilter?: AddressLike): Promise<StakeAccount[]>;
+	helper: StakeHelper;
+	isStaking: boolean;
+	isUnstaking: boolean;
+	isWithdrawing: boolean;
+	reset(): void;
+	resetUnstake(): void;
+	resetWithdraw(): void;
+	stake(config: Omit<StakeInput, 'validatorId'>, options?: StakeSendOptions): Promise<StakeSignature>;
+	unstake(config: Omit<UnstakeInput, 'validatorId'>, options?: UnstakeSendOptions): Promise<UnstakeSignature>;
+	withdraw(config: Omit<WithdrawInput, 'validatorId'>, options?: WithdrawSendOptions): Promise<WithdrawSignature>;
+	signature: StakeSignature | null;
+	unstakeSignature: UnstakeSignature | null;
+	withdrawSignature: WithdrawSignature | null;
+	status: AsyncState<StakeSignature>['status'];
+	unstakeStatus: AsyncState<UnstakeSignature>['status'];
+	withdrawStatus: AsyncState<WithdrawSignature>['status'];
+	unstakeError: unknown;
+	withdrawError: unknown;
+	validatorId: string;
+}> {
+	const client = useSolanaClient();
+	const session = useWalletSession();
+	const helper = client.stake;
+	const sessionRef = useRef(session);
+	const normalizedValidatorId = useMemo(() => String(validatorId), [validatorId]);
+
+	useEffect(() => {
+		sessionRef.current = session;
+	}, [session]);
+
+	const controller = useMemo(
+		() =>
+			createStakeController({
+				authorityProvider: () => sessionRef.current,
+				helper,
+			}),
+		[helper],
+	);
+
+	const state = useSyncExternalStore<AsyncState<StakeSignature>>(
+		controller.subscribe,
+		controller.getState,
+		controller.getState,
+	);
+
+	const unstakeState = useSyncExternalStore<AsyncState<UnstakeSignature>>(
+		controller.subscribeUnstake,
+		controller.getUnstakeState,
+		controller.getUnstakeState,
+	);
+
+	const withdrawState = useSyncExternalStore<AsyncState<WithdrawSignature>>(
+		controller.subscribeWithdraw,
+		controller.getWithdrawState,
+		controller.getWithdrawState,
+	);
+
+	const stake = useCallback(
+		(config: Omit<StakeInput, 'validatorId'>, options?: StakeSendOptions) =>
+			controller.stake({ ...config, validatorId: normalizedValidatorId }, options),
+		[controller, normalizedValidatorId],
+	);
+
+	const unstake = useCallback(
+		(config: Omit<UnstakeInput, 'validatorId'>, options?: UnstakeSendOptions) =>
+			controller.unstake({ ...config }, options),
+		[controller],
+	);
+
+	const withdraw = useCallback(
+		(config: Omit<WithdrawInput, 'validatorId'>, options?: WithdrawSendOptions) =>
+			controller.withdraw({ ...config }, options),
+		[controller],
+	);
+
+	const getStakeAccounts = useCallback(
+		async (wallet: AddressLike, validatorIdFilter?: AddressLike) => {
+			if (!helper.getStakeAccounts) {
+				throw new Error(
+					'getStakeAccounts is not available. Make sure you have the latest version of @solana/client package.',
+				);
+			}
+			const walletAddr = typeof wallet === 'string' ? wallet : String(wallet);
+			const filterAddr = validatorIdFilter
+				? typeof validatorIdFilter === 'string'
+					? validatorIdFilter
+					: String(validatorIdFilter)
+				: undefined;
+			return helper.getStakeAccounts(walletAddr, filterAddr);
+		},
+		[helper],
+	);
+
+	return {
+		error: state.error ?? null,
+		getStakeAccounts,
+		helper,
+		isStaking: state.status === 'loading',
+		isUnstaking: unstakeState.status === 'loading',
+		isWithdrawing: withdrawState.status === 'loading',
+		reset: controller.reset,
+		resetUnstake: controller.resetUnstake,
+		resetWithdraw: controller.resetWithdraw,
+		stake,
+		unstake,
+		withdraw,
+		signature: state.data ?? null,
+		unstakeSignature: unstakeState.data ?? null,
+		withdrawSignature: withdrawState.data ?? null,
+		status: state.status,
+		unstakeStatus: unstakeState.status,
+		withdrawStatus: withdrawState.status,
+		unstakeError: unstakeState.error ?? null,
+		withdrawError: withdrawState.error ?? null,
+		validatorId: normalizedValidatorId,
 	};
 }
 

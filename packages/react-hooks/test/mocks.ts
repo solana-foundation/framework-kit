@@ -8,10 +8,10 @@ import {
 	createClientStore,
 	createInitialClientState,
 	type SolanaClient,
-	type SolanaClientConfig,
 	type SolTransferHelper,
 	type SplTokenHelper,
 	type SplTokenHelperConfig,
+	type StakeHelper,
 	type TransactionHelper,
 	type WalletConnector,
 	type WalletRegistry,
@@ -39,6 +39,10 @@ type MockedTransactionHelper = {
 	[K in keyof TransactionHelper]: MockedFunction<TransactionHelper[K]>;
 };
 
+type MockedStakeHelper = {
+	[K in keyof StakeHelper]: MockedFunction<StakeHelper[K]>;
+};
+
 type CreateMockSplTokenHelper = (config: SplTokenHelperConfig) => MockedSplTokenHelper;
 
 export type MockSolanaClient = SolanaClient & {
@@ -46,6 +50,7 @@ export type MockSolanaClient = SolanaClient & {
 	helpers: ClientHelpers & {
 		solTransfer: MockedSolTransferHelper;
 		splToken: MockedFunction<ClientHelpers['splToken']>;
+		stake: MockedStakeHelper;
 		transaction: MockedTransactionHelper;
 	};
 	solTransfer: MockedSolTransferHelper;
@@ -53,6 +58,7 @@ export type MockSolanaClient = SolanaClient & {
 	splToken: MockedFunction<SolanaClient['splToken']>;
 	SplToken: MockedFunction<SolanaClient['SplToken']>;
 	SplHelper: MockedFunction<SolanaClient['SplHelper']>;
+	stake: MockedStakeHelper;
 	transaction: MockedTransactionHelper;
 	watchers: MockedWatchers;
 };
@@ -64,6 +70,7 @@ export type MockSolanaClientOptions = Readonly<{
 	createSplTokenHelper?: CreateMockSplTokenHelper;
 	runtime?: Partial<SolanaClient['runtime']>;
 	solTransfer?: Partial<MockedSolTransferHelper>;
+	stake?: Partial<MockedStakeHelper>;
 	state?: Partial<ClientState>;
 	store?: ClientStore;
 	transaction?: Partial<MockedTransactionHelper>;
@@ -244,6 +251,23 @@ function createDefaultTransactionHelper(): MockedTransactionHelper {
 	};
 }
 
+function createDefaultStakeHelper(): MockedStakeHelper {
+	return {
+		prepareStake: vi.fn<StakeHelper['prepareStake']>(async () => ({
+			commitment: 'confirmed',
+			lifetime: { blockhash: 'mock-blockhash', lastValidBlockHeight: 0n },
+			message: {} as unknown,
+			mode: 'send',
+			signer: { address: 'mock' } as unknown as TransactionSigner,
+			stakeAccount: { address: 'mock-stake-account' } as unknown as TransactionSigner<string>,
+		})),
+		sendPreparedStake: vi.fn<StakeHelper['sendPreparedStake']>(
+			async () => 'MockPreparedStakeSignature111111111111' as Signature,
+		),
+		sendStake: vi.fn<StakeHelper['sendStake']>(async () => 'MockStakeSignature1111111111111111111111' as Signature),
+	};
+}
+
 function createDefaultConnectors(connectors: readonly WalletConnector[] = []): WalletRegistry {
 	return {
 		all: connectors,
@@ -299,6 +323,11 @@ export function createMockSolanaClient(options: MockSolanaClientOptions = {}): M
 		...(options.transaction ?? {}),
 	};
 
+	const stakeHelper: MockedStakeHelper = {
+		...createDefaultStakeHelper(),
+		...(options.stake ?? {}),
+	};
+
 	const connectors = createDefaultConnectors(options.connectors);
 
 	const config = normaliseConfig(options.config);
@@ -311,6 +340,7 @@ export function createMockSolanaClient(options: MockSolanaClientOptions = {}): M
 	const helpers = {
 		solTransfer: solTransferHelper,
 		splToken: splTokenFn,
+		stake: stakeHelper,
 		transaction: transactionHelper,
 	} as MockSolanaClient['helpers'];
 
@@ -328,6 +358,7 @@ export function createMockSolanaClient(options: MockSolanaClientOptions = {}): M
 		splToken: splTokenFn,
 		SplToken: splTokenFn,
 		SplHelper: splTokenFn,
+		stake: stakeHelper,
 		transaction: transactionHelper,
 	} as MockSolanaClient;
 

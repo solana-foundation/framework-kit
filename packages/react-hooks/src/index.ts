@@ -1,5 +1,6 @@
 'use client';
 
+export type { StakeAccount } from '@solana/client';
 export { SolanaClientProvider, useSolanaClient } from './context';
 export {
 	useAccount,
@@ -12,6 +13,7 @@ export {
 	useSignatureStatus,
 	useSolTransfer,
 	useSplToken,
+	useStake,
 	useTransactionPool,
 	useWaitForSignature,
 	useWallet,

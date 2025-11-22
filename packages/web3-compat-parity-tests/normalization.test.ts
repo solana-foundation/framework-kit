@@ -12,7 +12,9 @@ withProviders('Connection normalization parity', (getCtx) => {
 		});
 		const request = context.requests.find((call) => call.method === 'getLatestBlockhash');
 		const params =
-			request && Array.isArray(request.params) ? (request.params[0] as Record<string, unknown>) : (request?.params as Record<string, unknown>);
+			request && Array.isArray(request.params)
+				? (request.params[0] as Record<string, unknown>)
+				: (request?.params as Record<string, unknown>);
 		expect(params?.commitment).toBe('processed');
 		expect(Number(params?.minContextSlot ?? 0)).toBe(12);
 		expect(params?.maxSupportedTransactionVersion).toBe(0);
@@ -28,7 +30,9 @@ withProviders('Connection normalization parity', (getCtx) => {
 		});
 		const request = context.requests.find((call) => call.method === 'sendTransaction');
 		const params = request?.params as unknown[];
-		const options = Array.isArray(params) ? (params[1] as Record<string, unknown>) : (params as Record<string, unknown>);
+		const options = Array.isArray(params)
+			? (params[1] as Record<string, unknown>)
+			: (params as Record<string, unknown>);
 		expect(options?.skipPreflight).toBe(true);
 		expect(Number(options?.maxRetries ?? 0)).toBe(3);
 		expect(options?.preflightCommitment ?? options?.commitment).toBe('processed');
@@ -47,7 +51,9 @@ withProviders('Connection normalization parity', (getCtx) => {
 				// Some clients omit the options object when using the default commitment.
 				expect((context.connection as { commitment?: unknown }).commitment ?? 'confirmed').toBe('confirmed');
 			} else {
-				expect(options?.commitment ?? (context.connection as { commitment?: unknown }).commitment).toBe('confirmed');
+				expect(options?.commitment ?? (context.connection as { commitment?: unknown }).commitment).toBe(
+					'confirmed',
+				);
 			}
 		} else {
 			expect((context.connection as { commitment?: unknown }).commitment).toBe('confirmed');

@@ -13,6 +13,7 @@ import { SignatureWatcherCard } from './components/SignatureWatcherCard.tsx';
 import { SimulateTransactionCard } from './components/SimulateTransactionCard.tsx';
 import { SolTransferForm } from './components/SolTransferForm.tsx';
 import { SplTokenPanel } from './components/SplTokenPanel.tsx';
+import { StakePanel } from './components/StakePanel.tsx';
 import { StoreInspectorCard } from './components/StoreInspectorCard.tsx';
 import { TransactionPoolPanel } from './components/TransactionPoolPanel.tsx';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs.tsx';
@@ -98,6 +99,7 @@ function DemoApp() {
 							<SolTransferForm />
 							<SendTransactionCard />
 							<SplTokenPanel />
+							<StakePanel />
 							<TransactionPoolPanel />
 						</div>
 					</TabsContent>

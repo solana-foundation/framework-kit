@@ -42,6 +42,8 @@ import {
 	type TransactionPrepared,
 	type TransactionSendOptions,
 	toAddress,
+	type UnstakeInput,
+	type UnstakeSendOptions,
 	type WalletConnector,
 	type WalletSession,
 	type WalletStatus,
@@ -221,6 +223,7 @@ export function useSolTransfer(): Readonly<{
 }
 
 type StakeSignature = UnwrapPromise<ReturnType<StakeHelper['sendStake']>>;
+type UnstakeSignature = UnwrapPromise<ReturnType<StakeHelper['sendUnstake']>>;
 
 /**
  * Convenience wrapper around the stake helper that tracks status and signature for native SOL staking.
@@ -231,10 +234,16 @@ export function useStake(validatorId: AddressLike): Readonly<{
 	getStakeAccounts(wallet: AddressLike, validatorIdFilter?: AddressLike): Promise<StakeAccount[]>;
 	helper: StakeHelper;
 	isStaking: boolean;
+	isUnstaking: boolean;
 	reset(): void;
+	resetUnstake(): void;
 	stake(config: Omit<StakeInput, 'validatorId'>, options?: StakeSendOptions): Promise<StakeSignature>;
+	unstake(config: Omit<UnstakeInput, 'validatorId'>, options?: UnstakeSendOptions): Promise<UnstakeSignature>;
 	signature: StakeSignature | null;
+	unstakeSignature: UnstakeSignature | null;
 	status: AsyncState<StakeSignature>['status'];
+	unstakeStatus: AsyncState<UnstakeSignature>['status'];
+	unstakeError: unknown;
 	validatorId: string;
 }> {
 	const client = useSolanaClient();
@@ -262,10 +271,22 @@ export function useStake(validatorId: AddressLike): Readonly<{
 		controller.getState,
 	);
 
+	const unstakeState = useSyncExternalStore<AsyncState<UnstakeSignature>>(
+		controller.subscribeUnstake,
+		controller.getUnstakeState,
+		controller.getUnstakeState,
+	);
+
 	const stake = useCallback(
 		(config: Omit<StakeInput, 'validatorId'>, options?: StakeSendOptions) =>
 			controller.stake({ ...config, validatorId: normalizedValidatorId }, options),
 		[controller, normalizedValidatorId],
+	);
+
+	const unstake = useCallback(
+		(config: Omit<UnstakeInput, 'validatorId'>, options?: UnstakeSendOptions) =>
+			controller.unstake({ ...config }, options),
+		[controller],
 	);
 
 	const getStakeAccounts = useCallback(
@@ -286,10 +307,16 @@ export function useStake(validatorId: AddressLike): Readonly<{
 		getStakeAccounts,
 		helper,
 		isStaking: state.status === 'loading',
+		isUnstaking: unstakeState.status === 'loading',
 		reset: controller.reset,
+		resetUnstake: controller.resetUnstake,
 		stake,
+		unstake,
 		signature: state.data ?? null,
+		unstakeSignature: unstakeState.data ?? null,
 		status: state.status,
+		unstakeStatus: unstakeState.status,
+		unstakeError: unstakeState.error ?? null,
 		validatorId: normalizedValidatorId,
 	};
 }

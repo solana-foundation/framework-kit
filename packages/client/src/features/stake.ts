@@ -23,7 +23,7 @@ import {
 	type TransactionSigner,
 	type TransactionVersion,
 } from '@solana/kit';
-import { getDelegateStakeInstruction, getInitializeInstruction } from '@solana-program/stake';
+import { getDeactivateInstruction, getDelegateStakeInstruction, getInitializeInstruction } from '@solana-program/stake';
 import { getCreateAccountInstruction } from '@solana-program/system';
 
 import { lamportsMath } from '../numeric/lamports';
@@ -76,6 +76,7 @@ type SignableStakeTransactionMessage = Parameters<typeof signTransactionMessageW
 
 // Stake Program constants
 const STAKE_PROGRAM_ID: Address = 'Stake11111111111111111111111111111111111111' as Address;
+const SYSVAR_CLOCK: Address = 'SysvarC1ock11111111111111111111111111111111' as Address;
 const SYSVAR_STAKE_HISTORY: Address = 'SysvarStakeHistory1111111111111111111111111' as Address;
 const UNUSED_STAKE_CONFIG_ACC: Address = 'StakeConfig11111111111111111111111111111111' as Address;
 const STAKE_STATE_LEN = 200;
@@ -95,6 +96,25 @@ export type StakeSendOptions = Readonly<{
 	maxRetries?: bigint | number;
 	minContextSlot?: Slot;
 	skipPreflight?: boolean;
+}>;
+
+export type UnstakePrepareConfig = Readonly<{
+	authority: StakeAuthority;
+	commitment?: Commitment;
+	lifetime?: BlockhashLifetime;
+	stakeAccount: Address | string;
+	transactionVersion?: TransactionVersion;
+}>;
+
+export type UnstakeSendOptions = StakeSendOptions;
+
+type PreparedUnstake = Readonly<{
+	commitment?: Commitment;
+	lifetime: BlockhashLifetime;
+	message: SignableStakeTransactionMessage;
+	mode: 'partial' | 'send';
+	plan: TransactionPlan;
+	signer: TransactionSigner<string>;
 }>;
 
 type PreparedStake = Readonly<{
@@ -139,10 +159,13 @@ function toLamportAmount(input: StakeAmount): bigint {
 }
 
 export type StakeHelper = Readonly<{
-	prepareStake(config: StakePrepareConfig): Promise<PreparedStake>;
-	sendPreparedStake(prepared: PreparedStake, options?: StakeSendOptions): Promise<ReturnType<typeof signature>>;
-	sendStake(config: StakePrepareConfig, options?: StakeSendOptions): Promise<ReturnType<typeof signature>>;
 	getStakeAccounts(wallet: Address | string, validatorId?: Address | string): Promise<StakeAccount[]>;
+	prepareStake(config: StakePrepareConfig): Promise<PreparedStake>;
+	prepareUnstake(config: UnstakePrepareConfig): Promise<PreparedUnstake>;
+	sendPreparedStake(prepared: PreparedStake, options?: StakeSendOptions): Promise<ReturnType<typeof signature>>;
+	sendPreparedUnstake(prepared: PreparedUnstake, options?: UnstakeSendOptions): Promise<ReturnType<typeof signature>>;
+	sendStake(config: StakePrepareConfig, options?: StakeSendOptions): Promise<ReturnType<typeof signature>>;
+	sendUnstake(config: UnstakePrepareConfig, options?: UnstakeSendOptions): Promise<ReturnType<typeof signature>>;
 }>;
 
 /** Creates helpers that build and submit native SOL staking transactions. */
@@ -265,6 +288,90 @@ export function createStakeHelper(runtime: SolanaClientRuntime): StakeHelper {
 		return await sendPreparedStake(prepared, options);
 	}
 
+	async function prepareUnstake(config: UnstakePrepareConfig): Promise<PreparedUnstake> {
+		const commitment = config.commitment;
+		const lifetime = await resolveLifetime(runtime, commitment, config.lifetime);
+		const { signer, mode } = resolveSigner(config.authority, commitment);
+		const stakeAccountAddress = ensureAddress(config.stakeAccount);
+
+		const deactivateIx = getDeactivateInstruction({
+			stake: stakeAccountAddress,
+			clockSysvar: SYSVAR_CLOCK,
+			stakeAuthority: signer,
+		});
+
+		const message = pipe(
+			createTransactionMessage({ version: config.transactionVersion ?? 0 }),
+			(m) => setTransactionMessageFeePayer(signer.address, m),
+			(m) => setTransactionMessageLifetimeUsingBlockhash(lifetime, m),
+			(m) => appendTransactionMessageInstructions([deactivateIx], m),
+		);
+
+		return {
+			commitment,
+			lifetime,
+			message,
+			mode,
+			signer,
+			plan: singleTransactionPlan(message),
+		};
+	}
+
+	async function sendPreparedUnstake(
+		prepared: PreparedUnstake,
+		options: UnstakeSendOptions = {},
+	): Promise<ReturnType<typeof signature>> {
+		if (prepared.mode === 'send' && isTransactionSendingSigner(prepared.signer)) {
+			const signatureBytes = await signAndSendTransactionMessageWithSigners(prepared.message, {
+				abortSignal: options.abortSignal,
+				minContextSlot: options.minContextSlot,
+			});
+			const base58Decoder = getBase58Decoder();
+			return signature(base58Decoder.decode(signatureBytes));
+		}
+
+		const commitment = options.commitment ?? prepared.commitment;
+		const maxRetries =
+			options.maxRetries === undefined
+				? undefined
+				: typeof options.maxRetries === 'bigint'
+					? options.maxRetries
+					: BigInt(options.maxRetries);
+		let latestSignature: ReturnType<typeof signature> | null = null;
+		const executor = createTransactionPlanExecutor({
+			async executeTransactionMessage(message, config = {}) {
+				const signed = await signTransactionMessageWithSigners(message as SignableStakeTransactionMessage, {
+					abortSignal: config.abortSignal ?? options.abortSignal,
+					minContextSlot: options.minContextSlot,
+				});
+				const wire = getBase64EncodedWireTransaction(signed);
+				const response = await runtime.rpc
+					.sendTransaction(wire, {
+						encoding: 'base64',
+						maxRetries,
+						preflightCommitment: commitment,
+						skipPreflight: options.skipPreflight,
+					})
+					.send({ abortSignal: config.abortSignal ?? options.abortSignal });
+				latestSignature = signature(response);
+				return { transaction: signed };
+			},
+		});
+		await executor(prepared.plan);
+		if (!latestSignature) {
+			throw new Error('Failed to resolve transaction signature.');
+		}
+		return latestSignature;
+	}
+
+	async function sendUnstake(
+		config: UnstakePrepareConfig,
+		options?: UnstakeSendOptions,
+	): Promise<ReturnType<typeof signature>> {
+		const prepared = await prepareUnstake(config);
+		return await sendPreparedUnstake(prepared, options);
+	}
+
 	async function getStakeAccounts(wallet: Address | string, validatorId?: Address | string): Promise<StakeAccount[]> {
 		const walletAddress = typeof wallet === 'string' ? wallet : String(wallet);
 
@@ -299,9 +406,12 @@ export function createStakeHelper(runtime: SolanaClientRuntime): StakeHelper {
 	}
 
 	return {
-		prepareStake,
-		sendPreparedStake,
-		sendStake,
 		getStakeAccounts,
+		prepareStake,
+		prepareUnstake,
+		sendPreparedStake,
+		sendPreparedUnstake,
+		sendStake,
+		sendUnstake,
 	};
 }

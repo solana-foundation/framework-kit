@@ -14,11 +14,17 @@ export function StakePanel() {
 	const session = useWalletSession();
 	const {
 		stake,
+		unstake,
 		signature,
+		unstakeSignature,
 		status,
+		unstakeStatus,
 		error,
+		unstakeError,
 		isStaking,
+		isUnstaking,
 		reset,
+		resetUnstake,
 		getStakeAccounts,
 		validatorId: currentValidatorId,
 	} = useStake(validatorId);
@@ -62,6 +68,22 @@ export function StakePanel() {
 			console.log('Stake transaction signature:', sig);
 		} catch (err) {
 			console.error('Stake failed:', err);
+		}
+	};
+
+	const handleUnstake = async (stakeAccount: string) => {
+		try {
+			const sig = await unstake({
+				stakeAccount,
+			});
+
+			console.log('Unstake transaction signature:', sig);
+
+			setTimeout(() => {
+				handleFetchStakeAccounts();
+			}, 3000);
+		} catch (err) {
+			console.error('Unstake failed:', err);
 		}
 	};
 
@@ -153,16 +175,54 @@ export function StakePanel() {
 					</div>
 				)}
 
+				{unstakeStatus === 'success' && unstakeSignature && (
+					<div className="p-3 bg-green-50 dark:bg-green-950 rounded-md">
+						<p className="text-sm font-medium text-green-900 dark:text-green-100">Unstake Successful!</p>
+						<p className="text-xs text-green-700 dark:text-green-300 font-mono mt-1 break-all">
+							Signature: {unstakeSignature}
+						</p>
+						<Button onClick={resetUnstake} variant="ghost" size="sm" className="mt-2">
+							Clear
+						</Button>
+					</div>
+				)}
+
+				{unstakeStatus === 'error' && unstakeError && (
+					<div className="p-3 bg-red-50 dark:bg-red-950 rounded-md">
+						<p className="text-sm font-medium text-red-900 dark:text-red-100">Unstake Error</p>
+						<p className="text-xs text-red-700 dark:text-red-300 mt-1">
+							{String(unstakeError instanceof Error ? unstakeError.message : unstakeError)}
+						</p>
+					</div>
+				)}
+
+				{unstakeStatus === 'loading' && (
+					<div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-md">
+						<p className="text-sm text-blue-900 dark:text-blue-100">Processing unstake transaction...</p>
+					</div>
+				)}
+
 				<div className="text-xs text-muted-foreground space-y-1">
 					<p>
-						<strong>Status:</strong> {status}
+						<strong>Stake Status:</strong> {status}
+					</p>
+					<p>
+						<strong>Unstake Status:</strong> {unstakeStatus}
 					</p>
 					<p>
 						<strong>Is Staking:</strong> {isStaking ? 'Yes' : 'No'}
 					</p>
+					<p>
+						<strong>Is Unstaking:</strong> {isUnstaking ? 'Yes' : 'No'}
+					</p>
 					{signature && (
 						<p>
-							<strong>Last Signature:</strong> {signature.slice(0, 20)}...
+							<strong>Last Stake Signature:</strong> {signature.slice(0, 20)}...
+						</p>
+					)}
+					{unstakeSignature && (
+						<p>
+							<strong>Last Unstake Signature:</strong> {unstakeSignature.slice(0, 20)}...
 						</p>
 					)}
 				</div>
@@ -181,7 +241,7 @@ export function StakePanel() {
 						<div className="mt-4 space-y-2">
 							<p className="text-sm font-medium">Found {stakeAccounts.length} stake account(s):</p>
 							{stakeAccounts.map((acc) => (
-								<div key={acc.pubkey} className="p-2 bg-muted rounded text-xs space-y-1">
+								<div key={acc.pubkey} className="p-3 bg-muted rounded text-xs space-y-2">
 									<p>
 										<strong>Account:</strong> {acc.pubkey.slice(0, 20)}...
 									</p>
@@ -197,6 +257,15 @@ export function StakePanel() {
 										<strong>Voter:</strong>{' '}
 										{acc.account.data.parsed.info.stake?.delegation?.voter?.slice(0, 20)}...
 									</p>
+									<Button
+										onClick={() => handleUnstake(acc.pubkey)}
+										disabled={isUnstaking}
+										variant="destructive"
+										size="sm"
+										className="w-full mt-2"
+									>
+										{isUnstaking ? 'Unstaking...' : 'Unstake'}
+									</Button>
 								</div>
 							))}
 						</div>

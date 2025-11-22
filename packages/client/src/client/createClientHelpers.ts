@@ -60,8 +60,11 @@ function wrapStakeHelper(helper: StakeHelper, getFallback: () => Commitment): St
 	return {
 		getStakeAccounts: helper.getStakeAccounts,
 		prepareStake: (config) => helper.prepareStake(withDefaultCommitment(config, getFallback)),
+		prepareUnstake: (config) => helper.prepareUnstake(withDefaultCommitment(config, getFallback)),
 		sendPreparedStake: helper.sendPreparedStake,
+		sendPreparedUnstake: helper.sendPreparedUnstake,
 		sendStake: (config, options) => helper.sendStake(withDefaultCommitment(config, getFallback), options),
+		sendUnstake: (config, options) => helper.sendUnstake(withDefaultCommitment(config, getFallback), options),
 	};
 }
 

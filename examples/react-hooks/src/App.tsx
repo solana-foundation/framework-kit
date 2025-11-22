@@ -23,8 +23,8 @@ const LAST_CONNECTOR_STORAGE_KEY = 'solana:last-connector';
 
 const DEFAULT_CLIENT_CONFIG: SolanaClientConfig = {
 	commitment: 'confirmed',
-	endpoint: 'https://mainnet.helius-rpc.com/?api-key=22a5a327-77fd-4021-b6d3-2d1ccb26fb18',
-	websocketEndpoint: 'wss://mainnet.helius-rpc.com/?api-key=22a5a327-77fd-4021-b6d3-2d1ccb26fb18',
+	endpoint: 'https://api.devnet.solana.com',
+	websocketEndpoint: 'wss://api.devnet.solana.com',
 };
 
 export default function App() {

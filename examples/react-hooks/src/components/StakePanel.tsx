@@ -1,11 +1,14 @@
+import { LAMPORTS_PER_SOL } from '@solana/client';
 import { type StakeAccount, useStake, useWallet, useWalletSession } from '@solana/react-hooks';
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
 
+const DEVNET_VALIDATOR_ID = 'i7NyKBMJCA9bLM2nsGyAGCKHECuR2L5eh4GqFciuwNT'; // Validator ID get from https://solana.com/docs/rpc/http/getvoteaccounts
+
 export function StakePanel() {
-	const [validatorId, setValidatorId] = useState('he1iusunGwqrNtafDtLdhsUQDFvo13z9sUa36PauBtk');
+	const [validatorId, setValidatorId] = useState(DEVNET_VALIDATOR_ID);
 	const [amount, setAmount] = useState('1');
 	const [stakeAccounts, setStakeAccounts] = useState<StakeAccount[]>([]);
 	const [loadingAccounts, setLoadingAccounts] = useState(false);
@@ -39,7 +42,7 @@ export function StakePanel() {
 		if (!session) return;
 		setLoadingAccounts(true);
 		try {
-			const accounts = await getStakeAccounts(session.account.address, validatorId);
+			const accounts = await getStakeAccounts(session.account?.address, validatorId);
 			setStakeAccounts(accounts);
 		} catch (err) {
 			console.error('Failed to fetch stake accounts:', err);
@@ -65,13 +68,11 @@ export function StakePanel() {
 
 	const handleStake = async () => {
 		try {
-			const lamports = BigInt(Math.floor(parseFloat(amount) * 1_000_000_000));
+			const lamports = BigInt(Math.floor(parseFloat(amount) * Number(LAMPORTS_PER_SOL)));
 
-			const sig = await stake({
+			await stake({
 				amount: lamports,
 			});
-
-			console.log('Stake transaction signature:', sig);
 		} catch (err) {
 			console.error('Stake failed:', err);
 		}
@@ -79,11 +80,9 @@ export function StakePanel() {
 
 	const handleUnstake = async (stakeAccount: string) => {
 		try {
-			const sig = await unstake({
+			await unstake({
 				stakeAccount,
 			});
-
-			console.log('Unstake transaction signature:', sig);
 
 			setTimeout(() => {
 				handleFetchStakeAccounts();
@@ -95,13 +94,11 @@ export function StakePanel() {
 
 	const handleWithdraw = async (stakeAccount: string, amount: bigint, destination: string) => {
 		try {
-			const sig = await withdraw({
+			await withdraw({
 				stakeAccount,
 				destination,
 				amount,
 			});
-
-			console.log('Withdraw transaction signature:', sig);
 
 			setTimeout(() => {
 				handleFetchStakeAccounts();
@@ -290,23 +287,25 @@ export function StakePanel() {
 							<p className="text-sm font-medium">Found {stakeAccounts.length} stake account(s):</p>
 							{stakeAccounts.map((acc) => {
 								const stakeAmount =
-									Number(acc.account.data.parsed.info.stake?.delegation?.stake || 0) / 1_000_000_000;
+									Number(acc?.account?.data?.parsed?.info?.stake?.delegation?.stake || 0) /
+									Number(LAMPORTS_PER_SOL);
 								const deactivationEpoch =
-									acc.account.data.parsed.info.stake?.delegation?.deactivationEpoch ||
+									acc?.account?.data?.parsed?.info?.stake?.delegation?.deactivationEpoch ||
 									'18446744073709551615';
 								const isDeactivated = deactivationEpoch !== '18446744073709551615';
 
 								return (
-									<div key={acc.pubkey} className="p-3 bg-muted rounded text-xs space-y-2">
+									<div key={acc?.pubkey} className="p-3 bg-muted rounded text-xs space-y-2">
 										<p>
-											<strong>Account:</strong> {acc.pubkey.slice(0, 20)}...
+											<strong>Account:</strong> {acc?.pubkey.slice(0, 20)}...
 										</p>
 										<p>
 											<strong>Stake:</strong> {stakeAmount.toFixed(4)} SOL
 										</p>
 										<p>
 											<strong>Voter:</strong>{' '}
-											{acc.account.data.parsed.info.stake?.delegation?.voter?.slice(0, 20)}...
+											{acc?.account?.data?.parsed?.info?.stake?.delegation?.voter?.slice(0, 20)}
+											...
 										</p>
 										<p>
 											<strong>Status:</strong>{' '}
@@ -316,7 +315,7 @@ export function StakePanel() {
 										</p>
 										<div className="flex gap-2">
 											<Button
-												onClick={() => handleUnstake(acc.pubkey)}
+												onClick={() => handleUnstake(acc?.pubkey)}
 												disabled={isUnstaking || isDeactivated}
 												variant="destructive"
 												size="sm"
@@ -327,9 +326,9 @@ export function StakePanel() {
 											<Button
 												onClick={() =>
 													handleWithdraw(
-														acc.pubkey,
-														acc.account.lamports,
-														session?.account.address || '',
+														acc?.pubkey,
+														acc?.account?.lamports,
+														session?.account?.address || '',
 													)
 												}
 												disabled={isWithdrawing || !isDeactivated}

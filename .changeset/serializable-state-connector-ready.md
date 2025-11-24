@@ -2,4 +2,4 @@
 "@solana/client": patch
 ---
 
-Add SerializableSolanaState helpers for hydration/persistence and include an optional ready flag on WalletConnector metadata (set for Wallet Standard connectors).
+Add SerializableSolanaState helpers for hydration/persistence and include connector metadata tweaks: optional ready flag plus stable Wallet Standard connector ids/kind.

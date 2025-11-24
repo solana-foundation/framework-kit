@@ -24,6 +24,7 @@ export type WalletStandardConnectorMetadata = Readonly<{
 	defaultChain?: IdentifierString;
 	icon?: string;
 	id?: string;
+	kind?: string;
 	name?: string;
 }>;
 
@@ -37,10 +38,11 @@ const transactionEncoder = getTransactionEncoder();
  * Derives a connector identifier from a wallet instance.
  *
  * @param wallet - Wallet whose name will be transformed into an identifier.
- * @returns Kebab-case identifier string derived from the wallet name.
+ * @returns Namespaced identifier string derived from the wallet name.
  */
 function deriveConnectorId(wallet: Wallet): string {
-	return wallet.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+	const kebab = wallet.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+	return `wallet-standard:${kebab}`;
 }
 
 /**
@@ -125,6 +127,7 @@ export function createWalletStandardConnector(
 		canAutoConnect: options.canAutoConnect ?? Boolean(wallet.features[StandardConnect]),
 		icon: options.icon ?? wallet.icon,
 		id: options.id ?? deriveConnectorId(wallet),
+		kind: options.kind ?? 'wallet-standard',
 		name: options.name ?? wallet.name,
 		ready: typeof window !== 'undefined',
 	};

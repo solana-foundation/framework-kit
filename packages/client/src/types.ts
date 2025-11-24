@@ -27,6 +27,7 @@ export type WalletConnectorMetadata = Readonly<{
 	canAutoConnect?: boolean;
 	icon?: string;
 	id: string;
+	kind?: string;
 	name: string;
 	ready?: boolean;
 }>;

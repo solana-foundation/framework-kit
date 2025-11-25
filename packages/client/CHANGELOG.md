@@ -1,5 +1,11 @@
 # @solana/client
 
+## 0.2.1
+
+### Patch Changes
+
+- [#43](https://github.com/solana-foundation/framework-kit/pull/43) [`081cf6d`](https://github.com/solana-foundation/framework-kit/commit/081cf6d7f374f235222d5d18ac272c311b992d13) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Wire serializable state persistence into SolanaProvider for shared SSR hydration and auto-connect.
+
 ## 0.2.0
 
 ### Minor Changes

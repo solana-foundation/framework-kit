@@ -1,5 +1,22 @@
 # @solana/react-hooks
 
+## 1.0.0
+
+### Major Changes
+
+- [#43](https://github.com/solana-foundation/framework-kit/pull/43) [`88390a3`](https://github.com/solana-foundation/framework-kit/commit/88390a3cd7e9ef645acf7ac3d89d7caf0f59eba6) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Remove the Wallet Standard hook exports in favor of connector-driven flows. `useWalletConnection` prefers client-registered connectors and only falls back to discovery when none are configured; signing is done via connector-provided session methods instead of Wallet Standard packages.
+
+### Minor Changes
+
+- [#43](https://github.com/solana-foundation/framework-kit/pull/43) [`f602b64`](https://github.com/solana-foundation/framework-kit/commit/f602b6477250b85f9ff9ada2880a3ff49126c5f4) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Default wallet connection hooks to client-configured connectors and update examples to use connector factories.
+
+### Patch Changes
+
+- [#43](https://github.com/solana-foundation/framework-kit/pull/43) [`081cf6d`](https://github.com/solana-foundation/framework-kit/commit/081cf6d7f374f235222d5d18ac272c311b992d13) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Wire serializable state persistence into SolanaProvider for shared SSR hydration and auto-connect.
+
+- Updated dependencies [[`081cf6d`](https://github.com/solana-foundation/framework-kit/commit/081cf6d7f374f235222d5d18ac272c311b992d13)]:
+  - @solana/client@0.2.1
+
 ## 0.2.5
 
 ### Patch Changes

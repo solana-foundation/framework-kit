@@ -1,5 +1,12 @@
 # @solana/web3-compat
 
+## 0.0.4
+
+### Patch Changes
+
+- Updated dependencies [[`081cf6d`](https://github.com/solana-foundation/framework-kit/commit/081cf6d7f374f235222d5d18ac272c311b992d13)]:
+  - @solana/client@0.2.1
+
 ## 0.0.3
 
 ### Patch Changes

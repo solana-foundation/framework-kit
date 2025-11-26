@@ -1,5 +1,16 @@
 # @solana/react-hooks
 
+## 1.0.0-rc.0
+
+### Major Changes
+
+- Release candidate for v1.0: simplified client config (cluster/rpc/websocket) and React provider defaults, plus streamlined Next.js example demonstrating wallet connect, SOL transfer, and memo send with @solana/react-hooks.
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @solana/client@1.0.0-rc.0
+
 ## 0.5.1
 
 ### Patch Changes

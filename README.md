@@ -6,7 +6,7 @@ Framework for Solana dApps: evolving multi-framework client core (React-first to
 
 - [`@solana/client`](packages/client/README.md) – headless Solana client with transaction helpers and wallet orchestration.
 - [`@solana/react-hooks`](packages/react-hooks/README.md) – React bindings, providers, and UI helpers powered by the client.
-- [`@solana/example-react-hooks`](examples/react-hooks/README.md) – Vite/Tailwind demo showcasing the hooks in action.
+- [`@solana/example-vite-react`](examples/vite-react/README.md) – Vite/Tailwind demo showcasing the hooks in action.
 
 ## React quick start
 

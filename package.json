@@ -6,7 +6,7 @@
 	"packageManager": "pnpm@10.20.0",
 	"scripts": {
 		"dev": "turbo run dev --parallel",
-		"dev:react": "pnpm --filter @solana/example-react-hooks dev",
+		"dev:react": "pnpm --filter @solana/example-vite-react dev",
 		"build": "turbo run build",
 		"format": "turbo run format",
 		"lint": "turbo run lint",

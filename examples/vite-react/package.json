@@ -1,5 +1,5 @@
 {
-	"name": "@solana/example-react-hooks",
+	"name": "@solana/example-vite-react",
 	"private": true,
 	"version": "0.0.12",
 	"type": "module",

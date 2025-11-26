@@ -1,4 +1,4 @@
-# @solana/example-react-hooks
+# @solana/example-vite-react
 
 Demonstrates how to build a React interface with the experimental `@solana/react-hooks` package.
 
@@ -23,7 +23,7 @@ const client = createClient({
 export function App() {
 	return (
 		<SolanaProvider client={client} query={{ suspense: true }}>
-			{/* components under examples/react-hooks/src/components */}
+            {/* components under examples/vite-react/src/components */}
 		</SolanaProvider>
 	);
 }
@@ -86,7 +86,7 @@ The hook takes care of building instructions, simulating to determine compute un
 
 ```sh
 pnpm install
-pnpm --filter @solana/example-react-hooks dev
+pnpm --filter @solana/example-vite-react dev
 ```
 
 The app runs against Devnet by default. Press <kbd>o</kbd> + <kbd>Enter</kbd> in the terminal to open a browser window once Vite starts.
@@ -94,7 +94,7 @@ The app runs against Devnet by default. Press <kbd>o</kbd> + <kbd>Enter</kbd> in
 ## Building
 
 ```sh
-pnpm --filter @solana/example-react-hooks build
+pnpm --filter @solana/example-vite-react build
 ```
 
 The production bundle is emitted to `dist/`.

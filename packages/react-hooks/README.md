@@ -422,7 +422,7 @@ function SimulationLogs({ transaction }) {
   `useProgramAccounts(address, { swr: { revalidateOnFocus: false } })`) and expose typed parameter
   and return aliases across all hooks.
 - Type helpers: use `UseHookNameParameters` / `UseHookNameReturnType` for public hooks.
-- Looking for examples? See `examples/react-hooks` for a ready-to-run, tabbed playground that wires
+- Looking for examples? See `examples/vite-react` for a ready-to-run, tabbed playground that wires
   the provider, hooks, and mock UIs together across wallet/state, transaction, and query demos.
 
 ## Scripts

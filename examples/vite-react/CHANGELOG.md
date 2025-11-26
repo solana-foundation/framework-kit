@@ -1,4 +1,4 @@
-# @solana/example-react-hooks
+# @solana/example-vite-react
 
 ## 0.0.12
 

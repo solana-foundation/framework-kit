@@ -1,7 +1,17 @@
 'use client';
 
-import type { SerializableSolanaState, SolanaClient, SolanaClientConfig } from '@solana/client';
-import { deserializeSolanaState, serializeSolanaState, subscribeSolanaState } from '@solana/client';
+import type {
+	CreateDefaultClientOptions,
+	SerializableSolanaState,
+	SolanaClient,
+	SolanaClientConfig,
+} from '@solana/client';
+import {
+	deserializeSolanaState,
+	resolveClientConfig,
+	serializeSolanaState,
+	subscribeSolanaState,
+} from '@solana/client';
 import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import type { SWRConfiguration } from 'swr';
@@ -37,7 +47,7 @@ type PersistedSerializableState = Readonly<{
 type SolanaProviderProps = Readonly<{
 	children: ReactNode;
 	client?: SolanaClient;
-	config?: SolanaClientConfig;
+	config?: SolanaClientConfig | CreateDefaultClientOptions;
 	query?: QueryLayerConfig | false;
 	walletPersistence?: WalletPersistenceConfig | false;
 }>;
@@ -57,10 +67,10 @@ export function SolanaProvider({ children, client, config, query, walletPersiste
 	const persistedState = persistenceConfig
 		? readPersistedState(storage, storageKey)
 		: { legacyConnectorId: null, state: null };
-	const clientConfig =
-		config && persistenceConfig
-			? { ...config, initialState: config.initialState ?? persistedState.state ?? undefined }
-			: config;
+	const normalizedConfig = config ? resolveClientConfig(config) : resolveClientConfig();
+	const clientConfig = persistenceConfig
+		? { ...normalizedConfig, initialState: normalizedConfig.initialState ?? persistedState.state ?? undefined }
+		: normalizedConfig;
 
 	const content = shouldIncludeQueryLayer ? (
 		<SolanaQueryProvider

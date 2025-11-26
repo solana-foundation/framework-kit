@@ -1,4 +1,10 @@
-import { createClient, type SolanaClient, type SolanaClientConfig } from '@solana/client';
+import {
+	type CreateDefaultClientOptions,
+	createClient,
+	resolveClientConfig,
+	type SolanaClient,
+	type SolanaClientConfig,
+} from '@solana/client';
 import type { ReactNode } from 'react';
 import { createContext, useContext, useEffect, useMemo } from 'react';
 
@@ -7,8 +13,12 @@ const SolanaClientContext = createContext<SolanaClient | null>(null);
 type ProviderProps = Readonly<{
 	children: ReactNode;
 	client?: SolanaClient;
-	config?: SolanaClientConfig;
+	config?: SolanaClientConfig | CreateDefaultClientOptions;
 }>;
+
+function normalizeConfig(config?: SolanaClientConfig | CreateDefaultClientOptions): SolanaClientConfig {
+	return resolveClientConfig(config ?? {});
+}
 
 /**
  * Provides a {@link SolanaClient} instance to descendant components.
@@ -17,15 +27,13 @@ type ProviderProps = Readonly<{
  * construct an instance via {@link createClient}.
  */
 export function SolanaClientProvider({ children, client: providedClient, config }: ProviderProps) {
+	const normalizedConfig = useMemo(() => normalizeConfig(config), [config]);
 	const client = useMemo(() => {
 		if (providedClient) {
 			return providedClient;
 		}
-		if (!config) {
-			throw new Error('SolanaClientProvider requires either a `client` or `config` prop.');
-		}
-		return createClient(config);
-	}, [config, providedClient]);
+		return createClient(normalizedConfig);
+	}, [normalizedConfig, providedClient]);
 
 	useEffect(() => {
 		if (providedClient) {

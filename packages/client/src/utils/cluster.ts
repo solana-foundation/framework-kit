@@ -8,6 +8,18 @@ type ResolvedCluster = Readonly<{
 	websocketEndpoint: ClusterUrl;
 }>;
 
+function ensureHttpProtocol(endpoint: string): ClusterUrl {
+	if (
+		endpoint.startsWith('http://') ||
+		endpoint.startsWith('https://') ||
+		endpoint.startsWith('ws://') ||
+		endpoint.startsWith('wss://')
+	) {
+		return endpoint as ClusterUrl;
+	}
+	return `https://${endpoint}` as ClusterUrl;
+}
+
 const MONIKER_ENDPOINTS: Record<ClusterMoniker, Readonly<{ endpoint: ClusterUrl; websocketEndpoint: ClusterUrl }>> = {
 	devnet: {
 		endpoint: 'https://api.devnet.solana.com',
@@ -42,6 +54,9 @@ function inferWebsocketEndpoint(endpoint: ClusterUrl): ClusterUrl {
 	if (endpoint.startsWith('http://')) {
 		return endpoint.replace('http://', 'ws://') as ClusterUrl;
 	}
+	if (endpoint.startsWith('ws://') || endpoint.startsWith('wss://')) {
+		return endpoint;
+	}
 	return endpoint;
 }
 
@@ -50,10 +65,11 @@ export function resolveCluster(
 ): ResolvedCluster {
 	const moniker = config.moniker ?? (config.endpoint ? 'custom' : 'devnet');
 	const mapped = moniker === 'custom' ? undefined : MONIKER_ENDPOINTS[moniker];
-	const endpoint = (config.endpoint ?? mapped?.endpoint) as ClusterUrl;
-	const websocketEndpoint = (config.websocketEndpoint ??
-		mapped?.websocketEndpoint ??
-		inferWebsocketEndpoint(endpoint)) as ClusterUrl;
+	const endpoint = ensureHttpProtocol((config.endpoint ?? mapped?.endpoint) as ClusterUrl);
+	const rawWebsocket = config.websocketEndpoint ? ensureHttpProtocol(config.websocketEndpoint) : undefined;
+	const websocketEndpoint = inferWebsocketEndpoint(
+		(rawWebsocket ?? mapped?.websocketEndpoint ?? endpoint) as ClusterUrl,
+	) as ClusterUrl;
 	return {
 		endpoint,
 		moniker,

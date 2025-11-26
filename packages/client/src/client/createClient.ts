@@ -3,6 +3,7 @@ import { createSolanaRpcClient } from '../rpc/createSolanaRpcClient';
 import { applySerializableState } from '../serialization/state';
 import type { ClientStore, SolanaClient, SolanaClientConfig, SolanaClientRuntime } from '../types';
 import { now } from '../utils';
+import { resolveCluster } from '../utils/cluster';
 import { createWalletRegistry } from '../wallet/registry';
 import { createActions } from './actions';
 import { createClientHelpers } from './createClientHelpers';
@@ -17,20 +18,24 @@ import { createWatchers } from './watchers';
  */
 export function createClient(config: SolanaClientConfig): SolanaClient {
 	const hydratedConfig = config.initialState ? applySerializableState(config, config.initialState) : config;
+	const resolvedCluster = resolveCluster({
+		endpoint: hydratedConfig.rpc ?? hydratedConfig.endpoint,
+		moniker: hydratedConfig.cluster,
+		websocketEndpoint: hydratedConfig.websocket ?? hydratedConfig.websocketEndpoint,
+	});
 	const commitment = hydratedConfig.commitment ?? 'confirmed';
-	const websocketEndpoint = hydratedConfig.websocketEndpoint ?? hydratedConfig.endpoint;
 	const initialState = createInitialClientState({
 		commitment,
-		endpoint: hydratedConfig.endpoint,
-		websocketEndpoint,
+		endpoint: resolvedCluster.endpoint,
+		websocketEndpoint: resolvedCluster.websocketEndpoint,
 	});
 	const store: ClientStore = config.createStore ? config.createStore(initialState) : createClientStore(initialState);
 	const rpcClient =
 		hydratedConfig.rpcClient ??
 		createSolanaRpcClient({
 			commitment,
-			endpoint: hydratedConfig.endpoint,
-			websocketEndpoint,
+			endpoint: resolvedCluster.endpoint,
+			websocketEndpoint: resolvedCluster.websocketEndpoint,
 		});
 	const runtime: SolanaClientRuntime = {
 		rpc: rpcClient.rpc,
@@ -49,13 +54,18 @@ export function createClient(config: SolanaClientConfig): SolanaClient {
 		},
 		lastUpdatedAt: now(),
 	}));
-	actions.setCluster(hydratedConfig.endpoint, { commitment, websocketEndpoint }).catch((error) =>
-		logger({
-			data: formatError(error),
-			level: 'error',
-			message: 'initial cluster setup failed',
-		}),
-	);
+	actions
+		.setCluster(resolvedCluster.endpoint, {
+			commitment,
+			websocketEndpoint: resolvedCluster.websocketEndpoint,
+		})
+		.catch((error) =>
+			logger({
+				data: formatError(error),
+				level: 'error',
+				message: 'initial cluster setup failed',
+			}),
+		);
 	/**
 	 * Resets the client's store back to its initial state.
 	 *

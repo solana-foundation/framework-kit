@@ -10,6 +10,12 @@ export {
 export { createClient } from './client/createClient';
 export { createClientStore, createDefaultClientStore, createInitialClientState } from './client/createClientStore';
 export {
+	type CreateDefaultClientOptions,
+	createDefaultClient,
+	defaultWalletConnectors,
+	resolveClientConfig,
+} from './client/defaultClient';
+export {
 	createSolTransferController,
 	type SolTransferController,
 	type SolTransferControllerConfig,

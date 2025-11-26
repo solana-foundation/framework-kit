@@ -15,6 +15,7 @@ import type { SplTokenHelper, SplTokenHelperConfig } from './features/spl';
 import type { TransactionHelper } from './features/transactions';
 import type { SolanaRpcClient } from './rpc/createSolanaRpcClient';
 import type { PrepareTransactionMessage, PrepareTransactionOptions } from './transactions/prepareTransaction';
+import type { ClusterMoniker } from './utils/cluster';
 
 type SolanaRpcInstance = ReturnType<typeof import('@solana/kit')['createSolanaRpc']>;
 type SolanaSubscriptionsInstance = ReturnType<typeof import('@solana/kit')['createSolanaRpcSubscriptions']>;
@@ -160,20 +161,23 @@ export type ClientStore = StoreApi<ClientState>;
 export type CreateStoreFn = (state: ClientState) => ClientStore;
 
 export type SolanaClientConfig = Readonly<{
+	cluster?: ClusterMoniker;
 	commitment?: Commitment;
 	createStore?: CreateStoreFn;
-	endpoint: ClusterUrl;
+	endpoint?: ClusterUrl;
 	initialState?: SerializableSolanaState;
 	logger?: ClientLogger;
+	rpc?: ClusterUrl;
 	rpcClient?: SolanaRpcClient;
 	walletConnectors?: readonly WalletConnector[];
+	websocket?: ClusterUrl;
 	websocketEndpoint?: ClusterUrl;
 }>;
 
 export type SerializableSolanaState = Readonly<{
 	autoconnect?: boolean;
 	commitment?: Commitment;
-	endpoint: ClusterUrl;
+	endpoint?: ClusterUrl;
 	lastConnectorId?: string | null;
 	lastPublicKey?: string | null;
 	version: number;

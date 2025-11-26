@@ -1,0 +1,32 @@
+{
+	"name": "@solana/example-nextjs",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"scripts": {
+		"dev": "next dev",
+		"build": "next build",
+		"start": "next start",
+		"lint": "biome check app",
+		"format": "biome check --write app",
+		"test:typecheck": "tsc --noEmit",
+		"typecheck": "pnpm test:typecheck"
+	},
+	"dependencies": {
+		"@solana/client": "workspace:*",
+		"@solana/kit": "^5.0.0",
+		"@solana/react-hooks": "workspace:*",
+		"next": "^16.0.4",
+		"react": "^19.0.0",
+		"react-dom": "^19.0.0"
+	},
+	"devDependencies": {
+		"@tailwindcss/postcss": "^4.1.17",
+		"@types/node": "^22.9.4",
+		"@types/react": "^19.0.0",
+		"@types/react-dom": "^19.0.0",
+		"postcss": "^8.4.47",
+		"tailwindcss": "^4.1.17",
+		"typescript": "^5.6.3"
+	}
+}

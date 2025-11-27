@@ -42,6 +42,15 @@ export type UseLatestBlockhashReturnType = SolanaQueryResult<LatestBlockhashResp
 		lastValidBlockHeight: bigint | null;
 	}>;
 
+/**
+ * Fetch the current cluster blockhash and keep it warm with a configurable polling interval.
+ * Falls back to the client's active commitment when one is not provided.
+ *
+ * @example
+ * ```ts
+ * const { blockhash, lastValidBlockHeight } = useLatestBlockhash({ refreshInterval: 10_000 });
+ * ```
+ */
 export function useLatestBlockhash(options: UseLatestBlockhashParameters = {}): UseLatestBlockhashReturnType {
 	const {
 		commitment,
@@ -94,6 +103,15 @@ export type UseProgramAccountsReturnType = SolanaQueryResult<ProgramAccountsResp
 		accounts: ProgramAccountsResponse;
 	}>;
 
+/**
+ * Fetch accounts owned by a program, keyed by the program address. The query is disabled until a
+ * program address is provided, and respects both explicit and client default commitments.
+ *
+ * @example
+ * ```ts
+ * const programAccounts = useProgramAccounts(programId, { config: { dataSlice: { offset: 0, length: 0 } } });
+ * ```
+ */
 export function useProgramAccounts(
 	programAddress?: AddressLike,
 	options?: UseProgramAccountsParameters,
@@ -147,6 +165,16 @@ export type UseSimulateTransactionReturnType = SolanaQueryResult<SimulateTransac
 		logs: readonly string[];
 	}>;
 
+/**
+ * Simulate a transaction or wire payload and return simulation logs/results. Disabled until a
+ * transaction payload is provided; uses client commitment when not specified in options.
+ *
+ * @example
+ * ```ts
+ * const simulation = useSimulateTransaction(base64Wire, { refreshInterval: 0 });
+ * console.log(simulation.logs);
+ * ```
+ */
 export function useSimulateTransaction(
 	transaction?: SimulationInput | null,
 	options?: UseSimulateTransactionParameters,

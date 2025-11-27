@@ -28,6 +28,23 @@ export type SolanaQueryResult<Data> = Readonly<{
 	status: QueryStatus;
 }>;
 
+/**
+ * Low-level RPC query helper that scopes SWR keys to the active cluster and exposes a Solana-friendly
+ * status shape. Prefer this when you need custom fetch logic beyond the built-in hooks.
+ *
+ * @param scope - Namespace label for the query key (for debugging and cache clarity).
+ * @param args - Additional key params that uniquely identify the query (e.g. signature, address).
+ * @param fetcher - Async function that receives the current {@link SolanaClient} and returns data.
+ * @param options - Optional flags to disable the query or pass through SWR configuration.
+ * @example
+ * ```ts
+ * const slotQuery = useSolanaRpcQuery(
+ *   'slot',
+ *   ['slot'],
+ *   (client) => client.runtime.rpc.getLatestBlockhash().send().then((r) => r.context.slot),
+ * );
+ * ```
+ */
 export function useSolanaRpcQuery<Data>(
 	scope: string,
 	args: readonly unknown[],

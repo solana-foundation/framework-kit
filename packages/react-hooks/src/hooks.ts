@@ -141,6 +141,12 @@ function useSuspenseFetcher(
 
 /**
  * Read the full cluster state managed by the client store.
+ *
+ * @example
+ * ```ts
+ * const cluster = useClusterState();
+ * console.log(cluster.endpoint, cluster.status);
+ * ```
  */
 export function useClusterState(): ClusterState {
 	const selector = useMemo(createClusterSelector, []);
@@ -148,7 +154,13 @@ export function useClusterState(): ClusterState {
 }
 
 /**
- * Read the current cluster connection status.
+ * Read just the cluster connection status slice (connecting/ready/error).
+ *
+ * @example
+ * ```ts
+ * const status = useClusterStatus();
+ * if (status.status === 'error') console.error(status.error);
+ * ```
  */
 export function useClusterStatus(): ClusterStatus {
 	const selector = useMemo(createClusterStatusSelector, []);
@@ -156,7 +168,15 @@ export function useClusterStatus(): ClusterStatus {
 }
 
 /**
- * Access the wallet status tracked by the client store.
+ * Access the wallet status tracked by the client store (connected/connecting/error/disconnected).
+ *
+ * @example
+ * ```ts
+ * const wallet = useWallet();
+ * if (wallet.status === 'connected') {
+ *   console.log(wallet.session.account.address.toString());
+ * }
+ * ```
  */
 export function useWallet(): WalletStatus {
 	const selector = useMemo(createWalletSelector, []);
@@ -164,7 +184,13 @@ export function useWallet(): WalletStatus {
 }
 
 /**
- * Convenience helper that returns the active wallet session when connected.
+ * Convenience helper that returns the active wallet session when connected, otherwise `undefined`.
+ *
+ * @example
+ * ```ts
+ * const session = useWalletSession();
+ * const address = session?.account.address.toString();
+ * ```
  */
 export function useWalletSession(): WalletSession | undefined {
 	const wallet = useWallet();
@@ -175,7 +201,13 @@ export function useWalletSession(): WalletSession | undefined {
 }
 
 /**
- * Access the headless client actions.
+ * Access the headless client actions (setCluster, fetchAccount, connectWallet, etc.).
+ *
+ * @example
+ * ```ts
+ * const actions = useWalletActions();
+ * await actions.connectWallet('phantom');
+ * ```
  */
 export function useWalletActions() {
 	const client = useSolanaClient();
@@ -184,6 +216,12 @@ export function useWalletActions() {
 
 /**
  * Stable connect helper that resolves to {@link ClientActions.connectWallet}.
+ *
+ * @example
+ * ```ts
+ * const connect = useConnectWallet();
+ * await connect('phantom', { autoConnect: true });
+ * ```
  */
 export function useConnectWallet(): (
 	connectorId: string,
@@ -199,6 +237,12 @@ export function useConnectWallet(): (
 
 /**
  * Stable disconnect helper mapping to {@link ClientActions.disconnectWallet}.
+ *
+ * @example
+ * ```ts
+ * const disconnect = useDisconnectWallet();
+ * await disconnect();
+ * ```
  */
 export function useDisconnectWallet(): () => Promise<void> {
 	const client = useSolanaClient();
@@ -209,6 +253,13 @@ type SolTransferSignature = UnwrapPromise<ReturnType<SolTransferHelper['sendTran
 
 /**
  * Convenience wrapper around the SOL transfer helper that tracks status and signature.
+ *
+ * @example
+ * ```ts
+ * const { send, signature, status } = useSolTransfer();
+ * await send({ amount: 1_000_000n, destination: toAddress('...') });
+ * console.log(signature, status);
+ * ```
  */
 export function useSolTransfer(): Readonly<{
 	error: unknown;
@@ -274,6 +325,14 @@ type UseSplTokenOptions = Readonly<{
 
 /**
  * Simplified SPL token hook that scopes helpers by mint and manages balance state.
+ *
+ * @example
+ * ```ts
+ * const { balance, send, owner } = useSplToken(mintAddress);
+ * if (owner && balance?.exists) {
+ *   await send({ amount: 1n, destinationOwner: toAddress('...') });
+ * }
+ * ```
  */
 export function useSplToken(
 	mint: AddressLike,
@@ -409,6 +468,12 @@ export function useSplToken(
 
 /**
  * Subscribe to the account cache for a given address, optionally triggering fetch & watch helpers.
+ *
+ * @example
+ * ```ts
+ * const account = useAccount(pubkey, { watch: true });
+ * const lamports = account?.lamports ?? null;
+ * ```
  */
 export function useAccount(addressLike?: AddressLike, options: UseAccountOptions = {}): AccountCacheEntry | undefined {
 	const client = useSolanaClient();
@@ -456,7 +521,12 @@ export function useAccount(addressLike?: AddressLike, options: UseAccountOptions
 }
 
 /**
- * Tracks a lamport balance for the provided address. Fetches immediately and watches by default.
+ * Track lamport balance for an address. Fetches immediately and watches by default.
+ *
+ * @example
+ * ```ts
+ * const { lamports, fetching } = useBalance(pubkey);
+ * ```
  */
 export function useBalance(
 	addressLike?: AddressLike,
@@ -551,7 +621,15 @@ type UseTransactionPoolPrepareAndSendOptions = TransactionPoolPrepareAndSendOpti
 type TransactionSignature = Signature;
 
 /**
- * Manage a mutable set of instructions and use the transaction helper to prepare and send transactions.
+ * Manage a mutable set of instructions and use the transaction helper to prepare/sign/send.
+ *
+ * @example
+ * ```ts
+ * const pool = useTransactionPool();
+ * pool.addInstruction(ix);
+ * const prepared = await pool.prepare({ feePayer });
+ * await pool.send();
+ * ```
  */
 export function useTransactionPool(config: UseTransactionPoolConfig = {}): Readonly<{
 	addInstruction(instruction: TransactionInstructionInput): void;
@@ -677,6 +755,12 @@ type UseSendTransactionResult = Readonly<{
 
 /**
  * General-purpose helper that prepares and sends arbitrary transactions through {@link TransactionHelper}.
+ *
+ * @example
+ * ```ts
+ * const { send, status } = useSendTransaction();
+ * await send({ instructions: [ix], feePayer });
+ * ```
  */
 export function useSendTransaction(): UseSendTransactionResult {
 	const client = useSolanaClient();
@@ -762,6 +846,11 @@ type SignatureStatusState = SolanaQueryResult<SignatureStatusValue | null> &
 
 /**
  * Fetch the RPC status for a transaction signature.
+ *
+ * @example
+ * ```ts
+ * const { signatureStatus, confirmationStatus } = useSignatureStatus(sig);
+ * ```
  */
 export function useSignatureStatus(
 	signatureInput?: SignatureLike,
@@ -822,7 +911,12 @@ type WaitForSignatureState = SignatureStatusState &
 	}>;
 
 /**
- * Polls signature status data until the desired commitment (or subscription notification) is reached.
+ * Poll signature status until the desired commitment (or subscription notification) is reached.
+ *
+ * @example
+ * ```ts
+ * const { waitStatus, confirmationStatus } = useWaitForSignature(sig, { commitment: 'finalized' });
+ * ```
  */
 export function useWaitForSignature(
 	signatureInput?: SignatureLike,

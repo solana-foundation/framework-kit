@@ -16,6 +16,10 @@ export function useClientStore<T>(selector: UseClientStoreSelector<T>): T;
  *
  * @param selector - Derives the slice of state to observe. Defaults to the entire state.
  * @returns Selected state slice that triggers re-render when it changes.
+ * @example
+ * ```ts
+ * const commitment = useClientStore((state) => state.cluster.commitment);
+ * ```
  */
 export function useClientStore<T>(selector?: UseClientStoreSelector<T>): ClientState | T {
 	const client = useSolanaClient();

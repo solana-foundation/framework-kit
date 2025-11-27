@@ -1,5 +1,13 @@
 # @solana/example-react-hooks
 
+## 0.0.12
+
+### Patch Changes
+
+- Updated dependencies [[`42e612f`](https://github.com/solana-foundation/framework-kit/commit/42e612ffb6a0d7f087b8e336ecab74749558a030)]:
+  - @solana/react-hooks@0.5.1
+  - @solana/client@0.2.3
+
 ## 0.0.11
 
 ### Patch Changes

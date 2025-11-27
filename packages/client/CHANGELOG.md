@@ -1,5 +1,11 @@
 # @solana/client
 
+## 0.2.3
+
+### Patch Changes
+
+- [#55](https://github.com/solana-foundation/framework-kit/pull/55) [`42e612f`](https://github.com/solana-foundation/framework-kit/commit/42e612ffb6a0d7f087b8e336ecab74749558a030) Thanks [@beharefe](https://github.com/beharefe)! - centralize shared dependency versions using pnpm catalogs
+
 ## 0.2.2
 
 ### Patch Changes

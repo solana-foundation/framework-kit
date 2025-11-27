@@ -1,16 +1,14 @@
 {
-  "mode": "pre",
-  "tag": "rc",
-  "initialVersions": {
-    "@solana/example-nextjs": "0.0.0",
-    "@solana/example-vite-react": "0.0.11",
-    "@solana/client": "0.2.2",
-    "@solana/react-hooks": "0.5.0",
-    "@solana/web3-compat": "0.0.5",
-    "@solana/test-types-smoke": "0.0.10",
-    "@solana/web3-compat-parity-tests": "0.0.0"
-  },
-  "changesets": [
-    "rc-1-bump"
-  ]
+	"mode": "pre",
+	"tag": "rc",
+	"initialVersions": {
+		"@solana/example-nextjs": "0.0.0",
+		"@solana/example-vite-react": "0.0.11",
+		"@solana/client": "0.2.2",
+		"@solana/react-hooks": "0.5.0",
+		"@solana/web3-compat": "0.0.5",
+		"@solana/test-types-smoke": "0.0.10",
+		"@solana/web3-compat-parity-tests": "0.0.0"
+	},
+	"changesets": ["rc-1-bump", "rc-2-docs-and-hydration"]
 }

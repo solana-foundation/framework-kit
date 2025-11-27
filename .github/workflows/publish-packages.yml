@@ -52,6 +52,7 @@ jobs:
         with:
           createGithubReleases: true
         env:
+          HUSKY: '0'
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Choose final step

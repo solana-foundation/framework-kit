@@ -102,7 +102,7 @@ describe('createClient', () => {
 		expect(createSolanaRpcClientMock).toHaveBeenCalledWith({
 			commitment: 'finalized',
 			endpoint: 'https://rpc.example',
-			websocketEndpoint: 'https://rpc.example',
+			websocketEndpoint: 'wss://rpc.example',
 		});
 		expect(createWalletRegistryMock).toHaveBeenCalledWith(config.walletConnectors);
 		expect(createActionsMock).toHaveBeenCalled();
@@ -112,7 +112,7 @@ describe('createClient', () => {
 		const actions = createActionsMock.mock.results[0].value as ActionSet;
 		expect(actions.setCluster).toHaveBeenCalledWith('https://rpc.example', {
 			commitment: 'finalized',
-			websocketEndpoint: 'https://rpc.example',
+			websocketEndpoint: 'wss://rpc.example',
 		});
 
 		const helpers = createClientHelpersMock.mock.results[0].value as Helpers;

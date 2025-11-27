@@ -67,6 +67,42 @@ describe('serialization state helpers', () => {
 		expect(deserializeSolanaState('not-json')).toBeNull();
 	});
 
+	it('honors the wallet autoConnect preference when serializing state', () => {
+		const initial = createInitialClientState({
+			commitment: 'confirmed',
+			endpoint: baseConfig.endpoint,
+			websocketEndpoint: `${baseConfig.endpoint.replace('https', 'wss')}`,
+		});
+		const store = createClientStore(initial);
+		const client = { store } as unknown as SolanaClient;
+
+		const snapshots: Array<ReturnType<typeof deserializeSolanaState>> = [];
+		const unsubscribe = subscribeSolanaState(client, (state) => snapshots.push(state));
+
+		store.setState((prev) => ({
+			...prev,
+			wallet: {
+				autoConnect: false,
+				connectorId: 'phantom',
+				session: {
+					account: {
+						address: 'address' as unknown as Address,
+						publicKey: new Uint8Array(),
+					},
+					connector: { id: 'phantom', name: 'Phantom' },
+					disconnect: async () => undefined,
+				},
+				status: 'connected',
+			},
+		}));
+
+		unsubscribe();
+
+		const lastSnapshot = snapshots.at(-1);
+		expect(lastSnapshot?.lastConnectorId).toBe('phantom');
+		expect(lastSnapshot?.autoconnect).toBe(false);
+	});
+
 	it('subscribes to client state changes and emits serializable snapshots', () => {
 		const initial = createInitialClientState({
 			commitment: 'confirmed',

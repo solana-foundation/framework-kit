@@ -1,6 +1,6 @@
 {
- "name": "@solana/web3-compat",
-	"version": "0.0.6-rc.0",
+	"name": "@solana/web3-compat",
+	"version": "0.0.6-rc.1",
 	"description": "Compatibility layer that preserves the web3.js API while delegating to Kit primitives under the hood",
 	"exports": {
 		"edge-light": {
@@ -56,7 +56,7 @@
 		"typecheck": "pnpm test:typecheck"
 	},
 	"license": "MIT",
- "dependencies": {
+	"dependencies": {
 		"@solana/compat": "catalog:solana",
 		"@solana/addresses": "catalog:solana",
 		"@solana/client": "workspace:*",

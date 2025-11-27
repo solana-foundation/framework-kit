@@ -58,12 +58,14 @@ export type WalletConnector = WalletConnectorMetadata & {
 };
 
 type WalletStatusConnected = Readonly<{
+	autoConnect?: boolean;
 	connectorId: string;
 	session: WalletSession;
 	status: 'connected';
 }>;
 
 type WalletStatusConnecting = Readonly<{
+	autoConnect?: boolean;
 	connectorId: string;
 	status: 'connecting';
 }>;
@@ -73,6 +75,7 @@ type WalletStatusDisconnected = Readonly<{
 }>;
 
 type WalletStatusError = Readonly<{
+	autoConnect?: boolean;
 	connectorId?: string;
 	error: unknown;
 	status: 'error';

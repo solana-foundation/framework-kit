@@ -1,5 +1,13 @@
 # @solana/test-types-smoke
 
+## 0.0.11-rc.1
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @solana/client@1.0.0-rc.1
+  - @solana/react-hooks@1.0.0-rc.1
+
 ## 0.0.11-rc.0
 
 ### Patch Changes

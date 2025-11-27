@@ -70,7 +70,8 @@ export function deserializeSolanaState(json: string | null | undefined): Seriali
 
 function getSerializableStateSnapshot(client: SolanaClient): SerializableSolanaState {
 	const state = client.store.getState();
-	const wallet = state.wallet;
+	const wallet = state.wallet as typeof state.wallet & { autoConnect?: boolean };
+	const autoConnectPreference = wallet.autoConnect;
 	let lastConnectorId: string | null = null;
 	let lastPublicKey: string | null = null;
 	if ('connectorId' in wallet) {
@@ -80,7 +81,7 @@ function getSerializableStateSnapshot(client: SolanaClient): SerializableSolanaS
 		}
 	}
 	return {
-		autoconnect: Boolean(lastConnectorId),
+		autoconnect: autoConnectPreference ?? Boolean(lastConnectorId),
 		commitment: state.cluster.commitment,
 		endpoint: state.cluster.endpoint,
 		lastConnectorId,

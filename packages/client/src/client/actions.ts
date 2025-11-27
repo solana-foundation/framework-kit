@@ -164,17 +164,18 @@ export function createActions({ connectors, logger: inputLogger, runtime, store 
 		if (!connector.isSupported()) {
 			throw new Error(`Wallet connector "${connectorId}" is not supported in this environment.`);
 		}
+		const autoConnectPreference = options.autoConnect ?? true;
 		store.setState((state) => ({
 			...state,
 			lastUpdatedAt: now(),
-			wallet: { connectorId, status: 'connecting' },
+			wallet: { autoConnect: autoConnectPreference, connectorId, status: 'connecting' },
 		}));
 		try {
 			const session = await connector.connect(options);
 			store.setState((state) => ({
 				...state,
 				lastUpdatedAt: now(),
-				wallet: { connectorId, session, status: 'connected' },
+				wallet: { autoConnect: autoConnectPreference, connectorId, session, status: 'connected' },
 			}));
 			logger({
 				data: { address: session.account.address.toString(), connectorId },
@@ -185,7 +186,7 @@ export function createActions({ connectors, logger: inputLogger, runtime, store 
 			store.setState((state) => ({
 				...state,
 				lastUpdatedAt: now(),
-				wallet: { connectorId, error, status: 'error' },
+				wallet: { autoConnect: autoConnectPreference, connectorId, error, status: 'error' },
 			}));
 			logger({
 				data: { connectorId, ...formatError(error) },

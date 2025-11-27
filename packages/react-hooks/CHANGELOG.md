@@ -1,5 +1,14 @@
 # @solana/react-hooks
 
+## 1.0.0-rc.1
+
+### Patch Changes
+
+- Persist wallet auto-connect preference coming from `connect()` options so provider defaults no longer override per-connection settings.
+
+- Updated dependencies []:
+  - @solana/client@1.0.0-rc.1
+
 ## 1.0.0-rc.0
 
 ### Major Changes

@@ -1,5 +1,12 @@
 # @solana/web3-compat
 
+## 0.0.6-rc.1
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @solana/client@1.0.0-rc.1
+
 ## 0.0.6-rc.0
 
 ### Patch Changes

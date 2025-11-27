@@ -169,16 +169,18 @@ function WalletPersistence({
 	}, [initialState, legacyConnectorId]);
 
 	useEffect(() => {
-		if (!autoConnect || hasAttemptedAutoConnect) {
+		const persisted = persistedStateRef.current ?? initialState;
+		const persistedAutoConnect = persisted?.autoconnect ?? false;
+		const autoConnectEnabled = persistedAutoConnect || autoConnect;
+		if (!autoConnectEnabled || hasAttemptedAutoConnect) {
 			return;
 		}
 		if (wallet.status === 'connected' || wallet.status === 'connecting') {
 			setHasAttemptedAutoConnect(true);
 			return;
 		}
-		const state = persistedStateRef.current ?? initialState;
-		const connectorId = state?.lastConnectorId ?? legacyConnectorIdRef.current;
-		const shouldAutoConnect = (state?.autoconnect ?? autoConnect) && connectorId;
+		const connectorId = persisted?.lastConnectorId ?? legacyConnectorIdRef.current;
+		const shouldAutoConnect = autoConnectEnabled && connectorId;
 		if (!shouldAutoConnect || !connectorId) return;
 		const connector = client.connectors.get(connectorId);
 		if (!connector) return;

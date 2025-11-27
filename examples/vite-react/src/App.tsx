@@ -18,7 +18,6 @@ import { TransactionPoolPanel } from './components/TransactionPoolPanel.tsx';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs.tsx';
 import { WalletControls } from './components/WalletControls.tsx';
 
-const LAST_CONNECTOR_STORAGE_KEY = 'solana:last-connector';
 const walletConnectors = [...phantom(), ...solflare(), ...backpack(), ...autoDiscover()];
 const client = createClient({
 	commitment: 'confirmed',
@@ -29,11 +28,7 @@ const client = createClient({
 
 export default function App() {
 	return (
-		<SolanaProvider
-			client={client}
-			query={{ suspense: true }}
-			walletPersistence={{ storageKey: LAST_CONNECTOR_STORAGE_KEY }}
-		>
+		<SolanaProvider client={client} query={{ suspense: true }}>
 			<DemoApp />
 		</SolanaProvider>
 	);

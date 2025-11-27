@@ -20,7 +20,7 @@ export function WalletControls() {
 	const handleConnect = useCallback(
 		async (connectorId: string) => {
 			try {
-				await connect(connectorId);
+				await connect(connectorId, { autoConnect: true });
 			} catch {
 				// Store will expose the error state; nothing else to do here.
 			}

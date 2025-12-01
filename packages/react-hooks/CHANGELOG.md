@@ -1,5 +1,11 @@
 # @solana/react-hooks
 
+## 1.0.1
+
+### Patch Changes
+
+- [#63](https://github.com/solana-foundation/framework-kit/pull/63) [`3b8c327`](https://github.com/solana-foundation/framework-kit/commit/3b8c327343c58d966829e1fca081d025500b6123) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Honor per-connection `autoConnect` preference even when provider auto-connect is disabled, and update the example app to opt out at the provider level while passing `autoConnect: true` from the handlers.
+
 ## 1.0.0
 
 ### Patch Changes

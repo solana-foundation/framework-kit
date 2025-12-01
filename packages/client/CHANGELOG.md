@@ -1,5 +1,15 @@
 # @solana/client
 
+## 1.0.0
+
+### Patch Changes
+
+- [#60](https://github.com/solana-foundation/framework-kit/pull/60) [`606d41b`](https://github.com/solana-foundation/framework-kit/commit/606d41b5658e7091d91f565d768bf1380bc57ed2) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Persist wallet auto-connect preference coming from `connect()` options so provider defaults no longer override per-connection settings.
+
+- [#61](https://github.com/solana-foundation/framework-kit/pull/61) [`0db2508`](https://github.com/solana-foundation/framework-kit/commit/0db25089c490f5c8f57c56960b0169fffee4e398) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Improve docs for all hooks, add SSR-safe connector hydration in `useWalletConnection`, and document client actions with JSDoc for clearer usage.
+
+- [`1389fc6`](https://github.com/solana-foundation/framework-kit/commit/1389fc6c931359c287cd7663ee85d33a54fc8414) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Prep next release candidate with recent docs and hydration updates.
+
 ## 1.0.0-rc.2
 
 ### Patch Changes

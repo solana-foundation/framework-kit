@@ -1,7 +1,7 @@
 {
 	"name": "@solana/example-nextjs",
 	"private": true,
-	"version": "0.0.1-rc.3",
+	"version": "0.0.1",
 	"type": "module",
 	"scripts": {
 		"dev": "next dev",

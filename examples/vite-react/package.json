@@ -1,7 +1,7 @@
 {
 	"name": "@solana/example-vite-react",
 	"private": true,
-	"version": "0.0.12-rc.3",
+	"version": "0.0.12",
 	"type": "module",
 	"scripts": {
 		"dev": "vite",

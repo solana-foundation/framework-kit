@@ -13,7 +13,7 @@ export function LatestBlockhashCard() {
 }
 
 function LatestBlockhashCardContent() {
-	const latest = useLatestBlockhash({ refreshInterval: 30_000 });
+	const latest = useLatestBlockhash({ swr: { refreshInterval: 30_000 } });
 
 	return (
 		<Card>

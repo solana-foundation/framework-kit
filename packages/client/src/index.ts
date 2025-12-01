@@ -1,5 +1,20 @@
+export {
+	connectWallet,
+	disconnectWallet,
+	fetchAccount,
+	fetchBalance,
+	requestAirdrop,
+	sendTransaction,
+	setCluster,
+} from './actions';
 export { createClient } from './client/createClient';
 export { createClientStore, createDefaultClientStore, createInitialClientState } from './client/createClientStore';
+export {
+	type CreateDefaultClientOptions,
+	createDefaultClient,
+	defaultWalletConnectors,
+	resolveClientConfig,
+} from './client/defaultClient';
 export {
 	createSolTransferController,
 	type SolTransferController,
@@ -85,6 +100,13 @@ export {
 } from './rpc/createSolanaRpcClient';
 export { bigintFromJson, bigintToJson, lamportsFromJson, lamportsToJson } from './serialization/json';
 export {
+	applySerializableState,
+	deserializeSolanaState,
+	getInitialSerializableState,
+	serializeSolanaState,
+	subscribeSolanaState,
+} from './serialization/state';
+export {
 	type ConfirmationCommitment,
 	confirmationMeetsCommitment,
 	deriveConfirmationStatus,
@@ -123,9 +145,26 @@ export type {
 	BalanceWatcherConfig,
 	ClientActions,
 	ClientHelpers,
+	ClientLogger,
 	ClientState,
 	ClientStore,
 	ClientWatchers,
+	ConnectWalletParameters,
+	ConnectWalletReturnType,
+	CreateStoreFn,
+	DisconnectWalletParameters,
+	DisconnectWalletReturnType,
+	FetchAccountParameters,
+	FetchAccountReturnType,
+	FetchBalanceParameters,
+	FetchBalanceReturnType,
+	RequestAirdropParameters,
+	RequestAirdropReturnType,
+	SendTransactionParameters,
+	SendTransactionReturnType,
+	SerializableSolanaState,
+	SetClusterParameters,
+	SetClusterReturnType,
 	SolanaClient,
 	SolanaClientConfig,
 	WalletConnector,
@@ -137,6 +176,7 @@ export type {
 export { type AddressLike, toAddress, toAddressString } from './utils/addressLike';
 export { type ClusterMoniker, resolveCluster } from './utils/cluster';
 export { stableStringify } from './utils/stableStringify';
+export { autoDiscover, backpack, injected, phantom, solflare } from './wallet/connectors';
 export { createWalletRegistry } from './wallet/registry';
 export {
 	createWalletStandardConnector,

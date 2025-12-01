@@ -1,20 +1,16 @@
 import type { WalletConnector, WalletSession, WalletStatus } from '@solana/client';
 import type { ReactNode } from 'react';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import {
-	useConnectWallet,
-	useDisconnectWallet,
-	useWallet,
-	useWalletStandardConnectors,
-	type WalletStandardDiscoveryOptions,
-} from './hooks';
+import { useSolanaClient } from './context';
+import { useConnectWallet, useDisconnectWallet, useWallet } from './hooks';
 
 type WalletConnectionState = Readonly<{
 	connect(connectorId: string, options?: Readonly<{ autoConnect?: boolean }>): Promise<void>;
 	connected: boolean;
 	connecting: boolean;
 	connectors: readonly WalletConnector[];
+	currentConnector?: WalletConnector;
 	connectorId?: string;
 	disconnect(): Promise<void>;
 	error: unknown;
@@ -22,21 +18,36 @@ type WalletConnectionState = Readonly<{
 	wallet: WalletSession | undefined;
 }>;
 
-type UseWalletConnectionOptions = Readonly<{
+type WalletConnectionOptions = Readonly<{
 	connectors?: readonly WalletConnector[];
-	discoveryOptions?: WalletStandardDiscoveryOptions;
 }>;
 
+export type UseWalletConnectionParameters = WalletConnectionOptions;
+export type UseWalletConnectionReturnType = WalletConnectionState;
+
 /**
- * Collects everything needed to build wallet connection UIs into a single hook.
+ * Collect everything needed to build wallet connection UIs into a single hook.
+ *
+ * @example
+ * ```tsx
+ * const { connectors, connect, disconnect, status } = useWalletConnection();
+ * return connectors.map((c) => (
+ *   <button key={c.id} onClick={() => connect(c.id)} disabled={status === 'connecting'}>
+ *     {c.name}
+ *   </button>
+ * ));
+ * ```
  */
-export function useWalletConnection(options: UseWalletConnectionOptions = {}): WalletConnectionState {
+export function useWalletConnection(options: WalletConnectionOptions = {}): WalletConnectionState {
 	const wallet = useWallet();
 	const connectWallet = useConnectWallet();
 	const disconnectWallet = useDisconnectWallet();
-	const discovered = useWalletStandardConnectors(options.discoveryOptions);
-
-	const connectors = options.connectors ?? discovered;
+	const client = useSolanaClient();
+	const [isHydrated, setIsHydrated] = useState(false);
+	useEffect(() => {
+		setIsHydrated(true);
+	}, []);
+	const connectors = isHydrated ? (options.connectors ?? client.connectors.all) : [];
 	const connect = useCallback(
 		(connectorId: string, connectOptions?: Readonly<{ autoConnect?: boolean }>) =>
 			connectWallet(connectorId, connectOptions),
@@ -46,6 +57,7 @@ export function useWalletConnection(options: UseWalletConnectionOptions = {}): W
 
 	const state = useMemo<WalletConnectionState>(() => {
 		const connectorId = 'connectorId' in wallet ? wallet.connectorId : undefined;
+		const currentConnector = connectorId ? connectors.find((connector) => connector.id === connectorId) : undefined;
 		const session: WalletSession | undefined = wallet.status === 'connected' ? wallet.session : undefined;
 		const error = wallet.status === 'error' ? (wallet.error ?? null) : null;
 
@@ -55,6 +67,7 @@ export function useWalletConnection(options: UseWalletConnectionOptions = {}): W
 			connecting: wallet.status === 'connecting',
 			connectors,
 			connectorId,
+			currentConnector,
 			disconnect,
 			error,
 			status: wallet.status,
@@ -68,18 +81,26 @@ export function useWalletConnection(options: UseWalletConnectionOptions = {}): W
 type WalletConnectionManagerProps = Readonly<{
 	children: (state: WalletConnectionState) => ReactNode;
 	connectors?: readonly WalletConnector[];
-	discoveryOptions?: WalletStandardDiscoveryOptions;
 }>;
 
 /**
  * Render-prop helper that lets you easily wire wallet status into custom UIs.
+ *
+ * @example
+ * ```tsx
+ * <WalletConnectionManager>
+ *   {({ connectors, connect }) => connectors.map((c) => (
+ *     <button key={c.id} onClick={() => connect(c.id)}>{c.name}</button>
+ *   ))}
+ * </WalletConnectionManager>
+ * ```
  */
-export function WalletConnectionManager({ children, connectors, discoveryOptions }: WalletConnectionManagerProps) {
-	const state = useWalletConnection({ connectors, discoveryOptions });
+export function WalletConnectionManager({ children, connectors }: WalletConnectionManagerProps) {
+	const state = useWalletConnection({ connectors });
 	return <>{children(state)}</>;
 }
 
-type UseWalletModalStateOptions = UseWalletConnectionOptions &
+type WalletModalStateOptions = WalletConnectionOptions &
 	Readonly<{
 		closeOnConnect?: boolean;
 		initialOpen?: boolean;
@@ -95,11 +116,27 @@ export type WalletModalState = WalletConnectionState &
 		toggle(): void;
 	}>;
 
+export type UseWalletModalStateParameters = WalletModalStateOptions;
+export type UseWalletModalStateReturnType = WalletModalState;
+
 /**
  * Small state machine for wallet selection modals – keeps track of modal visibility and the currently
  * highlighted connector while reusing the connection state returned by {@link useWalletConnection}.
+ *
+ * @example
+ * ```tsx
+ * const modal = useWalletModalState();
+ * return (
+ *   <>
+ *     <button onClick={modal.toggle}>Connect</button>
+ *     {modal.isOpen && modal.connectors.map((c) => (
+ *       <button key={c.id} onClick={() => modal.connect(c.id)}>{c.name}</button>
+ *     ))}
+ *   </>
+ * );
+ * ```
  */
-export function useWalletModalState(options: UseWalletModalStateOptions = {}): WalletModalState {
+export function useWalletModalState(options: WalletModalStateOptions = {}): WalletModalState {
 	const connection = useWalletConnection(options);
 	const [isOpen, setIsOpen] = useState(options.initialOpen ?? false);
 	const [selectedConnector, setSelectedConnector] = useState<string | null>(null);

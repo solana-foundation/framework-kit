@@ -26,5 +26,5 @@
 			"@solana/react-hooks/*": ["../../packages/react-hooks/src/*"]
 		}
 	},
-	"include": ["src"]
+	"include": ["src", "../../packages/react-hooks/src", "../../packages/client/src"]
 }

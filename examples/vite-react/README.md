@@ -1,8 +1,36 @@
-# @solana/example-react-hooks
+# @solana/example-vite-react
 
 Demonstrates how to build a React interface with the experimental `@solana/react-hooks` package.
 
 The example mirrors the vanilla proof-of-concept by wiring wallet discovery, SOL transfers, SPL token helpers, and live balance updates through idiomatic React components.
+
+All hooks expose `UseHookNameParameters` / `UseHookNameReturnType` aliases so you can type your own helpers consistently with the library.
+
+The app starts with connector-first setup: build connectors, create a client, and pass it to the provider (which
+includes the query layer).
+
+```tsx
+import { autoDiscover, backpack, createClient, phantom, solflare } from '@solana/client';
+import { SolanaProvider } from '@solana/react-hooks';
+
+const walletConnectors = [...phantom(), ...solflare(), ...backpack(), ...autoDiscover()];
+const client = createClient({
+	endpoint: 'https://api.devnet.solana.com',
+	websocketEndpoint: 'wss://api.devnet.solana.com',
+	walletConnectors,
+});
+
+export function App() {
+	return (
+		<SolanaProvider client={client} query={{ suspense: true }}>
+            {/* components under examples/vite-react/src/components */}
+		</SolanaProvider>
+	);
+}
+```
+
+Query hooks lean on SWR v2 defaults (revalidate on focus/reconnect/if stale, 2s deduping, 5s focus throttle) and
+accept overrides under the `swr` option.
 
 ## Compute-unit tuned transactions
 
@@ -58,7 +86,7 @@ The hook takes care of building instructions, simulating to determine compute un
 
 ```sh
 pnpm install
-pnpm --filter @solana/example-react-hooks dev
+pnpm --filter @solana/example-vite-react dev
 ```
 
 The app runs against Devnet by default. Press <kbd>o</kbd> + <kbd>Enter</kbd> in the terminal to open a browser window once Vite starts.
@@ -66,7 +94,7 @@ The app runs against Devnet by default. Press <kbd>o</kbd> + <kbd>Enter</kbd> in
 ## Building
 
 ```sh
-pnpm --filter @solana/example-react-hooks build
+pnpm --filter @solana/example-vite-react build
 ```
 
 The production bundle is emitted to `dist/`.

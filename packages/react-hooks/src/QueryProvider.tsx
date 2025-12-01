@@ -10,10 +10,11 @@ import { useClientStore } from './useClientStore';
 const createCache = (): Cache => new Map<string, unknown>() as Cache;
 
 const DEFAULT_QUERY_CONFIG: SWRConfiguration = Object.freeze({
-	dedupingInterval: 1_000,
-	focusThrottleInterval: 1_000,
+	dedupingInterval: 2_000,
+	focusThrottleInterval: 5_000,
 	provider: () => createCache(),
-	revalidateOnFocus: false,
+	revalidateIfStale: true,
+	revalidateOnFocus: true,
 	revalidateOnReconnect: true,
 });
 

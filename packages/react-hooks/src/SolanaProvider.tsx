@@ -1,6 +1,17 @@
 'use client';
 
-import type { SolanaClient, SolanaClientConfig } from '@solana/client';
+import type {
+	CreateDefaultClientOptions,
+	SerializableSolanaState,
+	SolanaClient,
+	SolanaClientConfig,
+} from '@solana/client';
+import {
+	deserializeSolanaState,
+	resolveClientConfig,
+	serializeSolanaState,
+	subscribeSolanaState,
+} from '@solana/client';
 import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import type { SWRConfiguration } from 'swr';
@@ -28,10 +39,15 @@ type WalletPersistenceConfig = Readonly<{
 	storageKey?: string;
 }>;
 
+type PersistedSerializableState = Readonly<{
+	legacyConnectorId: string | null;
+	state: SerializableSolanaState | null;
+}>;
+
 type SolanaProviderProps = Readonly<{
 	children: ReactNode;
 	client?: SolanaClient;
-	config?: SolanaClientConfig;
+	config?: SolanaClientConfig | CreateDefaultClientOptions;
 	query?: QueryLayerConfig | false;
 	walletPersistence?: WalletPersistenceConfig | false;
 }>;
@@ -46,6 +62,15 @@ export function SolanaProvider({ children, client, config, query, walletPersiste
 	const shouldIncludeQueryLayer = query !== false && query?.disabled !== true;
 	const queryProps: QueryLayerConfig = shouldIncludeQueryLayer && query ? query : {};
 	const persistenceConfig = walletPersistence === false ? undefined : (walletPersistence ?? {});
+	const storage = persistenceConfig ? (persistenceConfig.storage ?? getDefaultStorage()) : null;
+	const storageKey = persistenceConfig?.storageKey ?? DEFAULT_STORAGE_KEY;
+	const persistedState = persistenceConfig
+		? readPersistedState(storage, storageKey)
+		: { legacyConnectorId: null, state: null };
+	const normalizedConfig = config ? resolveClientConfig(config) : resolveClientConfig();
+	const clientConfig = persistenceConfig
+		? { ...normalizedConfig, initialState: normalizedConfig.initialState ?? persistedState.state ?? undefined }
+		: normalizedConfig;
 
 	const content = shouldIncludeQueryLayer ? (
 		<SolanaQueryProvider
@@ -60,8 +85,16 @@ export function SolanaProvider({ children, client, config, query, walletPersiste
 	);
 
 	return (
-		<SolanaClientProvider client={client} config={config}>
-			{persistenceConfig ? <WalletPersistence {...persistenceConfig} /> : null}
+		<SolanaClientProvider client={client} config={clientConfig}>
+			{persistenceConfig ? (
+				<WalletPersistence
+					autoConnect={persistenceConfig.autoConnect}
+					initialState={clientConfig?.initialState ?? persistedState.state}
+					legacyConnectorId={persistedState.legacyConnectorId}
+					storage={storage}
+					storageKey={storageKey}
+				/>
+			) : null}
 			{content}
 		</SolanaClientProvider>
 	);
@@ -69,14 +102,42 @@ export function SolanaProvider({ children, client, config, query, walletPersiste
 
 const DEFAULT_STORAGE_KEY = 'solana:last-connector';
 
-function WalletPersistence({ autoConnect = true, storage, storageKey = DEFAULT_STORAGE_KEY }: WalletPersistenceConfig) {
+function readPersistedState(storage: StorageAdapter | null, storageKey: string): PersistedSerializableState {
+	if (!storage) {
+		return { legacyConnectorId: null, state: null };
+	}
+	const raw = safelyRead(() => storage.getItem(storageKey));
+	if (!raw) {
+		return { legacyConnectorId: null, state: null };
+	}
+	const parsed = deserializeSolanaState(raw);
+	if (parsed) {
+		return { legacyConnectorId: null, state: parsed };
+	}
+	return { legacyConnectorId: raw, state: null };
+}
+
+type WalletPersistenceProps = WalletPersistenceConfig &
+	Readonly<{
+		initialState?: SerializableSolanaState | null;
+		legacyConnectorId?: string | null;
+	}>;
+
+function WalletPersistence({
+	autoConnect = true,
+	initialState = null,
+	legacyConnectorId = null,
+	storage,
+	storageKey = DEFAULT_STORAGE_KEY,
+}: WalletPersistenceProps) {
 	const wallet = useWallet();
 	const connectWallet = useConnectWallet();
 	const client = useSolanaClient();
 	const storageRef = useRef<StorageAdapter | null>(storage ?? getDefaultStorage());
 	const [hasAttemptedAutoConnect, setHasAttemptedAutoConnect] = useState(false);
-	const hasPersistedConnectorRef = useRef(false);
 	const clientRef = useRef<SolanaClient | null>(null);
+	const persistedStateRef = useRef<SerializableSolanaState | null>(initialState);
+	const legacyConnectorIdRef = useRef<string | null>(legacyConnectorId);
 
 	useEffect(() => {
 		storageRef.current = storage ?? getDefaultStorage();
@@ -92,46 +153,37 @@ function WalletPersistence({ autoConnect = true, storage, storageKey = DEFAULT_S
 	useEffect(() => {
 		const activeStorage = storageRef.current;
 		if (!activeStorage) return;
-		if ('connectorId' in wallet && wallet.connectorId) {
-			const connectorId = wallet.connectorId;
-			if (connectorId) {
-				safelyWrite(() => activeStorage.setItem(storageKey, connectorId));
-				hasPersistedConnectorRef.current = true;
-				return;
-			}
-		}
-		if (wallet.status === 'disconnected' && hasPersistedConnectorRef.current) {
-			safelyWrite(() => activeStorage.removeItem(storageKey));
-			hasPersistedConnectorRef.current = false;
-		}
-	}, [storageKey, wallet]);
+		const unsubscribe = subscribeSolanaState(client, (state) => {
+			persistedStateRef.current = state;
+			legacyConnectorIdRef.current = null;
+			safelyWrite(() => activeStorage.setItem(storageKey, serializeSolanaState(state)));
+		});
+		return () => {
+			unsubscribe();
+		};
+	}, [client, storageKey]);
 
 	useEffect(() => {
-		if (!autoConnect || hasAttemptedAutoConnect) {
+		persistedStateRef.current = initialState ?? persistedStateRef.current;
+		legacyConnectorIdRef.current = legacyConnectorId;
+	}, [initialState, legacyConnectorId]);
+
+	useEffect(() => {
+		const persisted = persistedStateRef.current ?? initialState;
+		const persistedAutoConnect = persisted?.autoconnect ?? false;
+		const autoConnectEnabled = persistedAutoConnect || autoConnect;
+		if (!autoConnectEnabled || hasAttemptedAutoConnect) {
 			return;
 		}
 		if (wallet.status === 'connected' || wallet.status === 'connecting') {
 			setHasAttemptedAutoConnect(true);
 			return;
 		}
-		const activeStorage = storageRef.current;
-		if (!activeStorage) {
-			setHasAttemptedAutoConnect(true);
-			return;
-		}
-
-		let cancelled = false;
-		const connectorId = safelyRead(() => activeStorage.getItem(storageKey));
-		if (!connectorId) {
-			setHasAttemptedAutoConnect(true);
-			return;
-		}
-
+		const connectorId = persisted?.lastConnectorId ?? legacyConnectorIdRef.current;
+		const shouldAutoConnect = autoConnectEnabled && connectorId;
+		if (!shouldAutoConnect || !connectorId) return;
 		const connector = client.connectors.get(connectorId);
-		if (!connector) {
-			// Connector not yet registered; wait for the client to refresh.
-			return;
-		}
+		if (!connector) return;
 
 		void (async () => {
 			try {
@@ -139,16 +191,10 @@ function WalletPersistence({ autoConnect = true, storage, storageKey = DEFAULT_S
 			} catch {
 				// Ignore auto-connect failures; consumers can handle manual retries via hooks.
 			} finally {
-				if (!cancelled) {
-					setHasAttemptedAutoConnect(true);
-				}
+				setHasAttemptedAutoConnect(true);
 			}
 		})();
-
-		return () => {
-			cancelled = true;
-		};
-	}, [autoConnect, client, connectWallet, hasAttemptedAutoConnect, storageKey, wallet.status]);
+	}, [autoConnect, client, connectWallet, hasAttemptedAutoConnect, initialState, wallet.status]);
 
 	return null;
 }

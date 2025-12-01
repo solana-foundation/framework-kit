@@ -1,6 +1,6 @@
-import { createSolanaRpcClient, type SolanaClientConfig } from '@solana/client';
-import { SolanaProvider, useWalletStandardConnectors } from '@solana/react-hooks';
-import { useMemo } from 'react';
+import { autoDiscover, backpack, createClient, phantom, solflare } from '@solana/client';
+import { SolanaProvider } from '@solana/react-hooks';
+import { Suspense } from 'react';
 
 import { AccountInspectorCard } from './components/AccountInspectorCard.tsx';
 import { AirdropCard } from './components/AirdropCard.tsx';
@@ -19,41 +19,17 @@ import { TransactionPoolPanel } from './components/TransactionPoolPanel.tsx';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs.tsx';
 import { WalletControls } from './components/WalletControls.tsx';
 
-const LAST_CONNECTOR_STORAGE_KEY = 'solana:last-connector';
-
-const DEFAULT_CLIENT_CONFIG: SolanaClientConfig = {
+const walletConnectors = [...phantom(), ...solflare(), ...backpack(), ...autoDiscover()];
+const client = createClient({
 	commitment: 'confirmed',
 	endpoint: 'https://api.devnet.solana.com',
 	websocketEndpoint: 'wss://api.devnet.solana.com',
-};
+	walletConnectors,
+});
 
 export default function App() {
-	const walletConnectors = useWalletStandardConnectors();
-	const rpcClient = useMemo(
-		() =>
-			createSolanaRpcClient({
-				commitment: DEFAULT_CLIENT_CONFIG.commitment,
-				endpoint: DEFAULT_CLIENT_CONFIG.endpoint,
-				websocketEndpoint: DEFAULT_CLIENT_CONFIG.websocketEndpoint,
-			}),
-		[],
-	);
-
-	const clientConfig = useMemo<SolanaClientConfig>(
-		() => ({
-			...DEFAULT_CLIENT_CONFIG,
-			rpcClient,
-			walletConnectors,
-		}),
-		[rpcClient, walletConnectors],
-	);
-
 	return (
-		<SolanaProvider
-			config={clientConfig}
-			query={{ suspense: true }}
-			walletPersistence={{ storageKey: LAST_CONNECTOR_STORAGE_KEY }}
-		>
+		<SolanaProvider client={client} query={{ suspense: true }}>
 			<DemoApp />
 		</SolanaProvider>
 	);
@@ -85,31 +61,45 @@ function DemoApp() {
 						<TabsTrigger value="queries">Queries &amp; Diagnostics</TabsTrigger>
 					</TabsList>
 					<TabsContent value="state">
-						<div className="grid gap-6 lg:grid-cols-2">
-							<ClusterStatusCard />
-							<WalletControls />
-							<BalanceCard />
-							<AccountInspectorCard />
-							<AirdropCard />
-							<StoreInspectorCard />
-						</div>
+						<Suspense
+							fallback={
+								<div className="log-panel text-sm text-muted-foreground">Loading wallet and state…</div>
+							}
+						>
+							<div className="grid gap-6 lg:grid-cols-2">
+								<ClusterStatusCard />
+								<WalletControls />
+								<BalanceCard />
+								<AccountInspectorCard />
+								<AirdropCard />
+								<StoreInspectorCard />
+							</div>
+						</Suspense>
 					</TabsContent>
 					<TabsContent value="transactions">
-						<div className="grid gap-6 lg:grid-cols-2">
-							<SolTransferForm />
-							<SendTransactionCard />
-							<SplTokenPanel />
-							<StakePanel />
-							<TransactionPoolPanel />
-						</div>
+						<Suspense
+							fallback={<div className="log-panel text-sm text-muted-foreground">Loading transfers…</div>}
+						>
+							<div className="grid gap-6 lg:grid-cols-2">
+								<SolTransferForm />
+								<SendTransactionCard />
+								<SplTokenPanel />
+								<StakePanel />
+								<TransactionPoolPanel />
+							</div>
+						</Suspense>
 					</TabsContent>
 					<TabsContent value="queries">
-						<div className="grid gap-6 lg:grid-cols-2">
-							<LatestBlockhashCard />
-							<ProgramAccountsCard />
-							<SimulateTransactionCard />
-							<SignatureWatcherCard />
-						</div>
+						<Suspense
+							fallback={<div className="log-panel text-sm text-muted-foreground">Loading queries…</div>}
+						>
+							<div className="grid gap-6 lg:grid-cols-2">
+								<LatestBlockhashCard />
+								<ProgramAccountsCard />
+								<SimulateTransactionCard />
+								<SignatureWatcherCard />
+							</div>
+						</Suspense>
 					</TabsContent>
 				</Tabs>
 			</div>

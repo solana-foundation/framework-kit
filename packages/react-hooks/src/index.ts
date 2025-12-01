@@ -1,7 +1,47 @@
 'use client';
 
 export type { StakeAccount } from '@solana/client';
+export type {
+	SolanaClientProviderProps,
+	UseSolanaClientParameters,
+	UseSolanaClientReturnType,
+} from './context';
 export { SolanaClientProvider, useSolanaClient } from './context';
+export type {
+	SignatureWaitStatus,
+	UseAccountParameters,
+	UseAccountReturnType,
+	UseBalanceParameters,
+	UseBalanceReturnType,
+	UseClusterStateParameters,
+	UseClusterStateReturnType,
+	UseClusterStatusParameters,
+	UseClusterStatusReturnType,
+	UseConnectWalletParameters,
+	UseConnectWalletReturnType,
+	UseDisconnectWalletParameters,
+	UseDisconnectWalletReturnType,
+	UseSendTransactionParameters,
+	UseSendTransactionReturnType,
+	UseSignatureStatusOptions,
+	UseSignatureStatusParameters,
+	UseSignatureStatusReturnType,
+	UseSolTransferParameters,
+	UseSolTransferReturnType,
+	UseSplTokenParameters,
+	UseSplTokenReturnType,
+	UseTransactionPoolParameters,
+	UseTransactionPoolReturnType,
+	UseWaitForSignatureOptions,
+	UseWaitForSignatureParameters,
+	UseWaitForSignatureReturnType,
+	UseWalletActionsParameters,
+	UseWalletActionsReturnType,
+	UseWalletParameters,
+	UseWalletReturnType,
+	UseWalletSessionParameters,
+	UseWalletSessionReturnType,
+} from './hooks';
 export {
 	useAccount,
 	useBalance,
@@ -19,20 +59,37 @@ export {
 	useWallet,
 	useWalletActions,
 	useWalletSession,
-	useWalletStandardConnectors,
 } from './hooks';
 export { SolanaQueryProvider } from './QueryProvider';
+export type { QueryStatus, SolanaQueryResult, UseSolanaRpcQueryOptions } from './query';
+export type {
+	UseLatestBlockhashParameters,
+	UseLatestBlockhashReturnType,
+	UseProgramAccountsParameters,
+	UseProgramAccountsReturnType,
+	UseSimulateTransactionParameters,
+	UseSimulateTransactionReturnType,
+} from './queryHooks';
 export { useLatestBlockhash, useProgramAccounts, useSimulateTransaction } from './queryHooks';
-export { SolanaProvider } from './SolanaProvider';
-export { useWalletConnection, useWalletModalState, WalletConnectionManager } from './ui';
-export { useClientStore } from './useClientStore';
-export type { OnlySolanaChains } from './walletStandardHooks';
+export type { QueryKey } from './queryKeys';
 export {
-	useSignAndSendTransaction,
-	useSignIn,
-	useSignMessage,
-	useSignTransaction,
-	useWalletAccountMessageSigner,
-	useWalletAccountTransactionSendingSigner,
-	useWalletAccountTransactionSigner,
-} from './walletStandardHooks';
+	getLatestBlockhashKey,
+	getProgramAccountsKey,
+	getSignatureStatusKey,
+	getSimulateTransactionKey,
+} from './queryKeys';
+export { SolanaProvider } from './SolanaProvider';
+export type {
+	UseWalletConnectionParameters,
+	UseWalletConnectionReturnType,
+	UseWalletModalStateParameters,
+	UseWalletModalStateReturnType,
+	WalletModalState,
+} from './ui';
+export { useWalletConnection, useWalletModalState, WalletConnectionManager } from './ui';
+export type {
+	UseClientStoreParameters,
+	UseClientStoreReturnType,
+	UseClientStoreSelector,
+} from './useClientStore';
+export { useClientStore } from './useClientStore';

@@ -9,20 +9,29 @@ The goal of this release is **zero breaking changes** for applications that only
 touch the subset of web3.js APIs listed below. There will be future releases that slowly
 implement breaking changes as they move over to Kit primitives and intuitions.
 
-## Installation
+## Migrating from `@solana/web3.js`
+
+The migration process is straightforward and can be done incrementally:
+
+### Install the compatibility package
 
 ```bash
 pnpm add @solana/web3-compat
 ```
 
-Your project must also have valid Kit peer dependencies (`@solana/kit`,
-`@solana/client`, etc.).
+Make sure you also have the required Kit peer dependencies:
 
-## Usage
+```bash
+pnpm add @solana/kit @solana/client
+```
 
-In Phase 0, you should be able to leave your web3.js code as-is.
+### Update your imports
 
-The compatibility layer mirrors the web3.js entry points:
+Replace your web3.js imports with the compatibility layer. Both import styles are supported:
+
+#### Named imports (TypeScript/ES6 style)
+
+**Before:**
 
 ```ts
 import {
@@ -30,33 +39,71 @@ import {
   Keypair,
   PublicKey,
   SystemProgram,
+  Transaction,
   sendAndConfirmTransaction,
-} from "@solana/web3-compat";
-
-const connection = new Connection(
-  "https://api.mainnet-beta.solana.com",
-  "confirmed"
-);
-
-const payer = Keypair.generate();
-const recipient = Keypair.generate().publicKey;
-
-const transferIx = SystemProgram.transfer({
-  fromPubkey: payer.publicKey,
-  toPubkey: recipient,
-  lamports: 1_000_000,
-});
-
-const transaction = new Transaction().add(transferIx);
-transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
-transaction.feePayer = payer.publicKey;
-
-await sendAndConfirmTransaction(connection, transaction, [payer]);
+} from "@solana/web3.js";
 ```
 
-Under the hood every RPC call goes through Kit via `@solana/client`, but currently
-the surface area, return types, and error semantics stay aligned with
-`@solana/web3.js`.
+**After:**
+
+```ts
+import {
+  Connection,
+  Keypair,
+  PublicKey,
+  SystemProgram,
+  Transaction,
+  sendAndConfirmTransaction,
+} from "@solana/web3-compat";
+```
+
+#### Namespace imports
+
+**Before:**
+
+```js
+const solanaWeb3 = require("@solana/web3.js");
+const connection = new solanaWeb3.Connection(
+  "https://api.mainnet-beta.solana.com"
+);
+```
+
+**After:**
+
+```js
+const solanaWeb3 = require("@solana/web3-compat");
+const connection = new solanaWeb3.Connection(
+  "https://api.mainnet-beta.solana.com"
+);
+```
+
+Or with ES6 modules:
+
+```ts
+import * as solanaWeb3 from "@solana/web3-compat";
+```
+
+### (Optional): Leverage Kit features
+
+You can gradually adopt Kit primitives alongside the compatibility layer using bridge helpers:
+
+```ts
+import { toAddress, toPublicKey, toKitSigner } from "@solana/web3-compat";
+
+// Convert between web3.js and Kit types
+const web3PublicKey = new PublicKey("11111111111111111111111111111111");
+const kitAddress = toAddress(web3PublicKey);
+
+// Convert back if needed
+const backToWeb3 = toPublicKey(kitAddress);
+```
+
+### Migration checklist
+
+- [ ] Install `@solana/web3-compat` and Kit dependencies
+- [ ] Update import statements from `@solana/web3.js` to `@solana/web3-compat`
+- [ ] Test your application
+- [ ] Keep legacy `@solana/web3.js` for any unimplemented methods (see limitations below)
 
 ## Implemented in Phase 0
 
@@ -80,16 +127,25 @@ the surface area, return types, and error semantics stay aligned with
 - Re‑exports of all Web3 primitives (`PublicKey`, `Keypair`, `Transaction`,
   `VersionedTransaction`, `TransactionInstruction`, etc)
 
-## Running tests
+## Running package locally
+
+### Building the package
 
 ```bash
-pnpm --filter @solana/web3-compat test
+# Build TypeScript definitions
+pnpm --filter @solana/web3-compat build
+
+# Or build components separately
+pnpm --filter @solana/web3-compat compile:js
+pnpm --filter @solana/web3-compat compile:typedefs
 ```
 
-## Examples
+### Running tests
 
-We've included some examples that are directly taken from Solana project code (eg `explorer`). We'll keep
-updating these throughout the phases.
+```bash
+# Run all tests
+pnpm --filter @solana/web3-compat test
+```
 
 ## Known limitations & edge cases
 

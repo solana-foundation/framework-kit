@@ -19,13 +19,15 @@ vi.mock('swr', async () => {
 	};
 });
 
-import useSWR from 'swr';
+import useSWR, { type SWRConfiguration, useSWRConfig } from 'swr';
 
 const useSWRMock = useSWR as unknown as vi.Mock;
+let providerConfig: SWRConfiguration | undefined;
 
 describe('useSolanaRpcQuery suspense configuration', () => {
 	beforeEach(() => {
 		useSWRMock.mockReset();
+		providerConfig = undefined;
 	});
 	it('disables suspense by default', () => {
 		const client = createMockSolanaClient();
@@ -42,6 +44,11 @@ describe('useSolanaRpcQuery suspense configuration', () => {
 		expect(useSWRMock).toHaveBeenCalled();
 		const config = useSWRMock.mock.calls[0][2];
 		expect(config?.suspense).toBe(false);
+		expect(providerConfig?.dedupingInterval).toBe(2_000);
+		expect(providerConfig?.focusThrottleInterval).toBe(5_000);
+		expect(providerConfig?.revalidateIfStale).toBe(true);
+		expect(providerConfig?.revalidateOnFocus).toBe(true);
+		expect(providerConfig?.revalidateOnReconnect).toBe(true);
 	});
 
 	it('enables suspense when the provider opts in', () => {
@@ -82,6 +89,7 @@ describe('useSolanaRpcQuery suspense configuration', () => {
 });
 
 function TestQuery({ disabled = false }: { disabled?: boolean }) {
+	providerConfig = useSWRConfig();
 	useSolanaRpcQuery('test-suspense', [], (_client: SolanaClient) => Promise.resolve('ok'), { disabled });
 	return null;
 }

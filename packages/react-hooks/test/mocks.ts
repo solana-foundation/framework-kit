@@ -280,6 +280,7 @@ function normaliseConfig(config?: Partial<SolanaClientConfig>): SolanaClientConf
 		endpoint: config?.endpoint ?? DEFAULT_ENDPOINT,
 		commitment: config?.commitment,
 		createStore: config?.createStore,
+		initialState: config?.initialState,
 		logger: config?.logger,
 		walletConnectors: config?.walletConnectors,
 		websocketEndpoint: config?.websocketEndpoint,

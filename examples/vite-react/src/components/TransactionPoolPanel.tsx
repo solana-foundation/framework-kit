@@ -24,7 +24,7 @@ export function TransactionPoolPanel() {
 		sendError,
 		sendSignature,
 		sendStatus,
-	} = useTransactionPool({ latestBlockhash: { refreshInterval: 20_000 } });
+	} = useTransactionPool({ latestBlockhash: { swr: { refreshInterval: 20_000 } } });
 
 	const handleQueueInstruction = (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();

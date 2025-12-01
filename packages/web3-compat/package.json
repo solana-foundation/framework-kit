@@ -1,6 +1,6 @@
 {
 	"name": "@solana/web3-compat",
-	"version": "0.0.1",
+	"version": "0.0.6",
 	"description": "Compatibility layer that preserves the web3.js API while delegating to Kit primitives under the hood",
 	"exports": {
 		"edge-light": {
@@ -41,6 +41,10 @@
 		"kit",
 		"compatibility"
 	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/solana-foundation/framework-kit"
+	},
 	"scripts": {
 		"build": "pnpm compile:js && pnpm compile:typedefs",
 		"compile:js": "tsup --config ../build-scripts/tsup.config.package.ts",
@@ -53,16 +57,16 @@
 	},
 	"license": "MIT",
 	"dependencies": {
-		"@solana/compat": "^5.0.0",
-		"@solana/addresses": "^5.0.0",
+		"@solana/compat": "catalog:solana",
+		"@solana/addresses": "catalog:solana",
 		"@solana/client": "workspace:*",
-		"@solana/kit": "^5.0.0",
-		"@solana/transactions": "^5.0.0",
-		"@solana/web3.js": "^1.95.3",
-		"bs58": "^6.0.0"
+		"@solana/kit": "catalog:solana",
+		"@solana/transactions": "catalog:solana",
+		"@solana/web3.js": "catalog:solana",
+		"bs58": "catalog:utils"
 	},
 	"devDependencies": {
-		"@types/node": "^24"
+		"@types/node": "catalog:typescript"
 	},
 	"peerDependencies": {
 		"typescript": ">=5.3.3"

@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 
-import type { WalletConnector } from '@solana/client';
+import type { ClusterUrl, SerializableSolanaState, WalletConnector } from '@solana/client';
+import { serializeSolanaState } from '@solana/client';
+import type { Address } from '@solana/kit';
 import { render, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -39,7 +41,7 @@ describe('SolanaProvider wallet persistence', () => {
 		vi.clearAllMocks();
 	});
 
-	it('persists the connector identifier when the wallet is connected', async () => {
+	it('persists serializable state when the wallet is connected', async () => {
 		const storage = createStorage();
 		useWalletMock.mockReturnValue({
 			connectorId: 'phantom',
@@ -47,62 +49,104 @@ describe('SolanaProvider wallet persistence', () => {
 			status: 'connected',
 		});
 		useConnectWalletMock.mockReturnValue(vi.fn());
+		const client = createMockSolanaClient({
+			connectors: [PHANTOM_CONNECTOR],
+			state: {
+				cluster: {
+					commitment: 'confirmed',
+					endpoint: 'https://rpc.test' as ClusterUrl,
+					status: { status: 'ready' },
+					websocketEndpoint: 'wss://rpc.test' as ClusterUrl,
+				},
+				wallet: {
+					connectorId: 'phantom',
+					session: {
+						account: {
+							address: 'address' as Address,
+							publicKey: new Uint8Array(),
+						},
+						connector: { id: 'phantom', name: 'Phantom' },
+						disconnect: async () => undefined,
+					},
+					status: 'connected',
+				},
+			},
+		});
 
 		render(
-			<SolanaProvider
-				client={createMockSolanaClient({ connectors: [PHANTOM_CONNECTOR] })}
-				query={false}
-				walletPersistence={{ storage }}
-			>
+			<SolanaProvider client={client} query={false} walletPersistence={{ storage }}>
 				<div />
 			</SolanaProvider>,
 		);
 
-		await waitFor(() => expect(storage.setItem).toHaveBeenCalledWith('solana:last-connector', 'phantom'));
-		expect(storage.removeItem).not.toHaveBeenCalled();
+		await waitFor(() => expect(storage.setItem).toHaveBeenCalled());
+		const [, serialized] = storage.setItem.mock.calls.at(-1) ?? [];
+		const state = JSON.parse(serialized) as SerializableSolanaState;
+		expect(state.lastConnectorId).toBe('phantom');
+		expect(state.autoconnect).toBe(true);
 	});
 
-	it('removes persisted state when the wallet disconnects after storing an id', async () => {
+	it('updates persisted state when the wallet disconnects after storing an id', async () => {
 		const storage = createStorage();
-		useWalletMock
-			.mockReturnValueOnce({
-				connectorId: 'phantom',
-				session: {},
-				status: 'connected',
-			})
-			.mockReturnValue({
-				status: 'disconnected',
-			});
+		useWalletMock.mockReturnValue({
+			status: 'connected',
+		});
 		useConnectWalletMock.mockReturnValue(vi.fn());
+		const client = createMockSolanaClient({
+			connectors: [PHANTOM_CONNECTOR],
+			state: {
+				cluster: {
+					commitment: 'confirmed',
+					endpoint: 'https://rpc.test' as ClusterUrl,
+					status: { status: 'ready' },
+					websocketEndpoint: 'wss://rpc.test' as ClusterUrl,
+				},
+				wallet: {
+					connectorId: 'phantom',
+					session: {
+						account: {
+							address: 'address' as Address,
+							publicKey: new Uint8Array(),
+						},
+						connector: { id: 'phantom', name: 'Phantom' },
+						disconnect: async () => undefined,
+					},
+					status: 'connected',
+				},
+			},
+		});
 
-		const { rerender } = render(
-			<SolanaProvider
-				client={createMockSolanaClient({ connectors: [PHANTOM_CONNECTOR] })}
-				query={false}
-				walletPersistence={{ storage }}
-			>
+		render(
+			<SolanaProvider client={client} query={false} walletPersistence={{ storage }}>
 				<div />
 			</SolanaProvider>,
 		);
 
-		await waitFor(() => expect(storage.setItem).toHaveBeenCalledWith('solana:last-connector', 'phantom'));
-		rerender(
-			<SolanaProvider
-				client={createMockSolanaClient({ connectors: [PHANTOM_CONNECTOR] })}
-				query={false}
-				walletPersistence={{ storage }}
-			>
-				<div />
-			</SolanaProvider>,
-		);
+		await waitFor(() => expect(storage.setItem).toHaveBeenCalled());
+		client.store.setState((prev) => ({
+			...prev,
+			wallet: { status: 'disconnected' },
+		}));
 
-		await waitFor(() => expect(storage.removeItem).toHaveBeenCalledWith('solana:last-connector'));
-		expect(storage.setItem).toHaveBeenCalledTimes(1);
+		await waitFor(() => expect(storage.setItem).toHaveBeenCalledTimes(2));
+		const [, serialized] = storage.setItem.mock.calls.at(-1) ?? [];
+		const state = JSON.parse(serialized) as SerializableSolanaState;
+		expect(state.lastConnectorId).toBeNull();
+		expect(state.autoconnect).toBe(false);
 	});
 
-	it('auto-connects using the stored connector identifier by default', async () => {
+	it('auto-connects using serialized state by default', async () => {
 		const storage = createStorage();
-		storage.getItem.mockReturnValue('phantom');
+		const serialized = serializeSolanaState({
+			autoconnect: true,
+			commitment: 'confirmed',
+			endpoint: 'https://rpc.test' as ClusterUrl,
+			lastConnectorId: 'phantom',
+			lastPublicKey: null,
+			version: 1,
+			websocketEndpoint: 'wss://rpc.test' as ClusterUrl,
+		});
+		storage.getItem.mockReturnValue(serialized);
 		const connect = vi.fn().mockResolvedValue(undefined);
 		useConnectWalletMock.mockReturnValue(connect);
 		useWalletMock.mockReturnValue({
@@ -122,9 +166,49 @@ describe('SolanaProvider wallet persistence', () => {
 		await waitFor(() => expect(connect).toHaveBeenCalledWith('phantom', { autoConnect: true }));
 	});
 
+	it('auto-connects using config initialState when provided', async () => {
+		const storage = createStorage();
+		const connect = vi.fn().mockResolvedValue(undefined);
+		useConnectWalletMock.mockReturnValue(connect);
+		useWalletMock.mockReturnValue({
+			status: 'disconnected',
+		});
+		const initialState: SerializableSolanaState = {
+			autoconnect: true,
+			commitment: 'confirmed',
+			endpoint: 'https://rpc.test' as ClusterUrl,
+			lastConnectorId: 'phantom',
+			lastPublicKey: null,
+			version: 1,
+			websocketEndpoint: 'wss://rpc.test' as ClusterUrl,
+		};
+
+		render(
+			<SolanaProvider
+				client={createMockSolanaClient({ connectors: [PHANTOM_CONNECTOR] })}
+				config={{ endpoint: 'https://rpc.test' as ClusterUrl, initialState }}
+				query={false}
+				walletPersistence={{ storage }}
+			>
+				<div />
+			</SolanaProvider>,
+		);
+
+		await waitFor(() => expect(connect).toHaveBeenCalledWith('phantom', { autoConnect: true }));
+	});
+
 	it('retries auto-connect when a new client with registered connectors is provided', async () => {
 		const storage = createStorage();
-		storage.getItem.mockReturnValue('phantom');
+		const serialized = serializeSolanaState({
+			autoconnect: true,
+			commitment: 'confirmed',
+			endpoint: 'https://rpc.test' as ClusterUrl,
+			lastConnectorId: 'phantom',
+			lastPublicKey: null,
+			version: 1,
+			websocketEndpoint: 'wss://rpc.test' as ClusterUrl,
+		});
+		storage.getItem.mockReturnValue(serialized);
 		const connect = vi.fn().mockResolvedValue(undefined);
 		useConnectWalletMock.mockReturnValue(connect);
 		useWalletMock.mockReturnValue({
@@ -153,7 +237,16 @@ describe('SolanaProvider wallet persistence', () => {
 
 	it('skips auto-connect when disabled via configuration', async () => {
 		const storage = createStorage();
-		storage.getItem.mockReturnValue('phantom');
+		const serialized = serializeSolanaState({
+			autoconnect: false,
+			commitment: 'confirmed',
+			endpoint: 'https://rpc.test' as ClusterUrl,
+			lastConnectorId: 'phantom',
+			lastPublicKey: null,
+			version: 1,
+			websocketEndpoint: 'wss://rpc.test' as ClusterUrl,
+		});
+		storage.getItem.mockReturnValue(serialized);
 		const connect = vi.fn();
 		useConnectWalletMock.mockReturnValue(connect);
 		useWalletMock.mockReturnValue({

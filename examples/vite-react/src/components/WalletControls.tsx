@@ -20,7 +20,7 @@ export function WalletControls() {
 	const handleConnect = useCallback(
 		async (connectorId: string) => {
 			try {
-				await connect(connectorId);
+				await connect(connectorId, { autoConnect: true });
 			} catch {
 				// Store will expose the error state; nothing else to do here.
 			}
@@ -53,8 +53,7 @@ export function WalletControls() {
 				<div className="space-y-1.5">
 					<CardTitle>Wallets</CardTitle>
 					<CardDescription>
-						Discover Wallet Standard connectors, connect with wallet actions, and disconnect with a single
-						helper call.
+						Connect with configured wallet connectors, and disconnect with a single helper call.
 					</CardDescription>
 				</div>
 			</CardHeader>
@@ -62,7 +61,7 @@ export function WalletControls() {
 				<div className="grid gap-2 sm:grid-cols-2" aria-live="polite">
 					{connectors.length === 0 ? (
 						<span className="rounded-md border border-dashed border-border/70 px-3 py-2 text-sm text-muted-foreground">
-							No Wallet Standard providers detected.
+							No connectors configured.
 						</span>
 					) : null}
 					{connectors.map((connector) => {

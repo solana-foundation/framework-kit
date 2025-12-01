@@ -10,13 +10,10 @@ const QUERY_NAMESPACE = '@solana/react-hooks';
 
 export type QueryStatus = 'error' | 'idle' | 'loading' | 'success';
 
-export type UseSolanaRpcQueryOptions<Data> = Omit<
-	SWRConfiguration<Data, unknown, BareFetcher<Data>>,
-	'fallback' | 'suspense'
-> &
-	Readonly<{
-		disabled?: boolean;
-	}>;
+export type UseSolanaRpcQueryOptions<Data> = Readonly<{
+	disabled?: boolean;
+	swr?: Omit<SWRConfiguration<Data, unknown, BareFetcher<Data>>, 'fallback' | 'suspense'>;
+}>;
 
 export type SolanaQueryResult<Data> = Readonly<{
 	data: Data | undefined;
@@ -31,6 +28,23 @@ export type SolanaQueryResult<Data> = Readonly<{
 	status: QueryStatus;
 }>;
 
+/**
+ * Low-level RPC query helper that scopes SWR keys to the active cluster and exposes a Solana-friendly
+ * status shape. Prefer this when you need custom fetch logic beyond the built-in hooks.
+ *
+ * @param scope - Namespace label for the query key (for debugging and cache clarity).
+ * @param args - Additional key params that uniquely identify the query (e.g. signature, address).
+ * @param fetcher - Async function that receives the current {@link SolanaClient} and returns data.
+ * @param options - Optional flags to disable the query or pass through SWR configuration.
+ * @example
+ * ```ts
+ * const slotQuery = useSolanaRpcQuery(
+ *   'slot',
+ *   ['slot'],
+ *   (client) => client.runtime.rpc.getLatestBlockhash().send().then((r) => r.context.slot),
+ * );
+ * ```
+ */
 export function useSolanaRpcQuery<Data>(
 	scope: string,
 	args: readonly unknown[],
@@ -39,11 +53,11 @@ export function useSolanaRpcQuery<Data>(
 ): SolanaQueryResult<Data> {
 	const client = useSolanaClient();
 	const cluster = useClientStore((state) => state.cluster);
-	const { disabled = false, ...restOptions } = options;
+	const { disabled = false, swr } = options;
 	const providerSuspensePreference = useQuerySuspensePreference();
 	const suspenseEnabled = !disabled && Boolean(providerSuspensePreference);
 	const swrOptions: SWRConfiguration<Data, unknown, BareFetcher<Data>> = {
-		...restOptions,
+		...(swr ?? {}),
 		suspense: suspenseEnabled,
 	};
 
@@ -54,36 +68,36 @@ export function useSolanaRpcQuery<Data>(
 		return [QUERY_NAMESPACE, scope, cluster.endpoint, cluster.commitment, ...args] as const;
 	}, [cluster.commitment, cluster.endpoint, args, scope, disabled]);
 
-	const swr = useSWR<Data>(key, () => fetcher(client), swrOptions);
+	const swrResponse = useSWR<Data>(key, () => fetcher(client), swrOptions);
 	const [dataUpdatedAt, setDataUpdatedAt] = useState<number | undefined>(() =>
-		swr.data !== undefined ? Date.now() : undefined,
+		swrResponse.data !== undefined ? Date.now() : undefined,
 	);
 
 	useEffect(() => {
-		if (swr.data !== undefined) {
+		if (swrResponse.data !== undefined) {
 			setDataUpdatedAt(Date.now());
 		}
-	}, [swr.data]);
+	}, [swrResponse.data]);
 
-	const status: QueryStatus = swr.error
+	const status: QueryStatus = swrResponse.error
 		? 'error'
-		: swr.isLoading
+		: swrResponse.isLoading
 			? 'loading'
-			: swr.data !== undefined
+			: swrResponse.data !== undefined
 				? 'success'
 				: 'idle';
 
-	const refresh = useCallback(() => swr.mutate(undefined, { revalidate: true }), [swr.mutate]);
+	const refresh = useCallback(() => swrResponse.mutate(undefined, { revalidate: true }), [swrResponse.mutate]);
 
 	return {
-		data: swr.data,
+		data: swrResponse.data,
 		dataUpdatedAt,
-		error: swr.error ?? null,
+		error: swrResponse.error ?? null,
 		isError: status === 'error',
-		isLoading: swr.isLoading,
+		isLoading: swrResponse.isLoading,
 		isSuccess: status === 'success',
-		isValidating: swr.isValidating,
-		mutate: swr.mutate,
+		isValidating: swrResponse.isValidating,
+		mutate: swrResponse.mutate,
 		refresh,
 		status,
 	};

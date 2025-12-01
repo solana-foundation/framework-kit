@@ -16,6 +16,7 @@ import type { StakeHelper } from './features/stake';
 import type { TransactionHelper } from './features/transactions';
 import type { SolanaRpcClient } from './rpc/createSolanaRpcClient';
 import type { PrepareTransactionMessage, PrepareTransactionOptions } from './transactions/prepareTransaction';
+import type { ClusterMoniker } from './utils/cluster';
 
 type SolanaRpcInstance = ReturnType<typeof import('@solana/kit')['createSolanaRpc']>;
 type SolanaSubscriptionsInstance = ReturnType<typeof import('@solana/kit')['createSolanaRpcSubscriptions']>;
@@ -28,7 +29,9 @@ export type WalletConnectorMetadata = Readonly<{
 	canAutoConnect?: boolean;
 	icon?: string;
 	id: string;
+	kind?: string;
 	name: string;
+	ready?: boolean;
 }>;
 
 export type WalletAccount = Readonly<{
@@ -56,12 +59,14 @@ export type WalletConnector = WalletConnectorMetadata & {
 };
 
 type WalletStatusConnected = Readonly<{
+	autoConnect?: boolean;
 	connectorId: string;
 	session: WalletSession;
 	status: 'connected';
 }>;
 
 type WalletStatusConnecting = Readonly<{
+	autoConnect?: boolean;
 	connectorId: string;
 	status: 'connecting';
 }>;
@@ -71,6 +76,7 @@ type WalletStatusDisconnected = Readonly<{
 }>;
 
 type WalletStatusError = Readonly<{
+	autoConnect?: boolean;
 	connectorId?: string;
 	error: unknown;
 	status: 'error';
@@ -159,12 +165,26 @@ export type ClientStore = StoreApi<ClientState>;
 export type CreateStoreFn = (state: ClientState) => ClientStore;
 
 export type SolanaClientConfig = Readonly<{
+	cluster?: ClusterMoniker;
 	commitment?: Commitment;
 	createStore?: CreateStoreFn;
-	endpoint: ClusterUrl;
+	endpoint?: ClusterUrl;
+	initialState?: SerializableSolanaState;
 	logger?: ClientLogger;
+	rpc?: ClusterUrl;
 	rpcClient?: SolanaRpcClient;
 	walletConnectors?: readonly WalletConnector[];
+	websocket?: ClusterUrl;
+	websocketEndpoint?: ClusterUrl;
+}>;
+
+export type SerializableSolanaState = Readonly<{
+	autoconnect?: boolean;
+	commitment?: Commitment;
+	endpoint?: ClusterUrl;
+	lastConnectorId?: string | null;
+	lastPublicKey?: string | null;
+	version: number;
 	websocketEndpoint?: ClusterUrl;
 }>;
 
@@ -193,20 +213,78 @@ export type WatchSubscription = Readonly<{
 	abort(): void;
 }>;
 
+export type ConnectWalletParameters = Readonly<{
+	connectorId: string;
+	options?: Readonly<{ autoConnect?: boolean }>;
+}>;
+
+export type ConnectWalletReturnType = Promise<void>;
+
+export type DisconnectWalletParameters = undefined;
+
+export type DisconnectWalletReturnType = Promise<void>;
+
+export type FetchAccountParameters = Readonly<{
+	address: Address;
+	commitment?: Commitment;
+}>;
+
+export type FetchAccountReturnType = Promise<AccountCacheEntry>;
+
+export type FetchBalanceParameters = Readonly<{
+	address: Address;
+	commitment?: Commitment;
+}>;
+
+export type FetchBalanceReturnType = Promise<Lamports>;
+
+export type RequestAirdropParameters = Readonly<{
+	address: Address;
+	lamports: Lamports;
+}>;
+
+export type RequestAirdropReturnType = Promise<Signature>;
+
+export type SendTransactionParameters = Readonly<{
+	commitment?: Commitment;
+	transaction: SendableTransaction & Transaction & TransactionWithLastValidBlockHeight;
+}>;
+
+export type SendTransactionReturnType = Promise<Signature>;
+
+export type SetClusterParameters = Readonly<{
+	config?: Readonly<{ commitment?: Commitment; websocketEndpoint?: ClusterUrl }>;
+	endpoint: ClusterUrl;
+}>;
+
+export type SetClusterReturnType = Promise<void>;
+
 export type ClientActions = Readonly<{
-	connectWallet(connectorId: string, options?: Readonly<{ autoConnect?: boolean }>): Promise<void>;
-	disconnectWallet(): Promise<void>;
-	fetchAccount(address: Address, commitment?: Commitment): Promise<AccountCacheEntry>;
-	fetchBalance(address: Address, commitment?: Commitment): Promise<Lamports>;
-	requestAirdrop(address: Address, lamports: Lamports): Promise<Signature>;
+	connectWallet(
+		connectorId: ConnectWalletParameters['connectorId'],
+		options?: ConnectWalletParameters['options'],
+	): ConnectWalletReturnType;
+	disconnectWallet(): DisconnectWalletReturnType;
+	fetchAccount(
+		address: FetchAccountParameters['address'],
+		commitment?: FetchAccountParameters['commitment'],
+	): FetchAccountReturnType;
+	fetchBalance(
+		address: FetchBalanceParameters['address'],
+		commitment?: FetchBalanceParameters['commitment'],
+	): FetchBalanceReturnType;
+	requestAirdrop(
+		address: RequestAirdropParameters['address'],
+		lamports: RequestAirdropParameters['lamports'],
+	): RequestAirdropReturnType;
 	sendTransaction(
-		transaction: SendableTransaction & Transaction & TransactionWithLastValidBlockHeight,
-		commitment?: Commitment,
-	): Promise<Signature>;
+		transaction: SendTransactionParameters['transaction'],
+		commitment?: SendTransactionParameters['commitment'],
+	): SendTransactionReturnType;
 	setCluster(
-		endpoint: ClusterUrl,
-		config?: Readonly<{ commitment?: Commitment; websocketEndpoint?: ClusterUrl }>,
-	): Promise<void>;
+		endpoint: SetClusterParameters['endpoint'],
+		config?: SetClusterParameters['config'],
+	): SetClusterReturnType;
 }>;
 
 export type ClientWatchers = Readonly<{

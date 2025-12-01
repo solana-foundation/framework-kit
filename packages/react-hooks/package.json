@@ -1,6 +1,6 @@
 {
 	"name": "@solana/react-hooks",
-	"version": "0.2.1",
+	"version": "1.0.1",
 	"description": "React hooks for the @solana/client Solana client",
 	"exports": {
 		"edge-light": {
@@ -59,26 +59,21 @@
 	"license": "MIT",
 	"dependencies": {
 		"@solana/client": "workspace:*",
-		"@solana/addresses": "^5.0.0",
-		"@solana/codecs-core": "^5.0.0",
-		"@solana/errors": "^5.0.0",
-		"@solana/keys": "^5.0.0",
-		"@solana/promises": "^5.0.0",
-		"@solana/signers": "^5.0.0",
-		"@solana/transaction-messages": "^5.0.0",
-		"@solana/transactions": "^5.0.0",
-		"@solana/wallet-standard-features": "^1.3.0",
-		"@solana/kit": "^5.0.0",
+		"@solana/addresses": "catalog:solana",
+		"@solana/codecs-core": "catalog:solana",
+		"@solana/errors": "catalog:solana",
+		"@solana/keys": "catalog:solana",
+		"@solana/promises": "catalog:solana",
+		"@solana/signers": "catalog:solana",
+		"@solana/transaction-messages": "catalog:solana",
+		"@solana/transactions": "catalog:solana",
+		"@solana/kit": "catalog:solana",
 		"swr": "^2.3.6",
-		"zustand": "^5.0.0",
-		"@wallet-standard/base": "^1.1.0",
-		"@wallet-standard/errors": "^0.1.1",
-		"@wallet-standard/ui": "^1.0.1",
-		"@wallet-standard/ui-registry": "^1.0.1"
+		"zustand": "catalog:utils"
 	},
 	"devDependencies": {
-		"@types/react": "^19",
-		"react": "^19.0.0"
+		"@types/react": "catalog:typescript",
+		"react": "catalog:react"
 	},
 	"peerDependencies": {
 		"react": ">=18"

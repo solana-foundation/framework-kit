@@ -1,0 +1,29 @@
+name: Maintenance / DX request
+description: Request refactors, docs cleanups, or developer-experience improvements
+title: "[Maintenance]: <short summary>"
+labels: ["chore"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What should be improved?
+    validations:
+      required: true
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: Why this matters (clarity, reliability, performance, docs, etc.).
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope / constraints
+      description: Boundaries, non-goals, or rollout expectations.
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Related issues/PRs or examples.

@@ -23,6 +23,13 @@ Thanks for your interest in helping! Framework-kit is still experimental, and we
 4. Write tests when adding or modifying functionality.
 5. Open a pull request with a clear summary and note any follow-up work.
 
+## Naming & types
+
+- Export `ActionNameParameters` / `ActionNameReturnType` for public actions and `UseHookNameParameters` / `UseHookNameReturnType` for hooks (use `void` when a hook takes no arguments).
+- Prefer `XxxOptions` for optional bags, `XxxConfig` for required configuration, and `SerializableXxxState` for persisted shapes.
+- Prefer canonical names; only add temporary aliases when absolutely necessary, and remove them once callers can migrate.
+- Keep SWR options under a `swr` namespace on hook parameters and align defaults with SWR v2 unless a hook documents otherwise.
+
 ## Versioning & Changesets
 
 - Any change that impacts a published package (e.g., `@solana/client`,

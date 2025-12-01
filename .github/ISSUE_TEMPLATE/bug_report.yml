@@ -1,0 +1,59 @@
+name: Bug report
+description: Report a reproducible bug with Framework Kit
+title: "[Bug]: <short summary>"
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please share a minimal public reproduction repo so we can debug quickly. Issues without a repro will be closed until a repro is provided.
+  - type: input
+    id: repro
+    attributes:
+      label: Minimal reproduction repo (required)
+      description: Link to a public repo/branch with the smallest possible reproduction and exact steps/commands to run it.
+      placeholder: "https://github.com/yourname/kit-repro"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Enumerate each step needed to hit the bug in the repro repo.
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happened? Include stack traces, logs, or screenshots if helpful.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should have happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Node version, package versions (`@solana/client`, `@solana/react-hooks`, `@solana/web3-compat` if applicable), runtime (browser/Node/edge), and any flags.
+      placeholder: |
+        - OS:
+        - Node:
+        - Package versions:
+        - Runtime (browser + version / Node / edge):
+        - Cluster / endpoint:
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional context
+      description: Anything else we should know?

@@ -1,0 +1,36 @@
+name: Feature request
+description: Suggest a new feature or significant improvement
+title: "[Feature]: <short summary>"
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What you want to build or change.
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: What limitation or pain point does this address?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Outline the approach or API you have in mind.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other options you evaluated and why they don’t work.
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Links, sketches, or related issues/PRs.

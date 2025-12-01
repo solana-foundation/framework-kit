@@ -176,14 +176,14 @@ export function StakePanel() {
 						</p>
 					</div>
 				)}
-				{status === 'error' && error && (
+				{status === 'error' && error ? (
 					<div className="p-3 bg-red-50 dark:bg-red-950 rounded-md">
 						<p className="text-sm font-medium text-red-900 dark:text-red-100">Error</p>
 						<p className="text-xs text-red-700 dark:text-red-300 mt-1">
 							{String(error instanceof Error ? error.message : error)}
 						</p>
 					</div>
-				)}
+				) : null}
 				{status === 'loading' && (
 					<div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-md">
 						<p className="text-sm text-blue-900 dark:text-blue-100">Processing stake transaction...</p>
@@ -200,14 +200,14 @@ export function StakePanel() {
 						</Button>
 					</div>
 				)}
-				{unstakeStatus === 'error' && unstakeError && (
+				{unstakeStatus === 'error' && unstakeError ? (
 					<div className="p-3 bg-red-50 dark:bg-red-950 rounded-md">
 						<p className="text-sm font-medium text-red-900 dark:text-red-100">Unstake Error</p>
 						<p className="text-xs text-red-700 dark:text-red-300 mt-1">
 							{String(unstakeError instanceof Error ? unstakeError.message : unstakeError)}
 						</p>
 					</div>
-				)}
+				) : null}
 				{unstakeStatus === 'loading' && (
 					<div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-md">
 						<p className="text-sm text-blue-900 dark:text-blue-100">Processing unstake transaction...</p>
@@ -224,14 +224,14 @@ export function StakePanel() {
 						</Button>
 					</div>
 				)}
-				{withdrawStatus === 'error' && withdrawError && (
+				{withdrawStatus === 'error' && withdrawError ? (
 					<div className="p-3 bg-red-50 dark:bg-red-950 rounded-md">
 						<p className="text-sm font-medium text-red-900 dark:text-red-100">Withdraw Error</p>
 						<p className="text-xs text-red-700 dark:text-red-300 mt-1">
 							{String(withdrawError instanceof Error ? withdrawError.message : withdrawError)}
 						</p>
 					</div>
-				)}
+				) : null}
 				{withdrawStatus === 'loading' && (
 					<div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-md">
 						<p className="text-sm text-blue-900 dark:text-blue-100">Processing withdraw transaction...</p>

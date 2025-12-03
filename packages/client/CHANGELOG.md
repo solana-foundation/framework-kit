@@ -1,5 +1,11 @@
 # @solana/client
 
+## 1.0.1
+
+### Patch Changes
+
+- [#67](https://github.com/solana-foundation/framework-kit/pull/67) [`19a98ee`](https://github.com/solana-foundation/framework-kit/commit/19a98eee8497d1f527119d9403d5140a6f2d89b0) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Refresh README to mirror react-hooks structure with quickstart, copy/paste flows, and updated notes/scripts.
+
 ## 1.0.0
 
 ### Patch Changes

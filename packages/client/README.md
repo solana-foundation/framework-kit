@@ -177,6 +177,48 @@ const watcher = client.watchers.watchSignature(
 watcher.abort();
 ```
 
+## Cluster monikers and endpoints
+
+Pass a cluster moniker to auto-resolve RPC + WebSocket URLs. Monikers map to:
+
+- `mainnet` / `mainnet-beta` → `https://api.mainnet-beta.solana.com`
+- `testnet` → `https://api.testnet.solana.com`
+- `devnet` (default) → `https://api.devnet.solana.com`
+- `localnet` / `localhost` → `http://127.0.0.1:8899`
+
+WebSocket URLs are inferred (`wss://` or `ws://`) when not supplied. Override with `endpoint`/`rpc` or `websocket`/`websocketEndpoint` when you need a custom host.
+
+```ts
+import { autoDiscover, createClient } from "@solana/client";
+
+const client = createClient({
+  cluster: "mainnet", // or 'devnet' | 'testnet' | 'localnet' | 'localhost'
+  walletConnectors: autoDiscover(),
+});
+```
+
+Custom endpoint with inferred WebSocket:
+
+```ts
+const client = createClient({
+  endpoint: "http://127.0.0.1:8899", // websocket inferred as ws://127.0.0.1:8900
+});
+```
+
+Use `resolveCluster` directly when you need the resolved URLs without creating a client:
+
+```ts
+import { resolveCluster } from "@solana/client";
+
+const resolved = resolveCluster({ moniker: "testnet" });
+console.log(resolved.endpoint, resolved.websocketEndpoint);
+```
+
+Notes:
+
+- Default moniker is `devnet` when nothing is provided; moniker becomes `custom` when you pass a raw `endpoint`.
+- `createClient`, `createDefaultClient` (`resolveClientConfig`), and `SolanaProvider` all use `resolveCluster` under the hood, so the moniker/endpoint behavior is consistent across entrypoints.
+
 ## Notes and defaults
 
 - Wallet connectors: `autoDiscover()` picks up Wallet Standard injectables; compose `phantom()`, `solflare()`, `backpack()`, or `injected()` when you need explicit control.

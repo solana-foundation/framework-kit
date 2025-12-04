@@ -22,8 +22,7 @@ import { WalletControls } from './components/WalletControls.tsx';
 const walletConnectors = [...phantom(), ...solflare(), ...backpack(), ...autoDiscover()];
 const client = createClient({
 	commitment: 'confirmed',
-	endpoint: 'https://api.devnet.solana.com',
-	websocketEndpoint: 'wss://api.devnet.solana.com',
+	cluster: 'devnet',
 	walletConnectors,
 });
 

@@ -4,7 +4,7 @@ Framework for Solana dApps: evolving multi-framework client core (React-first to
 
 ## Packages
 
-- [`@solana/client`](packages/client/README.md) – headless Solana client with transaction helpers and wallet orchestration.
+- [`@solana/client`](packages/client/README.md) – headless Solana client with transaction helpers, moniker-based endpoint helpers, and wallet orchestration.
 - [`@solana/react-hooks`](packages/react-hooks/README.md) – React bindings, providers, and UI helpers powered by the client.
   
 ## Example

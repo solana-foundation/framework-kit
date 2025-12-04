@@ -14,14 +14,10 @@ pnpm --filter @solana/example-nextjs dev
 
 Open http://localhost:3000 and pick a wallet. The app runs against Devnet by default.
 
-## Configuration
-
-- `NEXT_PUBLIC_SOLANA_RPC` – RPC endpoint (default: `https://api.devnet.solana.com`)
-- `NEXT_PUBLIC_SOLANA_WS` – WebSocket endpoint (default inferred from RPC)
-
 `next.config.mjs` enables `transpilePackages` for the `@solana/*` packages so the hooks work with the
 Next.js bundler. Tailwind CSS v4 is declared inside `app/globals.css` with `@import "tailwindcss";`
-and `@source "./app/**/*.{ts,tsx}"` for class detection.
+and `@source "./app/**/*.{ts,tsx}"` for class detection. The Solana client uses the `cluster` moniker
+(`devnet`) set in `app/providers.tsx`; change it there to target another cluster.
 
 ## Other scripts
 

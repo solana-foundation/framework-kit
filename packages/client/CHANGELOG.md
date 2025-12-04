@@ -1,5 +1,15 @@
 # @solana/client
 
+## 1.1.0
+
+### Minor Changes
+
+- [#73](https://github.com/solana-foundation/framework-kit/pull/73) [`870616b`](https://github.com/solana-foundation/framework-kit/commit/870616bb9a1f658f96f427d63f239b094a71cb92) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - - Staking helpers and hooks from @leandrogavidia
+  - getAddressLookupTable and getNonce from @meowyx
+  - fix autoconnect bug reported in documentation
+  - Fix a few types to get typechecks in CI.
+  - Enable typecheck in CI/CD
+
 ## 1.0.1
 
 ### Patch Changes

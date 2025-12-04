@@ -26,7 +26,7 @@ export function WalletConnectButton() {
 	async function handleConnect(connectorId: string) {
 		setError(null);
 		try {
-			await connectWallet(connectorId, { autoConnect: true });
+			await connectWallet(connectorId);
 			setOpen(false);
 		} catch (err) {
 			setError(err instanceof Error ? err.message : 'Unable to connect');

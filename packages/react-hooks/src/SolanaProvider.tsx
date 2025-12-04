@@ -187,7 +187,7 @@ function WalletPersistence({
 
 		void (async () => {
 			try {
-				await connectWallet(connectorId, { autoConnect: true });
+				await connectWallet(connectorId, { autoConnect: true, allowInteractiveFallback: false });
 			} catch {
 				// Ignore auto-connect failures; consumers can handle manual retries via hooks.
 			} finally {

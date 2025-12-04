@@ -3,7 +3,10 @@
 	"display": "@solana/web3-compat",
 	"extends": "../tsconfig/base.json",
 	"compilerOptions": {
-		"lib": ["DOM", "ES2018", "ESNext.AsyncIterable"]
+		"lib": ["DOM", "ES2018", "ESNext.AsyncIterable"],
+		"paths": {
+			"@solana/client": ["../client/src/index.ts"]
+		}
 	},
 	"include": ["../build-scripts/build-time-constants.d.ts", "src", "examples"],
 	"exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]

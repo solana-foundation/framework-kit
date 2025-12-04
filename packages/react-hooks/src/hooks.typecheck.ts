@@ -52,5 +52,5 @@ export type UseClientStoreParametersMatch = Expect<
 export type UseClientStoreReturnDefault = Expect<Equal<UseClientStoreReturnType<ClientState>, ClientState>>;
 export type UseClientStoreReturnSelector = Expect<Equal<UseClientStoreReturnType<number>, number>>;
 export type UseSignatureStatusParametersMatch = Expect<
-	Equal<Pick<UseSignatureStatusParameters, 'signature'>, { signature?: SignatureLike }>
+	Equal<Pick<UseSignatureStatusParameters, 'signature'>, Readonly<{ signature?: SignatureLike }>>
 >;

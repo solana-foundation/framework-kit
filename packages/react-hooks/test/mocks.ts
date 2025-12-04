@@ -261,10 +261,14 @@ function createDefaultStakeHelper(): MockedStakeHelper {
 			signer: { address: 'mock' } as unknown as TransactionSigner,
 			stakeAccount: { address: 'mock-stake-account' } as unknown as TransactionSigner<string>,
 		})),
-		sendPreparedStake: vi.fn<StakeHelper['sendPreparedStake']>(
-			async () => 'MockPreparedStakeSignature111111111111' as Signature,
-		),
-		sendStake: vi.fn<StakeHelper['sendStake']>(async () => 'MockStakeSignature1111111111111111111111' as Signature),
+		sendPreparedStake: vi.fn<StakeHelper['sendPreparedStake']>(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 0));
+			return 'MockPreparedStakeSignature111111111111' as Signature;
+		}),
+		sendStake: vi.fn<StakeHelper['sendStake']>(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 0));
+			return 'MockStakeSignature1111111111111111111111' as Signature;
+		}),
 	};
 }
 

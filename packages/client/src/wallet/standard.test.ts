@@ -22,11 +22,11 @@ const mockApp = walletApp as unknown as { __setWallets: (wallets: Wallet[]) => v
 
 function createStubWallet(name: string): Wallet {
 	const account = {
-		address: `${name}-address`,
+		address: '8opBt1NVr7Di5urN6byN1Nsx3Rp3XJ2nKxuxMxkvZWSr', // valid base58 address
 		chains: ['solana:devnet'],
 		features: [],
 		label: 'Primary',
-		publicKey: new Uint8Array([1, 2, 3]),
+		publicKey: new Uint8Array(32).fill(1),
 	};
 	const connectFeature = {
 		connect: vi.fn(async () => ({ accounts: [account] })),
@@ -65,5 +65,23 @@ describe('Wallet Standard connector metadata', () => {
 		const connectors = getWalletStandardConnectors();
 		expect(connectors).toHaveLength(1);
 		expect(connectors[0].id).toBe('wallet-standard:demo-wallet');
+	});
+
+	it('retries interactively when a silent auto-connect attempt fails', async () => {
+		const wallet = createStubWallet('Demo Wallet');
+		const connectSpy = (wallet.features[StandardConnect] as { connect: ReturnType<typeof vi.fn> }).connect;
+		connectSpy.mockImplementation(async ({ silent }: { silent?: boolean }) => {
+			if (silent) {
+				throw new Error('user rejection during silent connect');
+			}
+			return { accounts: wallet.accounts };
+		});
+
+		const connector = createWalletStandardConnector(wallet);
+		await expect(connector.connect({ autoConnect: true })).resolves.toBeDefined();
+
+		expect(connectSpy).toHaveBeenCalledTimes(2);
+		expect(connectSpy).toHaveBeenNthCalledWith(1, { silent: true });
+		expect(connectSpy).toHaveBeenNthCalledWith(2, { silent: false });
 	});
 });

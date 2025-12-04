@@ -62,6 +62,7 @@ function updateState(store: ClientStore, update: Partial<ClientState>): void {
  */
 export function createActions({ connectors, logger: inputLogger, runtime, store }: ActionDeps): ClientActions {
 	const logger = inputLogger ?? createLogger();
+	let walletEventsCleanup: (() => void) | undefined;
 
 	/**
 	 * Returns the commitment to use for a request, falling back to the store default.
@@ -167,6 +168,8 @@ export function createActions({ connectors, logger: inputLogger, runtime, store 
 		connectorId: string,
 		options: Readonly<{ autoConnect?: boolean }> = {},
 	): Promise<void> {
+		walletEventsCleanup?.();
+		walletEventsCleanup = undefined;
 		const connector = connectors.get(connectorId);
 		if (!connector) {
 			throw new Error(`No wallet connector registered for id "${connectorId}".`);
@@ -175,11 +178,13 @@ export function createActions({ connectors, logger: inputLogger, runtime, store 
 			throw new Error(`Wallet connector "${connectorId}" is not supported in this environment.`);
 		}
 		const autoConnectPreference = options.autoConnect ?? true;
+
 		store.setState((state) => ({
 			...state,
 			lastUpdatedAt: now(),
 			wallet: { autoConnect: autoConnectPreference, connectorId, status: 'connecting' },
 		}));
+
 		try {
 			const session = await connector.connect(options);
 			store.setState((state) => ({
@@ -187,6 +192,15 @@ export function createActions({ connectors, logger: inputLogger, runtime, store 
 				lastUpdatedAt: now(),
 				wallet: { autoConnect: autoConnectPreference, connectorId, session, status: 'connected' },
 			}));
+			if (session.onAccountsChanged) {
+				walletEventsCleanup = session.onAccountsChanged((accounts) => {
+					if (accounts.length === 0) {
+						walletEventsCleanup?.();
+						walletEventsCleanup = undefined;
+						void disconnectWallet();
+					}
+				});
+			}
 			logger({
 				data: { address: session.account.address.toString(), connectorId },
 				level: 'info',
@@ -217,6 +231,8 @@ export function createActions({ connectors, logger: inputLogger, runtime, store 
 		if (wallet.status === 'disconnected') {
 			return;
 		}
+		walletEventsCleanup?.();
+		walletEventsCleanup = undefined;
 		try {
 			if (wallet.status === 'connected') {
 				await wallet.session.disconnect();

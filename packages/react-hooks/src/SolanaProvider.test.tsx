@@ -163,7 +163,9 @@ describe('SolanaProvider wallet persistence', () => {
 			</SolanaProvider>,
 		);
 
-		await waitFor(() => expect(connect).toHaveBeenCalledWith('phantom', { autoConnect: true }));
+		await waitFor(() =>
+			expect(connect).toHaveBeenCalledWith('phantom', { autoConnect: true, allowInteractiveFallback: false }),
+		);
 	});
 
 	it('auto-connects using config initialState when provided', async () => {
@@ -194,7 +196,9 @@ describe('SolanaProvider wallet persistence', () => {
 			</SolanaProvider>,
 		);
 
-		await waitFor(() => expect(connect).toHaveBeenCalledWith('phantom', { autoConnect: true }));
+		await waitFor(() =>
+			expect(connect).toHaveBeenCalledWith('phantom', { autoConnect: true, allowInteractiveFallback: false }),
+		);
 	});
 
 	it('retries auto-connect when a new client with registered connectors is provided', async () => {
@@ -232,7 +236,9 @@ describe('SolanaProvider wallet persistence', () => {
 			</SolanaProvider>,
 		);
 
-		await waitFor(() => expect(connect).toHaveBeenCalledWith('phantom', { autoConnect: true }));
+		await waitFor(() =>
+			expect(connect).toHaveBeenCalledWith('phantom', { autoConnect: true, allowInteractiveFallback: false }),
+		);
 	});
 
 	it('skips auto-connect when disabled via configuration', async () => {

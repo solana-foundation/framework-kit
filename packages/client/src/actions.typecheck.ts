@@ -41,7 +41,13 @@ type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ?
 type Expect<T extends true> = T;
 
 export type ConnectWalletParametersMatch = Expect<
-	Equal<ConnectWalletParameters, Readonly<{ connectorId: string; options?: Readonly<{ autoConnect?: boolean }> }>>
+	Equal<
+		ConnectWalletParameters,
+		Readonly<{
+			connectorId: string;
+			options?: Readonly<{ autoConnect?: boolean; allowInteractiveFallback?: boolean }>;
+		}>
+	>
 >;
 export type ConnectWalletReturnMatch = Expect<Equal<ConnectWalletReturnType, Promise<void>>>;
 export type DisconnectWalletParametersMatch = Expect<Equal<DisconnectWalletParameters, undefined>>;

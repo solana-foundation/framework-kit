@@ -6,7 +6,10 @@ import { useSolanaClient } from './context';
 import { useConnectWallet, useDisconnectWallet, useWallet } from './hooks';
 
 type WalletConnectionState = Readonly<{
-	connect(connectorId: string, options?: Readonly<{ autoConnect?: boolean }>): Promise<void>;
+	connect(
+		connectorId: string,
+		options?: Readonly<{ autoConnect?: boolean; allowInteractiveFallback?: boolean }>,
+	): Promise<void>;
 	connected: boolean;
 	connecting: boolean;
 	connectors: readonly WalletConnector[];
@@ -49,8 +52,10 @@ export function useWalletConnection(options: WalletConnectionOptions = {}): Wall
 	}, []);
 	const connectors = isHydrated ? (options.connectors ?? client.connectors.all) : [];
 	const connect = useCallback(
-		(connectorId: string, connectOptions?: Readonly<{ autoConnect?: boolean }>) =>
-			connectWallet(connectorId, connectOptions),
+		(
+			connectorId: string,
+			connectOptions?: Readonly<{ autoConnect?: boolean; allowInteractiveFallback?: boolean }>,
+		) => connectWallet(connectorId, connectOptions),
 		[connectWallet],
 	);
 	const disconnect = useCallback(() => disconnectWallet(), [disconnectWallet]);

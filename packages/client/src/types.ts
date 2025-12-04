@@ -44,6 +44,7 @@ export type WalletSession = Readonly<{
 	account: WalletAccount;
 	connector: WalletConnectorMetadata;
 	disconnect(): Promise<void>;
+	onAccountsChanged?: (listener: (accounts: WalletAccount[]) => void) => () => void;
 	sendTransaction?(
 		transaction: SendableTransaction & Transaction,
 		config?: Readonly<{ commitment?: Commitment }>,
@@ -53,7 +54,7 @@ export type WalletSession = Readonly<{
 }>;
 
 export type WalletConnector = WalletConnectorMetadata & {
-	connect(opts?: Readonly<{ autoConnect?: boolean }>): Promise<WalletSession>;
+	connect(opts?: Readonly<{ autoConnect?: boolean; allowInteractiveFallback?: boolean }>): Promise<WalletSession>;
 	disconnect(): Promise<void>;
 	isSupported(): boolean;
 };
@@ -228,7 +229,7 @@ export type WatchSubscription = Readonly<{
 
 export type ConnectWalletParameters = Readonly<{
 	connectorId: string;
-	options?: Readonly<{ autoConnect?: boolean }>;
+	options?: Readonly<{ autoConnect?: boolean; allowInteractiveFallback?: boolean }>;
 }>;
 
 export type ConnectWalletReturnType = Promise<void>;

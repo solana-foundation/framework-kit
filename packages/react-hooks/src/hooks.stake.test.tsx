@@ -129,8 +129,9 @@ describe('useStake hook', () => {
 
 		expect(result.current.isStaking).toBe(false);
 
-		const stakePromise = act(async () => {
-			await result.current.stake({ amount: 500_000_000n });
+		let stakePromise: Promise<unknown>;
+		act(() => {
+			stakePromise = result.current.stake({ amount: 500_000_000n });
 		});
 
 		// During the stake operation, isStaking should be true
@@ -138,7 +139,7 @@ describe('useStake hook', () => {
 			expect(result.current.isStaking).toBe(true);
 		});
 
-		await stakePromise;
+		await stakePromise!;
 
 		// After completion, isStaking should be false
 		expect(result.current.isStaking).toBe(false);

@@ -1,0 +1,10 @@
+{
+	"$schema": "https://json.schemastore.org/tsconfig",
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"paths": {
+			"@solana/client": ["../../packages/client/src/index.ts"],
+			"@solana/react-hooks": ["../../packages/react-hooks/src/index.ts"]
+		}
+	}
+}

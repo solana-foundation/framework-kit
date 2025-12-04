@@ -9,7 +9,7 @@
 		"start": "next start",
 		"lint": "biome check app",
 		"format": "biome check --write app",
-		"test:typecheck": "tsc --noEmit",
+		"test:typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
 		"typecheck": "pnpm test:typecheck"
 	},
 	"dependencies": {

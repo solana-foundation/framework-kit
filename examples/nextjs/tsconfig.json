@@ -8,6 +8,10 @@
 		"esModuleInterop": true,
 		"module": "esnext",
 		"moduleResolution": "bundler",
+		"paths": {
+			"@solana/client": ["../../packages/client/src/index.ts"],
+			"@solana/react-hooks": ["../../packages/react-hooks/src/index.ts"]
+		},
 		"resolveJsonModule": true,
 		"isolatedModules": true,
 		"jsx": "react-jsx",

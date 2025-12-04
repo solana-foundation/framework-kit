@@ -177,7 +177,7 @@ export function createActions({ connectors, logger: inputLogger, runtime, store 
 		if (!connector.isSupported()) {
 			throw new Error(`Wallet connector "${connectorId}" is not supported in this environment.`);
 		}
-		const autoConnectPreference = options.autoConnect ?? true;
+		const autoConnectPreference = options.autoConnect ?? false;
 
 		store.setState((state) => ({
 			...state,

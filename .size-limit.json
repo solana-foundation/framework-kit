@@ -1,0 +1,14 @@
+[
+	{
+		"name": "@solana/client",
+		"path": "packages/client/dist/index.browser.mjs",
+		"limit": "70 KB",
+		"gzip": true
+	},
+	{
+		"name": "@solana/react-hooks",
+		"path": "packages/react-hooks/dist/index.browser.mjs",
+		"limit": "85 KB",
+		"gzip": true
+	}
+]

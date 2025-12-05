@@ -1,5 +1,17 @@
 # Framework-kit
 
+[![codecov](https://codecov.io/gh/solana-foundation/framework-kit/branch/main/graph/badge.svg)](https://codecov.io/gh/solana-foundation/framework-kit)
+
+**@solana/client:**
+[![npm version](https://img.shields.io/npm/v/@solana/client.svg)](https://www.npmjs.com/package/@solana/client)
+[![npm bundle size](https://img.shields.io/bundlephobia/minzip/@solana/client)](https://bundlephobia.com/package/@solana/client)
+[![npm downloads](https://img.shields.io/npm/dm/@solana/client.svg)](https://www.npmjs.com/package/@solana/client)
+
+**@solana/react-hooks:**
+[![npm version](https://img.shields.io/npm/v/@solana/react-hooks.svg)](https://www.npmjs.com/package/@solana/react-hooks)
+[![npm bundle size](https://img.shields.io/bundlephobia/minzip/@solana/react-hooks)](https://bundlephobia.com/package/@solana/react-hooks)
+[![npm downloads](https://img.shields.io/npm/dm/@solana/react-hooks.svg)](https://www.npmjs.com/package/@solana/react-hooks)
+
 Framework for Solana dApps: evolving multi-framework client core (React-first today) that orchestrates wallets, transactions, and reactive freshness-aware data flows out of the box.
 
 ## Packages

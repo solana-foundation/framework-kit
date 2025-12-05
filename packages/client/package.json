@@ -33,7 +33,8 @@
 	},
 	"type": "module",
 	"files": [
-		"./dist/"
+		"./dist/**/*.mjs",
+		"./dist/types/"
 	],
 	"sideEffects": false,
 	"keywords": [

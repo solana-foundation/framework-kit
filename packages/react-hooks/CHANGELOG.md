@@ -1,5 +1,22 @@
 # @solana/react-hooks
 
+## 1.1.3
+
+### Patch Changes
+
+- [#83](https://github.com/solana-foundation/framework-kit/pull/83) [`c6c8955`](https://github.com/solana-foundation/framework-kit/commit/c6c8955345d5f3a334b9324fb224abbb95880e3d) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Optimize bundle size and switch to ESM-only distribution
+
+  - Remove all CommonJS builds, ship ESM-only with .mjs extensions
+  - Enable minification for browser and React Native builds (51% size reduction)
+  - Browser bundles reduced: @solana/client 128KB → 62.5KB, @solana/react-hooks 41KB → 20KB
+  - Keep Node.js builds unminified for easier debugging
+  - Externalize sourcemaps and exclude from npm packages
+  - Add size-limit for bundle size tracking and CI enforcement
+  - Update TypeScript configuration to use bundler module resolution for ESM compatibility
+
+- Updated dependencies [[`c6c8955`](https://github.com/solana-foundation/framework-kit/commit/c6c8955345d5f3a334b9324fb224abbb95880e3d)]:
+  - @solana/client@1.1.3
+
 ## 1.1.2
 
 ### Patch Changes

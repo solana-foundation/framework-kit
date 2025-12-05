@@ -1,5 +1,14 @@
 # @solana/react-hooks
 
+## 1.1.1
+
+### Patch Changes
+
+- [#78](https://github.com/solana-foundation/framework-kit/pull/78) [`56f50bf`](https://github.com/solana-foundation/framework-kit/commit/56f50bfac04fdce5ad37cf81d1d9c28fc2b5ab56) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Fix typecheck to rebuild dependencies first, preventing stale type definition errors
+
+- Updated dependencies [[`56f50bf`](https://github.com/solana-foundation/framework-kit/commit/56f50bfac04fdce5ad37cf81d1d9c28fc2b5ab56)]:
+  - @solana/client@1.1.1
+
 ## 1.1.0
 
 ### Minor Changes

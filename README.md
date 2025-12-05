@@ -30,7 +30,36 @@ Framework for Solana dApps: evolving multi-framework client core (React-first to
 
 - [`@solana/client`](packages/client/README.md) – headless Solana client with transaction helpers, moniker-based endpoint helpers, and wallet orchestration.
 - [`@solana/react-hooks`](packages/react-hooks/README.md) – React bindings, providers, and UI helpers powered by the client.
-  
+
+## Relationship with `@solana/kit`
+
+This framework is built directly on top of `@solana/kit`. We use Kit internally for all low-level primitives, but **we deliberately do not re-export them.**
+
+### Why this architecture?
+
+We want to avoid the "wrapper confusion" often seen in earlier libraries (like Gill), where it was unclear whether developers should use the framework's version of a type or the native version.
+
+* **Clear Separation of Concerns:**
+    * **Use Framework-kit** for high-level application logic: Wallet state management, React Context, and connection orchestration.
+    * **Use `@solana/kit`** for low-level primitives: Addresses, Codecs, and Transaction construction types.
+* **No Vendor Lock-in:** By importing primitives like `address` or `Signature` directly from `@solana/kit`, your core data types remain standard. This ensures that your helper functions and types remain compatible with the broader ecosystem, regardless of the framework managing your state.
+
+### Interop Example
+
+You will often see imports from both libraries in the same file. This is the intended usage pattern.
+
+```typescript
+// 1. Import standard primitives directly from @solana/kit
+import { address, type Address } from "@solana/kit";
+
+// 2. Import high-level logic from the framework
+import { useWalletConnection } from "@solana/react-hooks";
+
+export const UserProfile = ({ userAddress }: { userAddress: Address }) => {
+   const { connect } = useWalletConnection();
+   // ... component logic
+}
+ ``` 
 ## Example
 - [`@solana/example-vite-react`](examples/vite-react/README.md) – Vite/Tailwind demo showcasing the hooks in action.
 

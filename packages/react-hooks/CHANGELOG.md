@@ -1,5 +1,20 @@
 # @solana/react-hooks
 
+## 1.1.4
+
+### Patch Changes
+
+- [#86](https://github.com/solana-foundation/framework-kit/pull/86) [`c19c39a`](https://github.com/solana-foundation/framework-kit/commit/c19c39a9c7ba918d83ed5dc585938101902c2073) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Exclude JavaScript sourcemaps from npm packages to reduce bundle size
+
+  - Updated `files` field in package.json to explicitly exclude .mjs.map files
+  - TypeScript declaration maps (.d.ts.map) are still included for "Go to Definition" support
+  - Package size reduced: @solana/client 273.9KB → 85.4KB (69% reduction)
+  - Package size reduced: @solana/react-hooks size also reduced significantly
+  - Improves install times and reduces disk usage with no DX impact
+
+- Updated dependencies [[`c19c39a`](https://github.com/solana-foundation/framework-kit/commit/c19c39a9c7ba918d83ed5dc585938101902c2073)]:
+  - @solana/client@1.1.4
+
 ## 1.1.3
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # @solana/react-hooks
 
+## 1.1.2
+
+### Patch Changes
+
+- [#80](https://github.com/solana-foundation/framework-kit/pull/80) [`bf7ef1d`](https://github.com/solana-foundation/framework-kit/commit/bf7ef1d49ec1c47ec437217139bff3446021c37c) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Add test coverage reporting, optimize CI performance, and enhance README with hero image and badges. Includes Codecov integration, GitHub Actions cache for Turbo, and centered badge layout showcasing npm versions, bundle sizes, and download counts for both packages.
+
+- Updated dependencies [[`bf7ef1d`](https://github.com/solana-foundation/framework-kit/commit/bf7ef1d49ec1c47ec437217139bff3446021c37c)]:
+  - @solana/client@1.1.2
+
 ## 1.1.1
 
 ### Patch Changes

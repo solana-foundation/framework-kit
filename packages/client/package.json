@@ -10,28 +10,17 @@
 			"workerd": "./dist/index.node.mjs",
 			"node": "./dist/index.node.mjs",
 			"react-native": "./dist/index.native.mjs",
-			"import": "./dist/index.node.mjs",
-			"require": "./dist/index.node.cjs",
 			"default": "./dist/index.node.mjs"
 		},
 		"./connectors": {
 			"types": "./dist/types/wallet/connectors.d.ts",
-			"import": "./dist/wallet/connectors.node.mjs",
-			"require": "./dist/wallet/connectors.node.cjs",
 			"default": "./dist/wallet/connectors.node.mjs"
 		},
 		"./server": {
 			"types": "./dist/types/server/index.d.ts",
-			"import": "./dist/server/index.node.mjs",
-			"require": "./dist/server/index.node.cjs",
 			"default": "./dist/server/index.node.mjs"
 		}
 	},
-	"browser": {
-		"./dist/index.node.cjs": "./dist/index.browser.cjs",
-		"./dist/index.node.mjs": "./dist/index.browser.mjs"
-	},
-	"main": "./dist/index.node.cjs",
 	"module": "./dist/index.node.mjs",
 	"react-native": "./dist/index.native.mjs",
 	"types": "./dist/types/index.d.ts",
@@ -42,7 +31,7 @@
 			]
 		}
 	},
-	"type": "commonjs",
+	"type": "module",
 	"files": [
 		"./dist/"
 	],
@@ -54,6 +43,7 @@
 		"zustand"
 	],
 	"scripts": {
+		"analyze": "pnpm build && tsx ../build-scripts/analyze-bundle.ts",
 		"build": "pnpm compile:js && pnpm compile:typedefs",
 		"compile:js": "tsup --config ../build-scripts/tsup.config.package.ts",
 		"compile:typedefs": "tsc -p ./tsconfig.declarations.json",

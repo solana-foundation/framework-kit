@@ -11,53 +11,63 @@ if (packageDirName === 'react-hooks') {
 
 const baseEntry = ['src/index.ts'];
 const nodeEntry = packageDirName === 'client' ? [...baseEntry, 'src/server/index.ts'] : baseEntry;
-const browserEntry = baseEntry;
-const neutralEntry = baseEntry;
 
+// Base config
 const common = {
 	clean: true,
 	dts: false,
-	entry: nodeEntry,
 	keepNames: true,
-	minify: false,
 	shims: false,
 	skipNodeModulesBundle: true,
-	sourcemap: true,
-	splitting: false,
 	target: 'es2022',
 	treeshake: true,
 	tsconfig: tsconfigPath,
 	external,
-} as const;
+};
+
+// Node config - NO minification for debugging
+const nodeConfig = {
+	...common,
+	minify: false,
+	sourcemap: true,
+	splitting: false,
+};
+
+// Browser/Native config - WITH minification
+const productionConfig = {
+	...common,
+	minify: true,
+	sourcemap: 'external',
+	splitting: false,
+};
 
 export default defineConfig([
+	// Node.js - ESM ONLY, unminified
 	{
-		...common,
+		...nodeConfig,
 		entry: nodeEntry,
-		format: ['esm', 'cjs'],
+		format: ['esm'],
 		outDir: 'dist',
-		outExtension({ format }) {
-			return {
-				js: format === 'esm' ? '.node.mjs' : '.node.cjs',
-			};
+		outExtension() {
+			return { js: '.node.mjs' };
 		},
 		platform: 'node',
 	},
+	// Browser - ESM ONLY, minified
 	{
-		...common,
-		entry: browserEntry,
-		format: ['esm', 'cjs'],
+		...productionConfig,
+		entry: baseEntry,
+		format: ['esm'],
 		outDir: 'dist',
-		outExtension({ format }) {
-			return {
-				js: format === 'esm' ? '.browser.mjs' : '.browser.cjs',
-			};
+		outExtension() {
+			return { js: '.browser.mjs' };
 		},
 		platform: 'browser',
 	},
+	// React Native - ESM ONLY, minified
 	{
-		...common,
-		entry: neutralEntry,
+		...productionConfig,
+		entry: baseEntry,
 		format: ['esm'],
 		outDir: 'dist',
 		outExtension() {

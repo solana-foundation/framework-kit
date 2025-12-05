@@ -150,7 +150,7 @@ jobs:
         run: pnpm build
 
       - name: Run tests with coverage
-        run: pnpm test -- --coverage
+        run: pnpm --filter=!@solana/test-types-smoke test -- --coverage
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4

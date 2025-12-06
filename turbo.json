@@ -19,6 +19,19 @@
 		"test": {
 			"outputs": []
 		},
+		"test:e2e": {
+			"dependsOn": ["^build"],
+			"outputs": [],
+			"cache": false
+		},
+		"docs": {
+			"dependsOn": ["build"],
+			"outputs": ["docs/**"]
+		},
+		"docs:json": {
+			"dependsOn": ["build"],
+			"outputs": ["docs/api.json"]
+		},
 		"typecheck": {
 			"dependsOn": ["^build"],
 			"outputs": []

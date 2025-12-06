@@ -47,6 +47,8 @@
 		"build": "pnpm compile:js && pnpm compile:typedefs",
 		"compile:js": "tsup --config ../build-scripts/tsup.config.package.ts",
 		"compile:typedefs": "tsc -p ./tsconfig.declarations.json",
+		"docs": "typedoc",
+		"docs:json": "typedoc --json ./docs/api.json",
 		"format": "biome check --write src",
 		"lint": "biome check src",
 		"test:typecheck": "tsc --noEmit",
@@ -78,7 +80,9 @@
 		"zustand": "catalog:utils"
 	},
 	"devDependencies": {
-		"@types/node": "catalog:typescript"
+		"@types/node": "catalog:typescript",
+		"typedoc": "^0.28.0",
+		"typedoc-plugin-markdown": "^4.4.0"
 	},
 	"peerDependencies": {
 		"typescript": ">=5.3.3"

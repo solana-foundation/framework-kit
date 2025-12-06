@@ -1,0 +1,20 @@
+{
+	"$schema": "https://typedoc.org/schema.json",
+	"entryPoints": ["./src/index.ts"],
+	"out": "./docs",
+	"name": "@solana/client API Documentation",
+	"readme": "./README.md",
+	"plugin": ["typedoc-plugin-markdown"],
+	"outputFileStrategy": "modules",
+	"excludePrivate": true,
+	"excludeProtected": true,
+	"excludeInternal": true,
+	"includeVersion": true,
+	"categorizeByGroup": true,
+	"categoryOrder": ["Client", "Actions", "Hooks", "Types", "*"],
+	"navigationLinks": {
+		"GitHub": "https://github.com/solana-foundation/framework-kit"
+	},
+	"githubPages": true,
+	"hideGenerator": true
+}

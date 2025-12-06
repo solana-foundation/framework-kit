@@ -1,0 +1,11 @@
+# Test artifacts
+playwright-report/
+test-results/
+
+# Dependencies
+node_modules/
+
+# Extensions (downloaded separately)
+extensions/
+!extensions/.gitignore
+!extensions/README.md

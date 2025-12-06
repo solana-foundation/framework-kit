@@ -11,5 +11,5 @@
 	"commit": false,
 	"linked": [],
 	"updateInternalDependencies": "patch",
-	"ignore": ["@solana/web3-compat-parity-tests"]
+	"ignore": ["@solana/web3-compat-parity-tests", "@solana/e2e"]
 }

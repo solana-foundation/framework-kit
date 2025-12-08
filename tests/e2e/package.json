@@ -1,22 +1,29 @@
 {
-    "name": "@solana/e2e",
-    "private": true,
-    "version": "0.0.1",
-    "type": "module",
-    "scripts": {
-        "test": "playwright test",
-        "test:headed": "playwright test --headed",
-        "test:ui": "playwright test --ui",
-        "test:debug": "playwright test --debug",
-        "format": "biome check --write src tests",
-        "lint": "biome check src tests",
-        "typecheck": "tsc --noEmit",
-        "download-extensions": "tsx scripts/download-extensions.ts"
-    },
-    "devDependencies": {
-        "@playwright/test": "^1.49.0",
-        "@types/node": "catalog:typescript",
-        "tsx": "^4.19.0",
-        "typescript": "catalog:typescript"
-    }
+	"name": "@solana/e2e",
+	"private": true,
+	"version": "0.0.1",
+	"type": "module",
+	"scripts": {
+		"test": "playwright test",
+		"test:headed": "playwright test --headed",
+		"test:ui": "playwright test --ui",
+		"test:debug": "playwright test --debug",
+		"format": "biome check --write src tests",
+		"lint": "biome check src tests",
+		"typecheck": "tsc --noEmit",
+		"download-extensions": "tsx scripts/download-extensions.ts"
+	},
+	"devDependencies": {
+		"@playwright/test": "^1.49.0",
+		"@solana/wallet-standard-features": "catalog:solana",
+		"@solana/web3.js": "^1.98.0",
+		"@types/node": "catalog:typescript",
+		"@wallet-standard/app": "catalog:solana",
+		"@wallet-standard/base": "catalog:solana",
+		"@wallet-standard/features": "catalog:solana",
+		"bs58": "catalog:utils",
+		"tsx": "^4.19.0",
+		"tweetnacl": "^1.0.3",
+		"typescript": "catalog:typescript"
+	}
 }

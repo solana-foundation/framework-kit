@@ -33,33 +33,87 @@ Framework for Solana dApps: evolving multi-framework client core (React-first to
 
 ## Relationship with `@solana/kit`
 
-This framework is built directly on top of `@solana/kit`. We use Kit internally for all low-level primitives, but **we deliberately do not re-export them.**
+This framework is built directly on top of @solana/kit. We use Kit internally for all low-level primitives, but we deliberately do not re-export them.
+
 
 ### Why this architecture?
 
-We want to avoid the "wrapper confusion" often seen in earlier libraries (like Gill), where it was unclear whether developers should use the framework's version of a type or the native version.
+Framework-kit sits on top of @solana/kit and uses its primitives directly. This keeps each layer focused on its role while maintaining full type compatibility.
+
 
 * **Clear Separation of Concerns:**
-    * **Use Framework-kit** for high-level application logic: Wallet state management, React Context, and connection orchestration.
-    * **Use `@solana/kit`** for low-level primitives: Addresses, Codecs, and Transaction construction types.
-* **No Vendor Lock-in:** By importing primitives like `address` or `Signature` directly from `@solana/kit`, your core data types remain standard. This ensures that your helper functions and types remain compatible with the broader ecosystem, regardless of the framework managing your state.
+    * **Framework-kit** focuses on application-level behavior: wallet and session state, React context, connection flow, and transaction orchestration.
+    * **`@solana/kit`** provides the foundational Solana pieces: addresses, codecs, instruction builders, and core types.
 
-### Interop Example
+* **No Type Shadowing:**
+    * **Framework-kit** purposely avoids re-exporting @solana/kit  primitives to prevent confusion.
+    * There is one source of truth: **`@solana/kit`**.
+    
+    
+### Interoperability Example
 
 You will often see imports from both libraries in the same file. This is the intended usage pattern.
 
 ```typescript
-// 1. Import standard primitives directly from @solana/kit
-import { address, type Address } from "@solana/kit";
+// kit primitives
+import { address, type Address, getTransferTokenInstruction } from "@solana/kit";
 
-// 2. Import high-level logic from the framework
-import { useWalletConnection } from "@solana/react-hooks";
+// framework-kit: client + hooks
+import { createSolanaClient } from "@solana/client";
+import { SolanaProvider, useWalletConnection, useSendTransaction } from "@solana/react-hooks";
 
-export const UserProfile = ({ userAddress }: { userAddress: Address }) => {
-   const { connect } = useWalletConnection();
-   // ... component logic
+export function App() {
+  const client = createSolanaClient({ endpoint: "https://api.devnet.solana.com" });
+
+  return (
+    <SolanaProvider client={client}>
+      <SendTokenButton />
+    </SolanaProvider>
+  );
 }
- ``` 
+
+function SendTokenButton() {
+  const { account } = useWalletConnection();      // wallet from framework-kit
+  const sendTx = useSendTransaction();            // transaction sending hook
+
+  const sendToken = async () => {
+    if (!account) return;
+
+    const mint: Address = address("TOKEN_MINT_ADDRESS");          // kit type
+    const source: Address = address(account.address);             // wallet address from framework-kit
+    const destination: Address = address("DESTINATION_ADDRESS");  // recipient
+
+    // build instruction with kit primitive
+    const ix = getTransferTokenInstruction({
+      mint,
+      source,
+      destination,
+      amount: 100n,
+    });
+
+    // send using framework-kit transaction orchestration
+    await sendTx([ix]);
+    console.log("SPL token transfer instruction sent!");
+  };
+
+  return <button onClick={sendToken} disabled={!account}>Send 100 Tokens</button>;
+}
+
+```
+
+### Summary:
+
+- **Kit primitives** (`address`, `getTransferTokenInstruction`) are used directly.
+
+- **Framework-kit hooks** (`useWalletConnection`, `useSendTransaction`) orchestrate wallet state and transaction sending.
+
+- **Types converge**: `account.address` from framework-kit is compatible with `Address` from kit.
+
+
+
+
+
+ 
 ## Example
 - [`@solana/example-vite-react`](examples/vite-react/README.md) – Vite/Tailwind demo showcasing the hooks in action.
 

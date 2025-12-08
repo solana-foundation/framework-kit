@@ -1,38 +1,23 @@
 {
 	"name": "@solana/react-hooks",
-	"version": "1.1.1",
+	"version": "1.1.4",
 	"description": "React hooks for the @solana/client Solana client",
 	"exports": {
-		"edge-light": {
-			"import": "./dist/index.node.mjs",
-			"require": "./dist/index.node.cjs"
-		},
-		"workerd": {
-			"import": "./dist/index.node.mjs",
-			"require": "./dist/index.node.cjs"
-		},
-		"browser": {
-			"import": "./dist/index.browser.mjs",
-			"require": "./dist/index.browser.cjs"
-		},
-		"node": {
-			"import": "./dist/index.node.mjs",
-			"require": "./dist/index.node.cjs"
-		},
+		"browser": "./dist/index.browser.mjs",
+		"edge-light": "./dist/index.node.mjs",
+		"workerd": "./dist/index.node.mjs",
+		"node": "./dist/index.node.mjs",
 		"react-native": "./dist/index.native.mjs",
-		"types": "./dist/types/index.d.ts"
+		"types": "./dist/types/index.d.ts",
+		"default": "./dist/index.node.mjs"
 	},
-	"browser": {
-		"./dist/index.node.cjs": "./dist/index.browser.cjs",
-		"./dist/index.node.mjs": "./dist/index.browser.mjs"
-	},
-	"main": "./dist/index.node.cjs",
 	"module": "./dist/index.node.mjs",
 	"react-native": "./dist/index.native.mjs",
 	"types": "./dist/types/index.d.ts",
-	"type": "commonjs",
+	"type": "module",
 	"files": [
-		"./dist/"
+		"./dist/**/*.mjs",
+		"./dist/types/"
 	],
 	"sideEffects": false,
 	"keywords": [

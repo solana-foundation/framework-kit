@@ -4,6 +4,7 @@
 		"declarationMap": true,
 		"emitDeclarationOnly": true,
 		"outDir": "./dist/types",
+		"moduleResolution": "bundler",
 		"paths": {
 			"@solana/client": ["../client/dist/types/index.d.ts"],
 			"@solana/client/*": ["../client/dist/types/*"]

@@ -1,5 +1,46 @@
 # @solana/react-hooks
 
+## 1.1.4
+
+### Patch Changes
+
+- [#86](https://github.com/solana-foundation/framework-kit/pull/86) [`c19c39a`](https://github.com/solana-foundation/framework-kit/commit/c19c39a9c7ba918d83ed5dc585938101902c2073) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Exclude JavaScript sourcemaps from npm packages to reduce bundle size
+
+  - Updated `files` field in package.json to explicitly exclude .mjs.map files
+  - TypeScript declaration maps (.d.ts.map) are still included for "Go to Definition" support
+  - Package size reduced: @solana/client 273.9KB → 85.4KB (69% reduction)
+  - Package size reduced: @solana/react-hooks size also reduced significantly
+  - Improves install times and reduces disk usage with no DX impact
+
+- Updated dependencies [[`c19c39a`](https://github.com/solana-foundation/framework-kit/commit/c19c39a9c7ba918d83ed5dc585938101902c2073)]:
+  - @solana/client@1.1.4
+
+## 1.1.3
+
+### Patch Changes
+
+- [#83](https://github.com/solana-foundation/framework-kit/pull/83) [`c6c8955`](https://github.com/solana-foundation/framework-kit/commit/c6c8955345d5f3a334b9324fb224abbb95880e3d) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Optimize bundle size and switch to ESM-only distribution
+
+  - Remove all CommonJS builds, ship ESM-only with .mjs extensions
+  - Enable minification for browser and React Native builds (51% size reduction)
+  - Browser bundles reduced: @solana/client 128KB → 62.5KB, @solana/react-hooks 41KB → 20KB
+  - Keep Node.js builds unminified for easier debugging
+  - Externalize sourcemaps and exclude from npm packages
+  - Add size-limit for bundle size tracking and CI enforcement
+  - Update TypeScript configuration to use bundler module resolution for ESM compatibility
+
+- Updated dependencies [[`c6c8955`](https://github.com/solana-foundation/framework-kit/commit/c6c8955345d5f3a334b9324fb224abbb95880e3d)]:
+  - @solana/client@1.1.3
+
+## 1.1.2
+
+### Patch Changes
+
+- [#80](https://github.com/solana-foundation/framework-kit/pull/80) [`bf7ef1d`](https://github.com/solana-foundation/framework-kit/commit/bf7ef1d49ec1c47ec437217139bff3446021c37c) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Add test coverage reporting, optimize CI performance, and enhance README with hero image and badges. Includes Codecov integration, GitHub Actions cache for Turbo, and centered badge layout showcasing npm versions, bundle sizes, and download counts for both packages.
+
+- Updated dependencies [[`bf7ef1d`](https://github.com/solana-foundation/framework-kit/commit/bf7ef1d49ec1c47ec437217139bff3446021c37c)]:
+  - @solana/client@1.1.2
+
 ## 1.1.1
 
 ### Patch Changes

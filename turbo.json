@@ -22,6 +22,11 @@
 		"typecheck": {
 			"dependsOn": ["^build"],
 			"outputs": []
+		},
+		"test:e2e": {
+			"dependsOn": ["^build"],
+			"outputs": [],
+			"cache": false
 		}
 	}
 }

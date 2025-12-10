@@ -1,8 +1,8 @@
 import { getWallets } from '@wallet-standard/app';
 import type { Wallet } from '@wallet-standard/base';
 import { StandardConnect } from '@wallet-standard/features';
-import type { WalletConnector } from '../types';
 import { createWalletStandardConnector } from './standard';
+import type { WalletConnector } from './types';
 
 type DiscoveryOptions = Readonly<{
 	overrides?: (wallet: Wallet) => Parameters<typeof createWalletStandardConnector>[1];

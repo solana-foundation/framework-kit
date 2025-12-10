@@ -101,6 +101,7 @@ export {
 	type SimulateTransactionOptions,
 	type SolanaRpcClient,
 } from './rpc/createSolanaRpcClient';
+export type { SolanaClientRuntime } from './rpc/types';
 export { bigintFromJson, bigintToJson, lamportsFromJson, lamportsToJson } from './serialization/json';
 export {
 	applySerializableState,
@@ -178,11 +179,6 @@ export type {
 	SetClusterReturnType,
 	SolanaClient,
 	SolanaClientConfig,
-	WalletConnector,
-	WalletConnectorMetadata,
-	WalletRegistry,
-	WalletSession,
-	WalletStatus,
 } from './types';
 export { type AddressLike, toAddress, toAddressString } from './utils/addressLike';
 export { type ClusterMoniker, resolveCluster } from './utils/cluster';
@@ -194,3 +190,10 @@ export {
 	getWalletStandardConnectors,
 	watchWalletStandardConnectors,
 } from './wallet/standard';
+export type {
+	WalletConnector,
+	WalletConnectorMetadata,
+	WalletRegistry,
+	WalletSession,
+	WalletStatus,
+} from './wallet/types';

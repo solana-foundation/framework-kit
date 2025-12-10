@@ -6,7 +6,7 @@
 		"indentWidth": 4
 	},
 	"files": {
-		"includes": ["**/*", "!!coverage", "!!**/.turbo", "!!**/dist", "!!**/next-env.d.ts"]
+		"includes": ["**/*", "!!coverage", "!!**/.turbo", "!!**/dist"]
 	},
 	"linter": {
 		"enabled": true,

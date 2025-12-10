@@ -11,6 +11,6 @@
 			"@solana/client/*": ["../client/src/*"]
 		}
 	},
-	"include": ["../build-scripts/build-time-constants.d.ts", "src"],
+	"include": ["src"],
 	"exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "test"]
 }

@@ -6,6 +6,7 @@ import {
 	type Blockhash,
 	type Commitment,
 	createTransactionMessage,
+	createTransactionPlanExecutor,
 	getBase64EncodedWireTransaction,
 	isSolanaError,
 	isTransactionSendingSigner,
@@ -16,6 +17,8 @@ import {
 	signAndSendTransactionMessageWithSigners,
 	signature,
 	signTransactionMessageWithSigners,
+	singleTransactionPlan,
+	type TransactionPlan,
 	type TransactionSigner,
 	type TransactionVersion,
 } from '@solana/kit';
@@ -82,6 +85,7 @@ type PreparedSplTransfer = Readonly<{
 	mode: 'partial' | 'send';
 	signer: TransactionSigner;
 	sourceAta: Address;
+	plan?: TransactionPlan;
 }>;
 
 function ensureAddress(value: Address | string | undefined, fallback?: Address): Address {
@@ -264,6 +268,7 @@ export function createSplTokenHelper(runtime: SolanaClientRuntime, config: SplTo
 			mode,
 			signer,
 			sourceAta,
+			plan: singleTransactionPlan(message),
 		};
 	}
 
@@ -280,26 +285,38 @@ export function createSplTokenHelper(runtime: SolanaClientRuntime, config: SplTo
 			return signature(base58Decoder.decode(signatureBytes));
 		}
 
-		const signed = await signTransactionMessageWithSigners(prepared.message, {
-			abortSignal: options.abortSignal,
-			minContextSlot: options.minContextSlot,
-		});
-		const wire = getBase64EncodedWireTransaction(signed);
+		const commitment = options.commitment ?? prepared.commitment;
 		const maxRetries =
 			options.maxRetries === undefined
 				? undefined
 				: typeof options.maxRetries === 'bigint'
 					? options.maxRetries
 					: BigInt(options.maxRetries);
-		const response = await runtime.rpc
-			.sendTransaction(wire, {
-				encoding: 'base64',
-				maxRetries,
-				preflightCommitment: options.commitment ?? prepared.commitment,
-				skipPreflight: options.skipPreflight,
-			})
-			.send({ abortSignal: options.abortSignal });
-		return signature(response);
+		let latestSignature: ReturnType<typeof signature> | null = null;
+		const executor = createTransactionPlanExecutor({
+			async executeTransactionMessage(message, config = {}) {
+				const signed = await signTransactionMessageWithSigners(message as SignableSplTransactionMessage, {
+					abortSignal: config.abortSignal ?? options.abortSignal,
+					minContextSlot: options.minContextSlot,
+				});
+				const wire = getBase64EncodedWireTransaction(signed);
+				const response = await runtime.rpc
+					.sendTransaction(wire, {
+						encoding: 'base64',
+						maxRetries,
+						preflightCommitment: commitment,
+						skipPreflight: options.skipPreflight,
+					})
+					.send({ abortSignal: config.abortSignal ?? options.abortSignal });
+				latestSignature = signature(response);
+				return { transaction: signed };
+			},
+		});
+		await executor(prepared.plan ?? singleTransactionPlan(prepared.message), { abortSignal: options.abortSignal });
+		if (!latestSignature) {
+			throw new Error('Failed to resolve transaction signature.');
+		}
+		return latestSignature;
 	}
 
 	async function sendTransfer(

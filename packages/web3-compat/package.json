@@ -1,0 +1,77 @@
+{
+	"name": "@solana/web3-compat",
+	"version": "0.0.12",
+	"description": "Compatibility layer that preserves the web3.js API while delegating to Kit primitives under the hood",
+	"exports": {
+		"edge-light": {
+			"import": "./dist/index.node.mjs",
+			"require": "./dist/index.node.cjs"
+		},
+		"workerd": {
+			"import": "./dist/index.node.mjs",
+			"require": "./dist/index.node.cjs"
+		},
+		"browser": {
+			"import": "./dist/index.browser.mjs",
+			"require": "./dist/index.browser.cjs"
+		},
+		"node": {
+			"import": "./dist/index.node.mjs",
+			"require": "./dist/index.node.cjs"
+		},
+		"react-native": "./dist/index.native.mjs",
+		"types": "./dist/types/index.d.ts"
+	},
+	"browser": {
+		"./dist/index.node.cjs": "./dist/index.browser.cjs",
+		"./dist/index.node.mjs": "./dist/index.browser.mjs"
+	},
+	"main": "./dist/index.node.cjs",
+	"module": "./dist/index.node.mjs",
+	"react-native": "./dist/index.native.mjs",
+	"types": "./dist/types/index.d.ts",
+	"type": "commonjs",
+	"files": [
+		"./dist/"
+	],
+	"sideEffects": false,
+	"keywords": [
+		"solana",
+		"web3",
+		"kit",
+		"compatibility"
+	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/solana-foundation/framework-kit"
+	},
+	"scripts": {
+		"build": "pnpm compile:js && pnpm compile:typedefs",
+		"compile:js": "tsup --config ../build-scripts/tsup.config.package.ts",
+		"compile:typedefs": "tsc -p ./tsconfig.declarations.json",
+		"format": "biome check --write src",
+		"lint": "biome check src",
+		"test:typecheck": "tsc --noEmit",
+		"test": "vitest run --config ../../vitest.config.ts",
+		"typecheck": "pnpm test:typecheck"
+	},
+	"license": "MIT",
+	"dependencies": {
+		"@solana/compat": "catalog:solana",
+		"@solana/addresses": "catalog:solana",
+		"@solana/client": "workspace:*",
+		"@solana/kit": "catalog:solana",
+		"@solana/transactions": "catalog:solana",
+		"@solana/web3.js": "catalog:solana",
+		"bs58": "catalog:utils"
+	},
+	"devDependencies": {
+		"@types/node": "catalog:typescript"
+	},
+	"peerDependencies": {
+		"typescript": ">=5.3.3"
+	},
+	"engines": {
+		"node": ">=20.18.0"
+	}
+}

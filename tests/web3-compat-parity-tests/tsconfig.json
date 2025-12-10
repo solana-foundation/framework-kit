@@ -1,0 +1,10 @@
+{
+	"$schema": "https://json.schemastore.org/tsconfig",
+	"display": "web3-compat parity tests",
+	"extends": "../../packages/tsconfig/base.json",
+	"compilerOptions": {
+		"lib": ["DOM", "ES2020"]
+	},
+	"include": ["./**/*.ts", "./**/*.tsx"],
+	"exclude": ["node_modules"]
+}

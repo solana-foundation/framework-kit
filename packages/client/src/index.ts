@@ -1,11 +1,43 @@
+export {
+	connectWallet,
+	disconnectWallet,
+	fetchAccount,
+	fetchBalance,
+	fetchLookupTable,
+	fetchLookupTables,
+	fetchNonceAccount,
+	requestAirdrop,
+	sendTransaction,
+	setCluster,
+} from './actions';
 export { createClient } from './client/createClient';
 export { createClientStore, createDefaultClientStore, createInitialClientState } from './client/createClientStore';
+export {
+	type CreateDefaultClientOptions,
+	createDefaultClient,
+	defaultWalletConnectors,
+	resolveClientConfig,
+} from './client/defaultClient';
 export {
 	createSolTransferController,
 	type SolTransferController,
 	type SolTransferControllerConfig,
 	type SolTransferInput,
 } from './controllers/solTransferController';
+export {
+	createSplTransferController,
+	type SplTransferController,
+	type SplTransferControllerConfig,
+	type SplTransferInput,
+} from './controllers/splTransferController';
+export {
+	createStakeController,
+	type StakeController,
+	type StakeControllerConfig,
+	type StakeInput,
+	type UnstakeInput,
+	type WithdrawInput,
+} from './controllers/stakeController';
 export {
 	createSolTransferHelper,
 	type SolTransferHelper,
@@ -20,12 +52,26 @@ export {
 	type SplTransferPrepareConfig,
 } from './features/spl';
 export {
+	createStakeHelper,
+	type StakeAccount,
+	type StakeHelper,
+	type StakePrepareConfig,
+	type StakeSendOptions,
+	type UnstakePrepareConfig,
+	type UnstakeSendOptions,
+	type WithdrawPrepareConfig,
+	type WithdrawSendOptions,
+} from './features/stake';
+export {
 	createTransactionHelper,
+	createTransactionRecipe,
 	type TransactionHelper,
 	type TransactionInstructionInput,
 	type TransactionPrepareAndSendRequest,
 	type TransactionPrepared,
 	type TransactionPrepareRequest,
+	type TransactionRecipe,
+	type TransactionRecipeContext,
 	type TransactionSendOptions,
 	type TransactionSignOptions,
 } from './features/transactions';
@@ -57,6 +103,13 @@ export {
 } from './rpc/createSolanaRpcClient';
 export type { SolanaClientRuntime } from './rpc/types';
 export { bigintFromJson, bigintToJson, lamportsFromJson, lamportsToJson } from './serialization/json';
+export {
+	applySerializableState,
+	deserializeSolanaState,
+	getInitialSerializableState,
+	serializeSolanaState,
+	subscribeSolanaState,
+} from './serialization/state';
 export {
 	type ConfirmationCommitment,
 	confirmationMeetsCommitment,
@@ -93,17 +146,44 @@ export type {
 	AccountCache,
 	AccountCacheEntry,
 	AccountWatcherConfig,
+	AddressLookupTableData,
 	BalanceWatcherConfig,
 	ClientActions,
 	ClientHelpers,
+	ClientLogger,
 	ClientState,
 	ClientStore,
 	ClientWatchers,
+	ConnectWalletParameters,
+	ConnectWalletReturnType,
+	CreateStoreFn,
+	DisconnectWalletParameters,
+	DisconnectWalletReturnType,
+	FetchAccountParameters,
+	FetchAccountReturnType,
+	FetchBalanceParameters,
+	FetchBalanceReturnType,
+	FetchLookupTableParameters,
+	FetchLookupTableReturnType,
+	FetchLookupTablesParameters,
+	FetchLookupTablesReturnType,
+	FetchNonceAccountParameters,
+	FetchNonceAccountReturnType,
+	NonceAccountData,
+	RequestAirdropParameters,
+	RequestAirdropReturnType,
+	SendTransactionParameters,
+	SendTransactionReturnType,
+	SerializableSolanaState,
+	SetClusterParameters,
+	SetClusterReturnType,
 	SolanaClient,
 	SolanaClientConfig,
 } from './types';
 export { type AddressLike, toAddress, toAddressString } from './utils/addressLike';
+export { type ClusterMoniker, resolveCluster } from './utils/cluster';
 export { stableStringify } from './utils/stableStringify';
+export { autoDiscover, backpack, injected, phantom, solflare } from './wallet/connectors';
 export { createWalletRegistry } from './wallet/registry';
 export {
 	createWalletStandardConnector,

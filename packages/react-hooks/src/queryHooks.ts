@@ -1,4 +1,4 @@
-import { type AddressLike, type SolanaClient, stableStringify, toAddress, toAddressString } from '@solana/client';
+import { type AddressLike, type SolanaClient, toAddress } from '@solana/client';
 import {
 	type Base64EncodedWireTransaction,
 	type Commitment,
@@ -10,6 +10,7 @@ import { useCallback, useMemo } from 'react';
 
 import type { SolanaQueryResult, UseSolanaRpcQueryOptions } from './query';
 import { useSolanaRpcQuery } from './query';
+import { getLatestBlockhashKey, getProgramAccountsKey, getSimulateTransactionKey } from './queryKeys';
 
 type RpcInstance = SolanaClient['runtime']['rpc'];
 
@@ -26,47 +27,61 @@ type SimulateTransactionResponse = Awaited<ReturnType<SimulateTransactionPlan['s
 
 const DEFAULT_BLOCKHASH_REFRESH_INTERVAL = 30_000;
 
-export type UseLatestBlockhashOptions = Omit<UseSolanaRpcQueryOptions<LatestBlockhashResponse>, 'refreshInterval'> &
-	Readonly<{
-		commitment?: Commitment;
-		minContextSlot?: bigint | number;
-		refreshInterval?: number;
-	}>;
+export type UseLatestBlockhashParameters = Readonly<{
+	commitment?: Commitment;
+	disabled?: boolean;
+	minContextSlot?: bigint | number;
+	refreshInterval?: number;
+	swr?: UseSolanaRpcQueryOptions<LatestBlockhashResponse>['swr'];
+}>;
 
-export type LatestBlockhashQueryResult = SolanaQueryResult<LatestBlockhashResponse> &
+export type UseLatestBlockhashReturnType = SolanaQueryResult<LatestBlockhashResponse> &
 	Readonly<{
 		blockhash: string | null;
 		contextSlot: bigint | null | undefined;
 		lastValidBlockHeight: bigint | null;
 	}>;
 
-export function useLatestBlockhash(options: UseLatestBlockhashOptions = {}): LatestBlockhashQueryResult {
-	const { commitment, minContextSlot, refreshInterval = DEFAULT_BLOCKHASH_REFRESH_INTERVAL, ...rest } = options;
-	const normalizedMinContextSlot = useMemo<bigint | undefined>(() => {
-		if (minContextSlot === undefined) {
-			return undefined;
-		}
-		return typeof minContextSlot === 'bigint' ? minContextSlot : BigInt(Math.floor(minContextSlot));
-	}, [minContextSlot]);
-	const keyArgs = useMemo(
-		() => [commitment ?? null, normalizedMinContextSlot ?? null],
-		[commitment, normalizedMinContextSlot],
-	);
+/**
+ * Fetch the current cluster blockhash and keep it warm with a configurable polling interval.
+ * Falls back to the client's active commitment when one is not provided.
+ *
+ * @example
+ * ```ts
+ * const { blockhash, lastValidBlockHeight } = useLatestBlockhash({ refreshInterval: 10_000 });
+ * ```
+ */
+export function useLatestBlockhash(options: UseLatestBlockhashParameters = {}): UseLatestBlockhashReturnType {
+	const {
+		commitment,
+		minContextSlot,
+		refreshInterval = DEFAULT_BLOCKHASH_REFRESH_INTERVAL,
+		disabled = false,
+		swr,
+	} = options;
 	const fetcher = useCallback(
 		async (client: SolanaClient) => {
 			const fallbackCommitment = commitment ?? client.store.getState().cluster.commitment;
 			const plan = client.runtime.rpc.getLatestBlockhash({
 				commitment: fallbackCommitment,
-				minContextSlot: normalizedMinContextSlot,
+				minContextSlot: normalizeMinContextSlot(minContextSlot),
 			});
 			return plan.send({ abortSignal: AbortSignal.timeout(15_000) });
 		},
-		[commitment, normalizedMinContextSlot],
+		[commitment, minContextSlot],
 	);
-	const query = useSolanaRpcQuery<LatestBlockhashResponse>('latestBlockhash', keyArgs, fetcher, {
-		refreshInterval,
-		...rest,
-	});
+	const query = useSolanaRpcQuery<LatestBlockhashResponse>(
+		'latestBlockhash',
+		getLatestBlockhashKey(options),
+		fetcher,
+		{
+			disabled,
+			swr: {
+				refreshInterval,
+				...swr,
+			},
+		},
+	);
 	return {
 		...query,
 		blockhash: query.data?.value.blockhash ?? null,
@@ -75,27 +90,36 @@ export function useLatestBlockhash(options: UseLatestBlockhashOptions = {}): Lat
 	};
 }
 
-export type UseProgramAccountsOptions = UseSolanaRpcQueryOptions<ProgramAccountsResponse> &
-	Readonly<{
-		commitment?: Commitment;
-		config?: ProgramAccountsConfig;
-	}>;
+export type UseProgramAccountsParameters = Readonly<{
+	commitment?: Commitment;
+	config?: ProgramAccountsConfig;
+	disabled?: boolean;
+	programAddress?: AddressLike;
+	swr?: UseSolanaRpcQueryOptions<ProgramAccountsResponse>['swr'];
+}>;
 
-export type ProgramAccountsQueryResult = SolanaQueryResult<ProgramAccountsResponse> &
+export type UseProgramAccountsReturnType = SolanaQueryResult<ProgramAccountsResponse> &
 	Readonly<{
 		accounts: ProgramAccountsResponse;
 	}>;
 
+/**
+ * Fetch accounts owned by a program, keyed by the program address. The query is disabled until a
+ * program address is provided, and respects both explicit and client default commitments.
+ *
+ * @example
+ * ```ts
+ * const programAccounts = useProgramAccounts(programId, { config: { dataSlice: { offset: 0, length: 0 } } });
+ * ```
+ */
 export function useProgramAccounts(
 	programAddress?: AddressLike,
-	options: UseProgramAccountsOptions = {},
-): ProgramAccountsQueryResult {
-	const { commitment, config, ...queryOptions } = options;
-	const address = useMemo(() => (programAddress ? toAddress(programAddress) : undefined), [programAddress]);
-	const addressKey = useMemo(() => (address ? toAddressString(address) : null), [address]);
-	const configKey = useMemo(() => stableStringify(config ?? null), [config]);
+	options?: UseProgramAccountsParameters,
+): UseProgramAccountsReturnType {
+	const { commitment, config, swr, disabled: disabledOption } = options ?? {};
 	const fetcher = useCallback(
 		async (client: SolanaClient) => {
+			const address = programAddress ? toAddress(programAddress) : undefined;
 			if (!address) {
 				throw new Error('Provide a program address before querying program accounts.');
 			}
@@ -107,40 +131,55 @@ export function useProgramAccounts(
 			const plan = client.runtime.rpc.getProgramAccounts(address, mergedConfig);
 			return plan.send({ abortSignal: AbortSignal.timeout(20_000) });
 		},
-		[address, commitment, config],
+		[commitment, config, programAddress],
 	);
-	const query = useSolanaRpcQuery<ProgramAccountsResponse>('programAccounts', [addressKey, configKey], fetcher, {
-		...queryOptions,
-		disabled: queryOptions.disabled ?? !address,
-	});
+	const disabled = disabledOption ?? !programAddress;
+	const query = useSolanaRpcQuery<ProgramAccountsResponse>(
+		'programAccounts',
+		getProgramAccountsKey({ programAddress, config }),
+		fetcher,
+		{
+			disabled,
+			swr,
+		},
+	);
 	return {
 		...query,
 		accounts: query.data ?? [],
 	};
 }
 
-export type UseSimulateTransactionOptions = Omit<
-	UseSolanaRpcQueryOptions<SimulateTransactionResponse>,
-	'refreshInterval'
-> &
-	Readonly<{
-		commitment?: Commitment;
-		config?: SimulateTransactionConfig;
-		refreshInterval?: number;
-	}>;
-
-export type SimulateTransactionQueryResult = SolanaQueryResult<SimulateTransactionResponse> &
-	Readonly<{
-		logs: readonly string[] | null | undefined;
-	}>;
+export type UseSimulateTransactionParameters = Readonly<{
+	commitment?: Commitment;
+	config?: SimulateTransactionConfig;
+	disabled?: boolean;
+	refreshInterval?: number;
+	swr?: UseSolanaRpcQueryOptions<SimulateTransactionResponse>['swr'];
+	transaction?: SimulationInput | null;
+}>;
 
 type SimulationInput = (SendableTransaction & Transaction) | Base64EncodedWireTransaction | string;
 
+export type UseSimulateTransactionReturnType = SolanaQueryResult<SimulateTransactionResponse> &
+	Readonly<{
+		logs: readonly string[];
+	}>;
+
+/**
+ * Simulate a transaction or wire payload and return simulation logs/results. Disabled until a
+ * transaction payload is provided; uses client commitment when not specified in options.
+ *
+ * @example
+ * ```ts
+ * const simulation = useSimulateTransaction(base64Wire, { refreshInterval: 0 });
+ * console.log(simulation.logs);
+ * ```
+ */
 export function useSimulateTransaction(
 	transaction?: SimulationInput | null,
-	options: UseSimulateTransactionOptions = {},
-): SimulateTransactionQueryResult {
-	const { commitment, config, refreshInterval, ...rest } = options;
+	options?: UseSimulateTransactionParameters,
+): UseSimulateTransactionReturnType {
+	const { commitment, config, refreshInterval, disabled: disabledOption, swr } = options ?? {};
 	const wire = useMemo<Base64EncodedWireTransaction | null>(() => {
 		if (!transaction) {
 			return null;
@@ -150,7 +189,6 @@ export function useSimulateTransaction(
 		}
 		return getBase64EncodedWireTransaction(transaction);
 	}, [transaction]);
-	const configKey = useMemo(() => stableStringify(config ?? null), [config]);
 	const fetcher = useCallback(
 		async (client: SolanaClient) => {
 			if (!wire) {
@@ -165,15 +203,28 @@ export function useSimulateTransaction(
 		},
 		[commitment, config, wire],
 	);
-	const query = useSolanaRpcQuery<SimulateTransactionResponse>('simulateTransaction', [wire, configKey], fetcher, {
-		...rest,
-		refreshInterval,
-		disabled: rest.disabled ?? !wire,
-		revalidateIfStale: rest.revalidateIfStale ?? false,
-		revalidateOnFocus: rest.revalidateOnFocus ?? false,
-	});
+	const disabled = disabledOption ?? !wire;
+	const query = useSolanaRpcQuery<SimulateTransactionResponse>(
+		'simulateTransaction',
+		getSimulateTransactionKey({ transaction, config }),
+		fetcher,
+		{
+			disabled,
+			swr: {
+				refreshInterval,
+				revalidateIfStale: false,
+				revalidateOnFocus: false,
+				...swr,
+			},
+		},
+	);
 	return {
 		...query,
-		logs: query.data?.value.logs,
+		logs: query.data?.value.logs ?? [],
 	};
+}
+
+function normalizeMinContextSlot(minContextSlot?: bigint | number): bigint | undefined {
+	if (minContextSlot === undefined) return undefined;
+	return typeof minContextSlot === 'bigint' ? minContextSlot : BigInt(Math.floor(minContextSlot));
 }

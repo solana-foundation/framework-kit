@@ -7,13 +7,34 @@ type MutableMessage = {
 	lifetimeConstraint?: unknown;
 };
 
-const appendTransactionMessageInstructionsMock = vi.hoisted(() =>
-	vi.fn((instructions: readonly unknown[], message: MutableMessage) => ({
-		...message,
-		instructions: [...message.instructions, ...instructions],
-	})),
-);
 const createTransactionMessageMock = vi.hoisted(() => vi.fn(() => ({ instructions: [] as unknown[] })));
+const createTransactionPlanExecutorMock = vi.hoisted(() =>
+	vi.fn((config: { executeTransactionMessage: (message: MutableMessage) => Promise<unknown> }) =>
+		vi.fn(async (plan: { kind: string; message: MutableMessage }) => {
+			if (plan.kind === 'single') {
+				await config.executeTransactionMessage(plan.message);
+				return { kind: 'single', message: plan.message };
+			}
+			return {};
+		}),
+	),
+);
+const createTransactionPlannerMock = vi.hoisted(() =>
+	vi.fn(
+		(config: { createTransactionMessage: () => MutableMessage }) =>
+			async (instructionPlan: { instructions?: unknown[] }) => {
+				const baseMessage = config.createTransactionMessage();
+				return {
+					instructionPlan,
+					kind: 'single',
+					message: {
+						...baseMessage,
+						instructions: [...(baseMessage.instructions ?? []), ...(instructionPlan?.instructions ?? [])],
+					},
+				};
+			},
+	),
+);
 const setTransactionMessageFeePayerMock = vi.hoisted(() =>
 	vi.fn((payer: unknown, message: MutableMessage) => ({
 		...message,
@@ -48,12 +69,18 @@ const prepareTransactionMock = vi.hoisted(() =>
 		instructions: [...transaction.instructions, { programAddress: 'compute' }],
 	})),
 );
+const getMessagePackerInstructionPlanFromInstructionsMock = vi.hoisted(() =>
+	vi.fn((instructions: readonly unknown[]) => ({ instructions })),
+);
+const singleTransactionPlanMock = vi.hoisted(() => vi.fn((message: MutableMessage) => ({ kind: 'single', message })));
 
 vi.mock('@solana/kit', () => ({
 	address: addressMock,
-	appendTransactionMessageInstructions: appendTransactionMessageInstructionsMock,
 	createTransactionMessage: createTransactionMessageMock,
+	createTransactionPlanExecutor: createTransactionPlanExecutorMock,
+	createTransactionPlanner: createTransactionPlannerMock,
 	getBase64EncodedWireTransaction: getBase64EncodedWireTransactionMock,
+	getMessagePackerInstructionPlanFromInstructions: getMessagePackerInstructionPlanFromInstructionsMock,
 	isInstructionForProgram: isInstructionForProgramMock,
 	isInstructionWithData: isInstructionWithDataMock,
 	isTransactionSendingSigner: isTransactionSendingSignerMock,
@@ -61,6 +88,7 @@ vi.mock('@solana/kit', () => ({
 	setTransactionMessageFeePayer: setTransactionMessageFeePayerMock,
 	setTransactionMessageFeePayerSigner: setTransactionMessageFeePayerSignerMock,
 	setTransactionMessageLifetimeUsingBlockhash: setTransactionMessageLifetimeUsingBlockhashMock,
+	singleTransactionPlan: singleTransactionPlanMock,
 	signAndSendTransactionMessageWithSigners: signAndSendTransactionMessageWithSignersMock,
 	signTransactionMessageWithSigners: signTransactionMessageWithSignersMock,
 	signature: signatureMock,

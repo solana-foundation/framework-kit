@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for your interest in helping! This project is an experimental Solana SDK, and we value contributions that respect the community and keep the codebase healthy.
+Thanks for your interest in helping! Framework-kit is still experimental, and we value contributions that respect the community and keep the codebase healthy.
 
 ## Code of Conduct & Ethics
 
@@ -22,6 +22,13 @@ Thanks for your interest in helping! This project is an experimental Solana SDK,
 3. Keep changes focused; open separate PRs for unrelated fixes.
 4. Write tests when adding or modifying functionality.
 5. Open a pull request with a clear summary and note any follow-up work.
+
+## Naming & types
+
+- Export `ActionNameParameters` / `ActionNameReturnType` for public actions and `UseHookNameParameters` / `UseHookNameReturnType` for hooks (use `void` when a hook takes no arguments).
+- Prefer `XxxOptions` for optional bags, `XxxConfig` for required configuration, and `SerializableXxxState` for persisted shapes.
+- Prefer canonical names; only add temporary aliases when absolutely necessary, and remove them once callers can migrate.
+- Keep SWR options under a `swr` namespace on hook parameters and align defaults with SWR v2 unless a hook documents otherwise.
 
 ## Versioning & Changesets
 
@@ -46,4 +53,4 @@ Thanks for your interest in helping! This project is an experimental Solana SDK,
 - Provide reproduction steps, expected vs. actual behavior, and environment details.
 - Be patient and courteous—maintainers review issues and PRs as time allows.
 
-We appreciate your contribution to the Solana SDK ecosystem!
+We appreciate your contribution to the Framework-kit ecosystem!

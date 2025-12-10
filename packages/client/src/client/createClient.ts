@@ -1,8 +1,10 @@
 import { createLogger, formatError } from '../logging/logger';
 import { createSolanaRpcClient } from '../rpc/createSolanaRpcClient';
 import type { SolanaClientRuntime } from '../rpc/types';
+import { applySerializableState } from '../serialization/state';
 import type { ClientStore, SolanaClient, SolanaClientConfig } from '../types';
 import { now } from '../utils';
+import { resolveCluster } from '../utils/cluster';
 import { createWalletRegistry } from '../wallet/registry';
 import { createActions } from './actions';
 import { createClientHelpers } from './createClientHelpers';
@@ -16,27 +18,32 @@ import { createWatchers } from './watchers';
  * @returns Fully initialized {@link SolanaClient} instance.
  */
 export function createClient(config: SolanaClientConfig): SolanaClient {
-	const commitment = config.commitment ?? 'confirmed';
-	const websocketEndpoint = config.websocketEndpoint ?? config.endpoint;
+	const hydratedConfig = config.initialState ? applySerializableState(config, config.initialState) : config;
+	const resolvedCluster = resolveCluster({
+		endpoint: hydratedConfig.rpc ?? hydratedConfig.endpoint,
+		moniker: hydratedConfig.cluster,
+		websocketEndpoint: hydratedConfig.websocket ?? hydratedConfig.websocketEndpoint,
+	});
+	const commitment = hydratedConfig.commitment ?? 'confirmed';
 	const initialState = createInitialClientState({
 		commitment,
-		endpoint: config.endpoint,
-		websocketEndpoint,
+		endpoint: resolvedCluster.endpoint,
+		websocketEndpoint: resolvedCluster.websocketEndpoint,
 	});
 	const store: ClientStore = config.createStore ? config.createStore(initialState) : createClientStore(initialState);
 	const rpcClient =
-		config.rpcClient ??
+		hydratedConfig.rpcClient ??
 		createSolanaRpcClient({
 			commitment,
-			endpoint: config.endpoint,
-			websocketEndpoint,
+			endpoint: resolvedCluster.endpoint,
+			websocketEndpoint: resolvedCluster.websocketEndpoint,
 		});
 	const runtime: SolanaClientRuntime = {
 		rpc: rpcClient.rpc,
 		rpcSubscriptions: rpcClient.rpcSubscriptions,
 	};
-	const connectors = createWalletRegistry(config.walletConnectors ?? []);
-	const logger = createLogger(config.logger);
+	const connectors = createWalletRegistry(hydratedConfig.walletConnectors ?? []);
+	const logger = createLogger(hydratedConfig.logger);
 	const actions = createActions({ connectors, logger, runtime, store });
 	const watchers = createWatchers({ logger, runtime, store });
 	const helpers = createClientHelpers(runtime, store);
@@ -48,13 +55,18 @@ export function createClient(config: SolanaClientConfig): SolanaClient {
 		},
 		lastUpdatedAt: now(),
 	}));
-	actions.setCluster(config.endpoint, { commitment, websocketEndpoint }).catch((error) =>
-		logger({
-			data: formatError(error),
-			level: 'error',
-			message: 'initial cluster setup failed',
-		}),
-	);
+	actions
+		.setCluster(resolvedCluster.endpoint, {
+			commitment,
+			websocketEndpoint: resolvedCluster.websocketEndpoint,
+		})
+		.catch((error) =>
+			logger({
+				data: formatError(error),
+				level: 'error',
+				message: 'initial cluster setup failed',
+			}),
+		);
 	/**
 	 * Resets the client's store back to its initial state.
 	 *
@@ -82,6 +94,9 @@ export function createClient(config: SolanaClientConfig): SolanaClient {
 		splToken: helpers.splToken,
 		SplToken: helpers.splToken,
 		SplHelper: helpers.splToken,
+		get stake() {
+			return helpers.stake;
+		},
 		get transaction() {
 			return helpers.transaction;
 		},

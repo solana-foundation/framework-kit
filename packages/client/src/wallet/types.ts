@@ -4,7 +4,9 @@ export type WalletConnectorMetadata = Readonly<{
 	canAutoConnect?: boolean;
 	icon?: string;
 	id: string;
+	kind?: string;
 	name: string;
+	ready?: boolean;
 }>;
 
 export type WalletAccount = Readonly<{
@@ -17,6 +19,7 @@ export type WalletSession = Readonly<{
 	account: WalletAccount;
 	connector: WalletConnectorMetadata;
 	disconnect(): Promise<void>;
+	onAccountsChanged?: (listener: (accounts: WalletAccount[]) => void) => () => void;
 	sendTransaction?(
 		transaction: SendableTransaction & Transaction,
 		config?: Readonly<{ commitment?: Commitment }>,
@@ -26,18 +29,20 @@ export type WalletSession = Readonly<{
 }>;
 
 export type WalletConnector = WalletConnectorMetadata & {
-	connect(opts?: Readonly<{ autoConnect?: boolean }>): Promise<WalletSession>;
+	connect(opts?: Readonly<{ autoConnect?: boolean; allowInteractiveFallback?: boolean }>): Promise<WalletSession>;
 	disconnect(): Promise<void>;
 	isSupported(): boolean;
 };
 
 type WalletStatusConnected = Readonly<{
+	autoConnect?: boolean;
 	connectorId: string;
 	session: WalletSession;
 	status: 'connected';
 }>;
 
 type WalletStatusConnecting = Readonly<{
+	autoConnect?: boolean;
 	connectorId: string;
 	status: 'connecting';
 }>;
@@ -47,6 +52,7 @@ type WalletStatusDisconnected = Readonly<{
 }>;
 
 type WalletStatusError = Readonly<{
+	autoConnect?: boolean;
 	connectorId?: string;
 	error: unknown;
 	status: 'error';

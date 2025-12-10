@@ -1,6 +1,7 @@
 import {
 	type AccountCacheEntry,
 	type AddressLike,
+	type AddressLookupTableData,
 	type AsyncState,
 	type ClientState,
 	type ConfirmationCommitment,
@@ -8,10 +9,12 @@ import {
 	createAsyncState,
 	createInitialAsyncState,
 	createSolTransferController,
+	createSplTransferController,
+	createStakeController,
 	createTransactionPoolController,
 	deriveConfirmationStatus,
-	getWalletStandardConnectors,
 	type LatestBlockhashCache,
+	type NonceAccountData,
 	normalizeSignature,
 	SIGNATURE_STATUS_TIMEOUT_MS,
 	type SignatureLike,
@@ -22,7 +25,12 @@ import {
 	type SplTokenBalance,
 	type SplTokenHelper,
 	type SplTokenHelperConfig,
-	type SplTransferPrepareConfig,
+	type SplTransferController,
+	type SplTransferInput,
+	type StakeAccount,
+	type StakeHelper,
+	type StakeInput,
+	type StakeSendOptions,
 	type TransactionHelper,
 	type TransactionInstructionInput,
 	type TransactionInstructionList,
@@ -35,24 +43,26 @@ import {
 	type TransactionPrepared,
 	type TransactionSendOptions,
 	toAddress,
-	type WalletConnector,
+	type UnstakeInput,
+	type UnstakeSendOptions,
 	type WalletSession,
 	type WalletStatus,
-	watchWalletStandardConnectors,
+	type WithdrawInput,
+	type WithdrawSendOptions,
 } from '@solana/client';
 import type { Commitment, Lamports, Signature } from '@solana/kit';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import useSWR from 'swr';
+import useSWR, { type BareFetcher, type SWRConfiguration } from 'swr';
 
 import { useSolanaClient } from './context';
 import { type SolanaQueryResult, type UseSolanaRpcQueryOptions, useSolanaRpcQuery } from './query';
-import { type LatestBlockhashQueryResult, type UseLatestBlockhashOptions, useLatestBlockhash } from './queryHooks';
+import { type UseLatestBlockhashParameters, type UseLatestBlockhashReturnType, useLatestBlockhash } from './queryHooks';
+import { getSignatureStatusKey } from './queryKeys';
+import { useQuerySuspensePreference } from './querySuspenseContext';
 import { useClientStore } from './useClientStore';
 
 type ClusterState = ClientState['cluster'];
 type ClusterStatus = ClientState['cluster']['status'];
-type WalletStandardDiscoveryOptions = Parameters<typeof watchWalletStandardConnectors>[1];
-
 type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
 
 type RpcInstance = SolanaClient['runtime']['rpc'];
@@ -93,8 +103,61 @@ function createAccountSelector(key?: string) {
 	return (state: ClientState): AccountCacheEntry | undefined => (key ? state.accounts[key] : undefined);
 }
 
+type SuspensePromiseRef = {
+	key: string | null;
+	promise: Promise<unknown>;
+};
+
+function useSuspenseFetcher(
+	config: Readonly<{
+		enabled: boolean;
+		fetcher: () => Promise<unknown>;
+		key: string | null;
+		ready: boolean;
+	}>,
+) {
+	const preference = useQuerySuspensePreference();
+	const suspenseEnabled = Boolean(preference) && config.enabled;
+	const pendingRef = useRef<SuspensePromiseRef | null>(null);
+
+	useEffect(() => {
+		if (!suspenseEnabled) {
+			pendingRef.current = null;
+			return;
+		}
+		if (pendingRef.current && pendingRef.current.key !== config.key) {
+			pendingRef.current = null;
+		}
+	}, [config.key, suspenseEnabled]);
+
+	if (pendingRef.current && pendingRef.current.key !== config.key) {
+		pendingRef.current = null;
+	}
+
+	if (suspenseEnabled && config.key && !config.ready) {
+		if (!pendingRef.current) {
+			const promise = config.fetcher();
+			pendingRef.current = {
+				key: config.key,
+				promise: promise.finally(() => {
+					if (pendingRef.current?.promise === promise) {
+						pendingRef.current = null;
+					}
+				}),
+			};
+		}
+		throw pendingRef.current.promise;
+	}
+}
+
 /**
  * Read the full cluster state managed by the client store.
+ *
+ * @example
+ * ```ts
+ * const cluster = useClusterState();
+ * console.log(cluster.endpoint, cluster.status);
+ * ```
  */
 export function useClusterState(): ClusterState {
 	const selector = useMemo(createClusterSelector, []);
@@ -102,7 +165,13 @@ export function useClusterState(): ClusterState {
 }
 
 /**
- * Read the current cluster connection status.
+ * Read just the cluster connection status slice (connecting/ready/error).
+ *
+ * @example
+ * ```ts
+ * const status = useClusterStatus();
+ * if (status.status === 'error') console.error(status.error);
+ * ```
  */
 export function useClusterStatus(): ClusterStatus {
 	const selector = useMemo(createClusterStatusSelector, []);
@@ -110,7 +179,15 @@ export function useClusterStatus(): ClusterStatus {
 }
 
 /**
- * Access the wallet status tracked by the client store.
+ * Access the wallet status tracked by the client store (connected/connecting/error/disconnected).
+ *
+ * @example
+ * ```ts
+ * const wallet = useWallet();
+ * if (wallet.status === 'connected') {
+ *   console.log(wallet.session.account.address.toString());
+ * }
+ * ```
  */
 export function useWallet(): WalletStatus {
 	const selector = useMemo(createWalletSelector, []);
@@ -118,7 +195,13 @@ export function useWallet(): WalletStatus {
 }
 
 /**
- * Convenience helper that returns the active wallet session when connected.
+ * Convenience helper that returns the active wallet session when connected, otherwise `undefined`.
+ *
+ * @example
+ * ```ts
+ * const session = useWalletSession();
+ * const address = session?.account.address.toString();
+ * ```
  */
 export function useWalletSession(): WalletSession | undefined {
 	const wallet = useWallet();
@@ -129,7 +212,13 @@ export function useWalletSession(): WalletSession | undefined {
 }
 
 /**
- * Access the headless client actions.
+ * Access the headless client actions (setCluster, fetchAccount, connectWallet, etc.).
+ *
+ * @example
+ * ```ts
+ * const actions = useWalletActions();
+ * await actions.connectWallet('phantom');
+ * ```
  */
 export function useWalletActions() {
 	const client = useSolanaClient();
@@ -138,14 +227,20 @@ export function useWalletActions() {
 
 /**
  * Stable connect helper that resolves to {@link ClientActions.connectWallet}.
+ *
+ * @example
+ * ```ts
+ * const connect = useConnectWallet();
+ * await connect('phantom', { autoConnect: true });
+ * ```
  */
 export function useConnectWallet(): (
 	connectorId: string,
-	options?: Readonly<{ autoConnect?: boolean }>,
+	options?: Readonly<{ autoConnect?: boolean; allowInteractiveFallback?: boolean }>,
 ) => Promise<WalletSession> {
 	const client = useSolanaClient();
 	return useCallback(
-		(connectorId: string, options?: Readonly<{ autoConnect?: boolean }>) =>
+		(connectorId: string, options?: Readonly<{ autoConnect?: boolean; allowInteractiveFallback?: boolean }>) =>
 			client.actions.connectWallet(connectorId, options),
 		[client],
 	);
@@ -153,6 +248,12 @@ export function useConnectWallet(): (
 
 /**
  * Stable disconnect helper mapping to {@link ClientActions.disconnectWallet}.
+ *
+ * @example
+ * ```ts
+ * const disconnect = useDisconnectWallet();
+ * await disconnect();
+ * ```
  */
 export function useDisconnectWallet(): () => Promise<void> {
 	const client = useSolanaClient();
@@ -163,6 +264,13 @@ type SolTransferSignature = UnwrapPromise<ReturnType<SolTransferHelper['sendTran
 
 /**
  * Convenience wrapper around the SOL transfer helper that tracks status and signature.
+ *
+ * @example
+ * ```ts
+ * const { send, signature, status } = useSolTransfer();
+ * await send({ amount: 1_000_000n, destination: toAddress('...') });
+ * console.log(signature, status);
+ * ```
  */
 export function useSolTransfer(): Readonly<{
 	error: unknown;
@@ -213,22 +321,158 @@ export function useSolTransfer(): Readonly<{
 	};
 }
 
+type StakeSignature = UnwrapPromise<ReturnType<StakeHelper['sendStake']>>;
+type UnstakeSignature = UnwrapPromise<ReturnType<StakeHelper['sendUnstake']>>;
+type WithdrawSignature = UnwrapPromise<ReturnType<StakeHelper['sendWithdraw']>>;
+
+/**
+ * Convenience wrapper around the stake helper that tracks status and signature for native SOL staking.
+ * Allows staking SOL to a validator and returns transaction details.
+ */
+export function useStake(validatorId: AddressLike): Readonly<{
+	error: unknown;
+	getStakeAccounts(wallet: AddressLike, validatorIdFilter?: AddressLike): Promise<StakeAccount[]>;
+	helper: StakeHelper;
+	isStaking: boolean;
+	isUnstaking: boolean;
+	isWithdrawing: boolean;
+	reset(): void;
+	resetUnstake(): void;
+	resetWithdraw(): void;
+	stake(config: Omit<StakeInput, 'validatorId'>, options?: StakeSendOptions): Promise<StakeSignature>;
+	unstake(config: Omit<UnstakeInput, 'validatorId'>, options?: UnstakeSendOptions): Promise<UnstakeSignature>;
+	withdraw(config: Omit<WithdrawInput, 'validatorId'>, options?: WithdrawSendOptions): Promise<WithdrawSignature>;
+	signature: StakeSignature | null;
+	unstakeSignature: UnstakeSignature | null;
+	withdrawSignature: WithdrawSignature | null;
+	status: AsyncState<StakeSignature>['status'];
+	unstakeStatus: AsyncState<UnstakeSignature>['status'];
+	withdrawStatus: AsyncState<WithdrawSignature>['status'];
+	unstakeError: unknown;
+	withdrawError: unknown;
+	validatorId: string;
+}> {
+	const client = useSolanaClient();
+	const session = useWalletSession();
+	const helper = client.stake;
+	const sessionRef = useRef(session);
+	const normalizedValidatorId = useMemo(() => String(validatorId), [validatorId]);
+
+	useEffect(() => {
+		sessionRef.current = session;
+	}, [session]);
+
+	const controller = useMemo(
+		() =>
+			createStakeController({
+				authorityProvider: () => sessionRef.current,
+				helper,
+			}),
+		[helper],
+	);
+
+	const state = useSyncExternalStore<AsyncState<StakeSignature>>(
+		controller.subscribe,
+		controller.getState,
+		controller.getState,
+	);
+
+	const unstakeState = useSyncExternalStore<AsyncState<UnstakeSignature>>(
+		controller.subscribeUnstake,
+		controller.getUnstakeState,
+		controller.getUnstakeState,
+	);
+
+	const withdrawState = useSyncExternalStore<AsyncState<WithdrawSignature>>(
+		controller.subscribeWithdraw,
+		controller.getWithdrawState,
+		controller.getWithdrawState,
+	);
+
+	const stake = useCallback(
+		(config: Omit<StakeInput, 'validatorId'>, options?: StakeSendOptions) =>
+			controller.stake({ ...config, validatorId: normalizedValidatorId }, options),
+		[controller, normalizedValidatorId],
+	);
+
+	const unstake = useCallback(
+		(config: Omit<UnstakeInput, 'validatorId'>, options?: UnstakeSendOptions) =>
+			controller.unstake({ ...config }, options),
+		[controller],
+	);
+
+	const withdraw = useCallback(
+		(config: Omit<WithdrawInput, 'validatorId'>, options?: WithdrawSendOptions) =>
+			controller.withdraw({ ...config }, options),
+		[controller],
+	);
+
+	const getStakeAccounts = useCallback(
+		async (wallet: AddressLike, validatorIdFilter?: AddressLike) => {
+			if (!helper.getStakeAccounts) {
+				throw new Error(
+					'getStakeAccounts is not available. Make sure you have the latest version of @solana/client package.',
+				);
+			}
+			const walletAddr = typeof wallet === 'string' ? wallet : String(wallet);
+			const filterAddr = validatorIdFilter
+				? typeof validatorIdFilter === 'string'
+					? validatorIdFilter
+					: String(validatorIdFilter)
+				: undefined;
+			return helper.getStakeAccounts(walletAddr, filterAddr);
+		},
+		[helper],
+	);
+
+	return {
+		error: state.error ?? null,
+		getStakeAccounts,
+		helper,
+		isStaking: state.status === 'loading',
+		isUnstaking: unstakeState.status === 'loading',
+		isWithdrawing: withdrawState.status === 'loading',
+		reset: controller.reset,
+		resetUnstake: controller.resetUnstake,
+		resetWithdraw: controller.resetWithdraw,
+		stake,
+		unstake,
+		withdraw,
+		signature: state.data ?? null,
+		unstakeSignature: unstakeState.data ?? null,
+		withdrawSignature: withdrawState.data ?? null,
+		status: state.status,
+		unstakeStatus: unstakeState.status,
+		withdrawStatus: withdrawState.status,
+		unstakeError: unstakeState.error ?? null,
+		withdrawError: withdrawState.error ?? null,
+		validatorId: normalizedValidatorId,
+	};
+}
+
 type SplTokenBalanceResult = SplTokenBalance;
 type SplTransferSignature = UnwrapPromise<ReturnType<SplTokenHelper['sendTransfer']>>;
-type SplTransferInput = Omit<SplTransferPrepareConfig, 'authority' | 'sourceOwner'> & {
-	authority?: SplTransferPrepareConfig['authority'];
-	sourceOwner?: SplTransferPrepareConfig['sourceOwner'];
-};
-
 type UseSplTokenOptions = Readonly<{
 	commitment?: Commitment;
 	config?: Omit<SplTokenHelperConfig, 'commitment' | 'mint'>;
 	owner?: AddressLike;
 	revalidateOnFocus?: boolean;
+	swr?: Omit<
+		SWRConfiguration<SplTokenBalanceResult, unknown, BareFetcher<SplTokenBalanceResult>>,
+		'fallback' | 'suspense'
+	>;
 }>;
 
 /**
  * Simplified SPL token hook that scopes helpers by mint and manages balance state.
+ *
+ * @example
+ * ```ts
+ * const { balance, send, owner } = useSplToken(mintAddress);
+ * if (owner && balance?.exists) {
+ *   await send({ amount: 1n, destinationOwner: toAddress('...') });
+ * }
+ * ```
  */
 export function useSplToken(
 	mint: AddressLike,
@@ -251,6 +495,7 @@ export function useSplToken(
 }> {
 	const client = useSolanaClient();
 	const session = useWalletSession();
+	const suspense = Boolean(useQuerySuspensePreference());
 
 	const normalizedMint = useMemo(() => String(mint), [mint]);
 
@@ -277,12 +522,45 @@ export function useSplToken(
 		return helper.fetchBalance(owner, options.commitment);
 	}, [helper, owner, options.commitment]);
 
-	const { data, error, isLoading, isValidating, mutate } = useSWR<SplTokenBalanceResult>(balanceKey, fetchBalance, {
-		revalidateOnFocus: options.revalidateOnFocus ?? false,
-	});
+	const swrOptions = useMemo(
+		() => ({
+			revalidateOnFocus: options.revalidateOnFocus ?? false,
+			suspense,
+			...(options.swr ?? {}),
+		}),
+		[options.revalidateOnFocus, options.swr, suspense],
+	);
 
-	const [sendState, setSendState] = useState<AsyncState<SplTransferSignature>>(() =>
-		createInitialAsyncState<SplTransferSignature>(),
+	const { data, error, isLoading, isValidating, mutate } = useSWR<SplTokenBalanceResult>(
+		balanceKey,
+		fetchBalance,
+		swrOptions,
+	);
+
+	const sessionRef = useRef(session);
+	useEffect(() => {
+		sessionRef.current = session;
+	}, [session]);
+
+	const ownerRef = useRef(owner);
+	useEffect(() => {
+		ownerRef.current = owner;
+	}, [owner]);
+
+	const controller = useMemo<SplTransferController>(
+		() =>
+			createSplTransferController({
+				authorityProvider: () => sessionRef.current ?? undefined,
+				helper,
+				sourceOwnerProvider: () => ownerRef.current ?? undefined,
+			}),
+		[helper],
+	);
+
+	const sendState = useSyncExternalStore<AsyncState<SplTransferSignature>>(
+		controller.subscribe,
+		controller.getState,
+		controller.getState,
 	);
 
 	const refresh = useCallback(() => {
@@ -294,41 +572,18 @@ export function useSplToken(
 
 	const send = useCallback(
 		async (config: SplTransferInput, sendOptions?: SolTransferSendOptions) => {
-			const { authority: authorityOverride, sourceOwner: sourceOwnerOverride, ...rest } = config;
-			const authority = authorityOverride ?? session;
-			const sourceOwner = sourceOwnerOverride ?? owner;
-			if (!authority) {
-				throw new Error('Connect a wallet or supply an `authority` before sending SPL tokens.');
+			const signature = await controller.send(config, sendOptions);
+			if (owner) {
+				await mutate(() => helper.fetchBalance(owner, options.commitment), { revalidate: false });
 			}
-			if (!sourceOwner) {
-				throw new Error('Unable to resolve a source owner for the SPL token transfer.');
-			}
-			setSendState({ status: 'loading' });
-			try {
-				const signature = await helper.sendTransfer(
-					{
-						...rest,
-						authority,
-						sourceOwner,
-					},
-					sendOptions,
-				);
-				setSendState({ data: signature, status: 'success' });
-				if (owner) {
-					await mutate(() => helper.fetchBalance(owner, options.commitment), { revalidate: false });
-				}
-				return signature;
-			} catch (sendError) {
-				setSendState({ error: sendError, status: 'error' });
-				throw sendError;
-			}
+			return signature;
 		},
-		[helper, mutate, options.commitment, owner, session],
+		[controller, helper, mutate, options.commitment, owner],
 	);
 
 	const resetSend = useCallback(() => {
-		setSendState(() => createInitialAsyncState<SplTransferSignature>());
-	}, []);
+		controller.reset();
+	}, [controller]);
 
 	const status: 'disconnected' | 'error' | 'loading' | 'ready' =
 		owner === null ? 'disconnected' : error ? 'error' : isLoading && !data ? 'loading' : 'ready';
@@ -353,6 +608,12 @@ export function useSplToken(
 
 /**
  * Subscribe to the account cache for a given address, optionally triggering fetch & watch helpers.
+ *
+ * @example
+ * ```ts
+ * const account = useAccount(pubkey, { watch: true });
+ * const lamports = account?.lamports ?? null;
+ * ```
  */
 export function useAccount(addressLike?: AddressLike, options: UseAccountOptions = {}): AccountCacheEntry | undefined {
 	const client = useSolanaClient();
@@ -367,12 +628,24 @@ export function useAccount(addressLike?: AddressLike, options: UseAccountOptions
 	const selector = useMemo(() => createAccountSelector(accountKey), [accountKey]);
 	const account = useClientStore(selector);
 
+	useSuspenseFetcher({
+		enabled: options.fetch !== false && !shouldSkip && Boolean(address),
+		fetcher: () => {
+			if (!address) {
+				throw new Error('Provide an address before fetching account data.');
+			}
+			return client.actions.fetchAccount(address, options.commitment);
+		},
+		key: accountKey ?? null,
+		ready: account !== undefined,
+	});
+
 	useEffect(() => {
 		if (!address) {
 			return;
 		}
 		const commitment = options.commitment;
-		if (options.fetch !== false) {
+		if (options.fetch !== false && account === undefined) {
 			void client.actions.fetchAccount(address, commitment).catch(() => undefined);
 		}
 		if (options.watch) {
@@ -382,13 +655,18 @@ export function useAccount(addressLike?: AddressLike, options: UseAccountOptions
 			};
 		}
 		return undefined;
-	}, [address, client, options.commitment, options.fetch, options.watch]);
+	}, [account, address, client, options.commitment, options.fetch, options.watch]);
 
 	return account;
 }
 
 /**
- * Tracks a lamport balance for the provided address. Fetches immediately and watches by default.
+ * Track lamport balance for an address. Fetches immediately and watches by default.
+ *
+ * @example
+ * ```ts
+ * const { lamports, fetching } = useBalance(pubkey);
+ * ```
  */
 export function useBalance(
 	addressLike?: AddressLike,
@@ -421,12 +699,24 @@ export function useBalance(
 	const selector = useMemo(() => createAccountSelector(accountKey), [accountKey]);
 	const account = useClientStore(selector);
 
+	useSuspenseFetcher({
+		enabled: mergedOptions.fetch !== false && !shouldSkip && Boolean(address),
+		fetcher: () => {
+			if (!address) {
+				throw new Error('Provide an address before fetching balance.');
+			}
+			return client.actions.fetchBalance(address, mergedOptions.commitment);
+		},
+		key: accountKey ?? null,
+		ready: account !== undefined,
+	});
+
 	useEffect(() => {
 		if (!address) {
 			return;
 		}
 		const commitment = mergedOptions.commitment;
-		if (mergedOptions.fetch !== false) {
+		if (mergedOptions.fetch !== false && account === undefined) {
 			void client.actions.fetchBalance(address, commitment).catch(() => undefined);
 		}
 		if (mergedOptions.watch) {
@@ -436,7 +726,7 @@ export function useBalance(
 			};
 		}
 		return undefined;
-	}, [address, client, mergedOptions.commitment, mergedOptions.fetch, mergedOptions.watch]);
+	}, [account, address, client, mergedOptions.commitment, mergedOptions.fetch, mergedOptions.watch]);
 
 	const lamports = account?.lamports ?? null;
 	const fetching = account?.fetching ?? false;
@@ -455,30 +745,9 @@ export function useBalance(
 	);
 }
 
-/**
- * Collect Wallet Standard connectors and keep the list in sync with registration changes.
- */
-export function useWalletStandardConnectors(options?: WalletStandardDiscoveryOptions): readonly WalletConnector[] {
-	const overrides = options?.overrides;
-	const memoisedOptions = useMemo(() => (overrides ? { overrides } : undefined), [overrides]);
-	const [connectors, setConnectors] = useState<readonly WalletConnector[]>(() =>
-		getWalletStandardConnectors(memoisedOptions ?? {}),
-	);
-
-	useEffect(() => {
-		setConnectors(getWalletStandardConnectors(memoisedOptions ?? {}));
-		const unwatch = watchWalletStandardConnectors(setConnectors, memoisedOptions ?? {});
-		return () => {
-			unwatch();
-		};
-	}, [memoisedOptions]);
-
-	return connectors;
-}
-
 type UseTransactionPoolConfig = Readonly<{
 	instructions?: TransactionInstructionList;
-	latestBlockhash?: UseLatestBlockhashOptions;
+	latestBlockhash?: UseLatestBlockhashParameters;
 }>;
 
 type UseTransactionPoolPrepareOptions = TransactionPoolPrepareOptions;
@@ -492,7 +761,15 @@ type UseTransactionPoolPrepareAndSendOptions = TransactionPoolPrepareAndSendOpti
 type TransactionSignature = Signature;
 
 /**
- * Manage a mutable set of instructions and use the transaction helper to prepare and send transactions.
+ * Manage a mutable set of instructions and use the transaction helper to prepare/sign/send.
+ *
+ * @example
+ * ```ts
+ * const pool = useTransactionPool();
+ * pool.addInstruction(ix);
+ * const prepared = await pool.prepare({ feePayer });
+ * await pool.send();
+ * ```
  */
 export function useTransactionPool(config: UseTransactionPoolConfig = {}): Readonly<{
 	addInstruction(instruction: TransactionInstructionInput): void;
@@ -518,7 +795,7 @@ export function useTransactionPool(config: UseTransactionPoolConfig = {}): Reado
 	): Promise<TransactionSignature>;
 	sign(options?: UseTransactionPoolSignOptions): ReturnType<TransactionHelper['sign']>;
 	toWire(options?: UseTransactionPoolSignOptions): ReturnType<TransactionHelper['toWire']>;
-	latestBlockhash: LatestBlockhashQueryResult;
+	latestBlockhash: UseLatestBlockhashReturnType;
 }> {
 	const initialInstructions = useMemo<TransactionInstructionList>(
 		() => config.instructions ?? [],
@@ -526,7 +803,11 @@ export function useTransactionPool(config: UseTransactionPoolConfig = {}): Reado
 	);
 	const client = useSolanaClient();
 	const helper = client.helpers.transaction;
-	const blockhashMaxAgeMs = config.latestBlockhash?.refreshInterval ?? 30_000;
+	const swrRefreshInterval = config.latestBlockhash?.swr?.refreshInterval;
+	const blockhashRefreshInterval =
+		config.latestBlockhash?.refreshInterval ??
+		(typeof swrRefreshInterval === 'number' ? swrRefreshInterval : undefined);
+	const blockhashMaxAgeMs = blockhashRefreshInterval ?? 30_000;
 	const controller = useMemo<TransactionPoolController>(
 		() =>
 			createTransactionPoolController({
@@ -614,6 +895,12 @@ type UseSendTransactionResult = Readonly<{
 
 /**
  * General-purpose helper that prepares and sends arbitrary transactions through {@link TransactionHelper}.
+ *
+ * @example
+ * ```ts
+ * const { send, status } = useSendTransaction();
+ * await send({ instructions: [ix], feePayer });
+ * ```
  */
 export function useSendTransaction(): UseSendTransactionResult {
 	const client = useSolanaClient();
@@ -680,12 +967,18 @@ export function useSendTransaction(): UseSendTransactionResult {
 	};
 }
 
-export type UseSignatureStatusOptions = UseSolanaRpcQueryOptions<SignatureStatusValue | null> &
+export type UseSignatureStatusOptions = Readonly<{
+	config?: SignatureStatusConfig;
+	disabled?: boolean;
+	swr?: UseSolanaRpcQueryOptions<SignatureStatusValue | null>['swr'];
+}>;
+
+export type UseSignatureStatusParameters = UseSignatureStatusOptions &
 	Readonly<{
-		config?: SignatureStatusConfig;
+		signature?: SignatureLike;
 	}>;
 
-export type SignatureStatusResult = SolanaQueryResult<SignatureStatusValue | null> &
+type SignatureStatusState = SolanaQueryResult<SignatureStatusValue | null> &
 	Readonly<{
 		confirmationStatus: ConfirmationCommitment | null;
 		signatureStatus: SignatureStatusValue | null;
@@ -693,15 +986,19 @@ export type SignatureStatusResult = SolanaQueryResult<SignatureStatusValue | nul
 
 /**
  * Fetch the RPC status for a transaction signature.
+ *
+ * @example
+ * ```ts
+ * const { signatureStatus, confirmationStatus } = useSignatureStatus(sig);
+ * ```
  */
 export function useSignatureStatus(
 	signatureInput?: SignatureLike,
 	options: UseSignatureStatusOptions = {},
-): SignatureStatusResult {
-	const { config, ...queryOptions } = options;
+): SignatureStatusState {
+	const { config, disabled: disabledOption, swr } = options;
 	const signature = useMemo(() => normalizeSignature(signatureInput), [signatureInput]);
 	const signatureKey = signature?.toString() ?? null;
-	const configKey = useMemo(() => JSON.stringify(config ?? null), [config]);
 	const fetcher = useCallback(
 		async (client: SolanaClient) => {
 			if (!signatureKey) {
@@ -716,14 +1013,14 @@ export function useSignatureStatus(
 		},
 		[config, signature, signatureKey],
 	);
-	const disabled = queryOptions.disabled ?? !signatureKey;
+	const disabled = disabledOption ?? !signatureKey;
 	const query = useSolanaRpcQuery<SignatureStatusValue | null>(
 		'signatureStatus',
-		[signatureKey, configKey],
+		getSignatureStatusKey({ signature: signatureInput, config }),
 		fetcher,
 		{
-			...queryOptions,
 			disabled,
+			swr,
 		},
 	);
 	const confirmationStatus = deriveConfirmationStatus(query.data ?? null);
@@ -744,7 +1041,7 @@ export type UseWaitForSignatureOptions = Omit<UseSignatureStatusOptions, 'disabl
 		watchCommitment?: ConfirmationCommitment;
 	}>;
 
-export type WaitForSignatureResult = SignatureStatusResult &
+type WaitForSignatureState = SignatureStatusState &
 	Readonly<{
 		isError: boolean;
 		isSuccess: boolean;
@@ -754,12 +1051,17 @@ export type WaitForSignatureResult = SignatureStatusResult &
 	}>;
 
 /**
- * Polls signature status data until the desired commitment (or subscription notification) is reached.
+ * Poll signature status until the desired commitment (or subscription notification) is reached.
+ *
+ * @example
+ * ```ts
+ * const { waitStatus, confirmationStatus } = useWaitForSignature(sig, { commitment: 'finalized' });
+ * ```
  */
 export function useWaitForSignature(
 	signatureInput?: SignatureLike,
 	options: UseWaitForSignatureOptions = {},
-): WaitForSignatureResult {
+): WaitForSignatureState {
 	const {
 		commitment = 'confirmed',
 		disabled: disabledOption,
@@ -767,14 +1069,17 @@ export function useWaitForSignature(
 		watchCommitment,
 		...signatureStatusOptions
 	} = options;
-	const { refreshInterval, ...restStatusOptions } = signatureStatusOptions;
+	const { swr, ...restStatusOptions } = signatureStatusOptions;
 	const subscribeCommitment = watchCommitment ?? commitment;
 	const client = useSolanaClient();
 	const normalizedSignature = useMemo(() => normalizeSignature(signatureInput), [signatureInput]);
 	const disabled = disabledOption ?? !normalizedSignature;
 	const statusQuery = useSignatureStatus(signatureInput, {
 		...restStatusOptions,
-		refreshInterval: refreshInterval ?? 2_000,
+		swr: {
+			refreshInterval: 2_000,
+			...swr,
+		},
 		disabled,
 	});
 	const [subscriptionSettled, setSubscriptionSettled] = useState(false);
@@ -832,3 +1137,121 @@ export function useWaitForSignature(
 		waitStatus,
 	};
 }
+
+type UseLookupTableOptions = Readonly<{
+	commitment?: Commitment;
+	swr?: Omit<SWRConfiguration<AddressLookupTableData, unknown, BareFetcher<AddressLookupTableData>>, 'suspense'>;
+}>;
+
+/**
+ * Fetch an address lookup table.
+ *
+ * @example
+ * ```ts
+ * const { data, isLoading, error } = useLookupTable(lutAddress);
+ * ```
+ */
+export function useLookupTable(
+	addressLike?: AddressLike,
+	options: UseLookupTableOptions = {},
+): SolanaQueryResult<AddressLookupTableData> {
+	const addr = useMemo(() => (addressLike ? toAddress(addressLike) : undefined), [addressLike]);
+	const key = addr?.toString() ?? null;
+	const fetcher = useCallback(
+		async (c: SolanaClient) => {
+			if (!addr) throw new Error('Address required');
+			return c.actions.fetchLookupTable(addr, options.commitment);
+		},
+		[addr, options.commitment],
+	);
+	return useSolanaRpcQuery<AddressLookupTableData>('lookupTable', [key, options.commitment], fetcher, {
+		disabled: !addr,
+		swr: options.swr,
+	});
+}
+
+type UseNonceAccountOptions = Readonly<{
+	commitment?: Commitment;
+	swr?: Omit<SWRConfiguration<NonceAccountData, unknown, BareFetcher<NonceAccountData>>, 'suspense'>;
+}>;
+
+/**
+ * Fetch a nonce account.
+ *
+ * @example
+ * ```ts
+ * const { data, isLoading, error } = useNonceAccount(nonceAddress);
+ * ```
+ */
+export function useNonceAccount(
+	addressLike?: AddressLike,
+	options: UseNonceAccountOptions = {},
+): SolanaQueryResult<NonceAccountData> {
+	const addr = useMemo(() => (addressLike ? toAddress(addressLike) : undefined), [addressLike]);
+	const key = addr?.toString() ?? null;
+	const fetcher = useCallback(
+		async (c: SolanaClient) => {
+			if (!addr) throw new Error('Address required');
+			return c.actions.fetchNonceAccount(addr, options.commitment);
+		},
+		[addr, options.commitment],
+	);
+	return useSolanaRpcQuery<NonceAccountData>('nonceAccount', [key, options.commitment], fetcher, {
+		disabled: !addr,
+		swr: options.swr,
+	});
+}
+
+// Public hook type aliases for consistency
+export type UseAccountParameters = Readonly<{ address?: AddressLike; options?: UseAccountOptions }>;
+export type UseAccountReturnType = ReturnType<typeof useAccount>;
+
+export type UseBalanceParameters = Readonly<{ address?: AddressLike; options?: UseBalanceOptions }>;
+export type UseBalanceReturnType = ReturnType<typeof useBalance>;
+
+export type UseClusterStateParameters = undefined;
+export type UseClusterStateReturnType = ReturnType<typeof useClusterState>;
+
+export type UseClusterStatusParameters = undefined;
+export type UseClusterStatusReturnType = ReturnType<typeof useClusterStatus>;
+
+export type UseConnectWalletParameters = undefined;
+export type UseConnectWalletReturnType = ReturnType<typeof useConnectWallet>;
+
+export type UseDisconnectWalletParameters = undefined;
+export type UseDisconnectWalletReturnType = ReturnType<typeof useDisconnectWallet>;
+
+export type UseSendTransactionParameters = undefined;
+export type UseSendTransactionReturnType = ReturnType<typeof useSendTransaction>;
+
+export type UseSignatureStatusReturnType = SignatureStatusState;
+
+export type UseWaitForSignatureParameters = Readonly<{
+	options?: UseWaitForSignatureOptions;
+	signature?: SignatureLike;
+}>;
+
+export type UseWaitForSignatureReturnType = WaitForSignatureState;
+
+export type UseSolTransferParameters = undefined;
+export type UseSolTransferReturnType = ReturnType<typeof useSolTransfer>;
+export type UseSplTokenParameters = Readonly<{ mint: AddressLike; options?: UseSplTokenOptions }>;
+export type UseSplTokenReturnType = ReturnType<typeof useSplToken>;
+
+export type UseTransactionPoolParameters = Readonly<{ config?: UseTransactionPoolConfig }>;
+export type UseTransactionPoolReturnType = ReturnType<typeof useTransactionPool>;
+
+export type UseWalletParameters = undefined;
+export type UseWalletReturnType = ReturnType<typeof useWallet>;
+
+export type UseWalletSessionParameters = undefined;
+export type UseWalletSessionReturnType = ReturnType<typeof useWalletSession>;
+
+export type UseWalletActionsParameters = undefined;
+export type UseWalletActionsReturnType = ReturnType<typeof useWalletActions>;
+
+export type UseLookupTableParameters = Readonly<{ address?: AddressLike; options?: UseLookupTableOptions }>;
+export type UseLookupTableReturnType = ReturnType<typeof useLookupTable>;
+
+export type UseNonceAccountParameters = Readonly<{ address?: AddressLike; options?: UseNonceAccountOptions }>;
+export type UseNonceAccountReturnType = ReturnType<typeof useNonceAccount>;

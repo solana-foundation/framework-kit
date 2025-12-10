@@ -1,0 +1,20 @@
+name: Dependency Audit
+
+on:
+  pull_request:
+
+jobs:
+  audit:
+    name: Audit Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        uses: ./.github/workflows/actions/install-dependencies
+        with:
+          version: 24
+
+      - name: Run pnpm audit
+        run: pnpm audit --prod

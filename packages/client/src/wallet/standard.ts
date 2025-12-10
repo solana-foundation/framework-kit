@@ -14,8 +14,13 @@ import {
 } from '@solana/wallet-standard-features';
 import { getWallets } from '@wallet-standard/app';
 import type { IdentifierString, Wallet, WalletAccount as WalletStandardAccount } from '@wallet-standard/base';
-import type { StandardConnectFeature, StandardDisconnectFeature } from '@wallet-standard/features';
-import { StandardConnect, StandardDisconnect } from '@wallet-standard/features';
+import type {
+	StandardConnectFeature,
+	StandardDisconnectFeature,
+	StandardEventsFeature,
+} from '@wallet-standard/features';
+import { StandardConnect, StandardDisconnect, StandardEvents } from '@wallet-standard/features';
+
 import type { WalletAccount, WalletConnector, WalletConnectorMetadata, WalletSession } from './types';
 
 export type WalletStandardConnectorMetadata = Readonly<{
@@ -23,6 +28,7 @@ export type WalletStandardConnectorMetadata = Readonly<{
 	defaultChain?: IdentifierString;
 	icon?: string;
 	id?: string;
+	kind?: string;
 	name?: string;
 }>;
 
@@ -36,10 +42,11 @@ const transactionEncoder = getTransactionEncoder();
  * Derives a connector identifier from a wallet instance.
  *
  * @param wallet - Wallet whose name will be transformed into an identifier.
- * @returns Kebab-case identifier string derived from the wallet name.
+ * @returns Namespaced identifier string derived from the wallet name.
  */
 function deriveConnectorId(wallet: Wallet): string {
-	return wallet.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+	const kebab = wallet.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+	return `wallet-standard:${kebab}`;
 }
 
 /**
@@ -124,7 +131,9 @@ export function createWalletStandardConnector(
 		canAutoConnect: options.canAutoConnect ?? Boolean(wallet.features[StandardConnect]),
 		icon: options.icon ?? wallet.icon,
 		id: options.id ?? deriveConnectorId(wallet),
+		kind: options.kind ?? 'wallet-standard',
 		name: options.name ?? wallet.name,
+		ready: typeof window !== 'undefined',
 	};
 
 	/**
@@ -133,23 +142,41 @@ export function createWalletStandardConnector(
 	 * @param connectionOptions - Optional connection configuration.
 	 * @returns A wallet session that exposes signing helpers.
 	 */
-	async function connect(connectionOptions: Readonly<{ autoConnect?: boolean }> = {}): Promise<WalletSession> {
+	async function connect(
+		connectionOptions: Readonly<{ autoConnect?: boolean; allowInteractiveFallback?: boolean }> = {},
+	): Promise<WalletSession> {
 		const connectFeature = wallet.features[StandardConnect] as
 			| StandardConnectFeature[typeof StandardConnect]
 			| undefined;
+		const eventsFeature = wallet.features[StandardEvents] as
+			| StandardEventsFeature[typeof StandardEvents]
+			| undefined;
 		const shouldConnectSilently = Boolean(connectionOptions.autoConnect);
+		const allowInteractiveFallback = connectionOptions.allowInteractiveFallback ?? true;
 		let walletAccounts = wallet.accounts;
 		if (connectFeature) {
-			const { accounts } = await connectFeature.connect({
-				silent: shouldConnectSilently || undefined,
-			});
-			if (accounts.length) {
-				walletAccounts = accounts;
+			const connectWithMode = async (silent?: boolean) =>
+				connectFeature.connect({
+					silent,
+				});
+			try {
+				const { accounts } = await connectWithMode(shouldConnectSilently);
+				if (accounts.length) {
+					walletAccounts = accounts;
+				}
+			} catch (error) {
+				if (!shouldConnectSilently || !allowInteractiveFallback) {
+					throw error;
+				}
+				const { accounts } = await connectWithMode(false);
+				if (accounts.length) {
+					walletAccounts = accounts;
+				}
 			}
 		}
 
-		const primaryAccount = getPrimaryAccount(walletAccounts);
-		const sessionAccount = toSessionAccount(primaryAccount);
+		let currentAccount = getPrimaryAccount(walletAccounts);
+		let sessionAccount = toSessionAccount(currentAccount);
 
 		const signMessageFeature = wallet.features[SolanaSignMessage] as
 			| SolanaSignMessageFeature[typeof SolanaSignMessage]
@@ -161,7 +188,7 @@ export function createWalletStandardConnector(
 			| SolanaSignAndSendTransactionFeature[typeof SolanaSignAndSendTransaction]
 			| undefined;
 
-		const resolvedChain = options.defaultChain ?? getChain(primaryAccount);
+		const resolvedChain = options.defaultChain ?? getChain(currentAccount);
 
 		/**
 		 * Signs messages using the wallet standard feature when available.
@@ -172,7 +199,7 @@ export function createWalletStandardConnector(
 		const signMessage = signMessageFeature
 			? async (message: Uint8Array) => {
 					const [output] = await signMessageFeature.signMessage({
-						account: primaryAccount,
+						account: currentAccount,
 						message,
 					});
 					return output.signature;
@@ -190,12 +217,12 @@ export function createWalletStandardConnector(
 					const wireBytes = new Uint8Array(transactionEncoder.encode(transaction));
 					const request = resolvedChain
 						? {
-								account: primaryAccount,
+								account: currentAccount,
 								chain: resolvedChain,
 								transaction: wireBytes,
 							}
 						: {
-								account: primaryAccount,
+								account: currentAccount,
 								transaction: wireBytes,
 							};
 					const [output] = await signTransactionFeature.signTransaction(request);
@@ -217,9 +244,9 @@ export function createWalletStandardConnector(
 				) => {
 					const wireBytes = new Uint8Array(transactionEncoder.encode(transaction));
 					const chain: IdentifierString =
-						options.defaultChain ?? getChain(primaryAccount) ?? 'solana:mainnet-beta';
+						options.defaultChain ?? getChain(currentAccount) ?? 'solana:mainnet-beta';
 					const [output] = await signAndSendFeature.signAndSendTransaction({
-						account: primaryAccount,
+						account: currentAccount,
 						chain,
 						options: {
 							commitment: mapCommitment(config?.commitment),
@@ -236,13 +263,40 @@ export function createWalletStandardConnector(
 		 * @returns Promise that resolves once the wallet has been disconnected.
 		 */
 		async function disconnectSession(): Promise<void> {
+			changeUnsubscribe?.();
 			await disconnectWallet(wallet);
 		}
+
+		let changeUnsubscribe: (() => void) | undefined;
+		const onAccountsChanged = eventsFeature
+			? (listener: (accounts: WalletAccount[]) => void) => {
+					const off = eventsFeature.on('change', ({ accounts }) => {
+						if (!accounts) return;
+						if (!accounts.length) {
+							listener([]);
+							return;
+						}
+						currentAccount = accounts[0];
+						sessionAccount = toSessionAccount(currentAccount);
+						listener(accounts.map(toSessionAccount));
+					});
+					return off;
+				}
+			: undefined;
 
 		return {
 			account: sessionAccount,
 			connector: metadata,
 			disconnect: disconnectSession,
+			onAccountsChanged: onAccountsChanged
+				? (listener) => {
+						changeUnsubscribe = onAccountsChanged(listener);
+						return () => {
+							changeUnsubscribe?.();
+							changeUnsubscribe = undefined;
+						};
+					}
+				: undefined,
 			sendTransaction,
 			signMessage,
 			signTransaction,

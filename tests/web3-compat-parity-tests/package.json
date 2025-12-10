@@ -1,0 +1,17 @@
+{
+	"name": "@solana/web3-compat-parity-tests",
+	"version": "0.0.0",
+	"private": true,
+	"description": "Parity checks that run the same Connection contract tests against web3.js and the compat layer",
+	"type": "module",
+	"scripts": {
+		"test": "vitest run --config ../../vitest.config.ts"
+	},
+	"dependencies": {
+		"@solana/web3-compat": "workspace:*",
+		"@solana/web3.js": "^1.95.3"
+	},
+	"devDependencies": {
+		"@types/node": "^24"
+	}
+}

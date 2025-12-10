@@ -1,0 +1,21 @@
+{
+	"name": "@solana/test-types-smoke",
+	"version": "0.0.18",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"test": "pnpm typecheck",
+		"pretypecheck": "pnpm --filter @solana/client build && pnpm --filter @solana/react-hooks build",
+		"typecheck": "tsc -p tsconfig.json"
+	},
+	"dependencies": {
+		"@solana/client": "workspace:*",
+		"@solana/react-hooks": "workspace:*",
+		"react": "catalog:react"
+	},
+	"devDependencies": {
+		"@types/node": "catalog:typescript",
+		"@types/react": "catalog:typescript",
+		"typescript": "catalog:typescript"
+	}
+}

@@ -29,16 +29,6 @@ describe('SolanaClientProvider', () => {
 		vi.clearAllMocks();
 	});
 
-	it('throws when neither a client nor config is provided', () => {
-		expect(() =>
-			render(
-				<SolanaClientProvider>
-					<div />
-				</SolanaClientProvider>,
-			),
-		).toThrowError('SolanaClientProvider requires either a `client` or `config` prop.');
-	});
-
 	it('reuses the provided client instance and does not destroy it on unmount', () => {
 		const client = createMockSolanaClient();
 		const { result, unmount } = renderHookWithClient(() => useSolanaClient(), { client });
@@ -64,7 +54,33 @@ describe('SolanaClientProvider', () => {
 			</SolanaClientProvider>,
 		);
 
-		expect(createClientMock).toHaveBeenCalledWith(config);
+		expect(createClientMock).toHaveBeenCalledWith(
+			expect.objectContaining({
+				endpoint: 'http://localhost:8899',
+				websocketEndpoint: 'ws://localhost:8899',
+			}),
+		);
+
+		unmount();
+		expect(client.destroy).toHaveBeenCalledTimes(1);
+	});
+
+	it('creates a default client when neither client nor config is provided and cleans up on unmount', () => {
+		const client = createMockSolanaClient();
+		createClientMock.mockReturnValue(client);
+
+		const { unmount } = render(
+			<SolanaClientProvider>
+				<TestConsumer />
+			</SolanaClientProvider>,
+		);
+
+		expect(createClientMock).toHaveBeenCalledWith(
+			expect.objectContaining({
+				endpoint: 'https://api.devnet.solana.com',
+				websocketEndpoint: 'wss://api.devnet.solana.com',
+			}),
+		);
 
 		unmount();
 		expect(client.destroy).toHaveBeenCalledTimes(1);

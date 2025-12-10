@@ -7,18 +7,20 @@ import type {
 	Signature,
 	Transaction,
 } from '@solana/kit';
-import { airdropFactory, getBase64EncodedWireTransaction } from '@solana/kit';
+import { airdropFactory, getBase64EncodedWireTransaction, isSome } from '@solana/kit';
 import type { TransactionWithLastValidBlockHeight } from '@solana/transaction-confirmation';
 import {
 	createBlockHeightExceedencePromiseFactory,
 	createRecentSignatureConfirmationPromiseFactory,
 	waitForRecentTransactionConfirmation,
 } from '@solana/transaction-confirmation';
+import { fetchAddressLookupTable, fetchAllAddressLookupTable } from '@solana-program/address-lookup-table';
+import { fetchNonce } from '@solana-program/system';
 
 import { createLogger, formatError } from '../logging/logger';
 import { createSolanaRpcClient } from '../rpc/createSolanaRpcClient';
 import type { SolanaClientRuntime } from '../rpc/types';
-import type { ClientActions, ClientState, ClientStore } from '../types';
+import type { AddressLookupTableData, ClientActions, ClientState, ClientStore, NonceAccountData } from '../types';
 import { now } from '../utils';
 import type { WalletRegistry, WalletSession } from '../wallet/types';
 
@@ -54,6 +56,7 @@ function updateState(store: ClientStore, update: Partial<ClientState>): void {
  */
 export function createActions({ connectors, logger: inputLogger, runtime, store }: ActionDeps): ClientActions {
 	const logger = inputLogger ?? createLogger();
+	let walletEventsCleanup: (() => void) | undefined;
 
 	/**
 	 * Returns the commitment to use for a request, falling back to the store default.
@@ -129,11 +132,6 @@ export function createActions({ connectors, logger: inputLogger, runtime, store 
 				},
 				lastUpdatedAt: now(),
 			}));
-			logger({
-				data: { endpoint, latencyMs, websocketEndpoint },
-				level: 'info',
-				message: 'cluster ready',
-			});
 		} catch (error) {
 			store.setState((state) => ({
 				...state,
@@ -164,6 +162,8 @@ export function createActions({ connectors, logger: inputLogger, runtime, store 
 		connectorId: string,
 		options: Readonly<{ autoConnect?: boolean }> = {},
 	): Promise<WalletSession> {
+		walletEventsCleanup?.();
+		walletEventsCleanup = undefined;
 		const connector = connectors.get(connectorId);
 		if (!connector) {
 			throw new Error(`No wallet connector registered for id "${connectorId}".`);
@@ -171,18 +171,30 @@ export function createActions({ connectors, logger: inputLogger, runtime, store 
 		if (!connector.isSupported()) {
 			throw new Error(`Wallet connector "${connectorId}" is not supported in this environment.`);
 		}
+		const autoConnectPreference = options.autoConnect ?? false;
+
 		store.setState((state) => ({
 			...state,
 			lastUpdatedAt: now(),
-			wallet: { connectorId, status: 'connecting' },
+			wallet: { autoConnect: autoConnectPreference, connectorId, status: 'connecting' },
 		}));
+
 		try {
 			const session = await connector.connect(options);
 			store.setState((state) => ({
 				...state,
 				lastUpdatedAt: now(),
-				wallet: { connectorId, session, status: 'connected' },
+				wallet: { autoConnect: autoConnectPreference, connectorId, session, status: 'connected' },
 			}));
+			if (session.onAccountsChanged) {
+				walletEventsCleanup = session.onAccountsChanged((accounts) => {
+					if (accounts.length === 0) {
+						walletEventsCleanup?.();
+						walletEventsCleanup = undefined;
+						void disconnectWallet();
+					}
+				});
+			}
 			logger({
 				data: { address: session.account.address.toString(), connectorId },
 				level: 'info',
@@ -193,7 +205,7 @@ export function createActions({ connectors, logger: inputLogger, runtime, store 
 			store.setState((state) => ({
 				...state,
 				lastUpdatedAt: now(),
-				wallet: { connectorId, error, status: 'error' },
+				wallet: { autoConnect: autoConnectPreference, connectorId, error, status: 'error' },
 			}));
 			logger({
 				data: { connectorId, ...formatError(error) },
@@ -214,6 +226,8 @@ export function createActions({ connectors, logger: inputLogger, runtime, store 
 		if (wallet.status === 'disconnected') {
 			return;
 		}
+		walletEventsCleanup?.();
+		walletEventsCleanup = undefined;
 		try {
 			if (wallet.status === 'connected') {
 				await wallet.session.disconnect();
@@ -380,6 +394,65 @@ export function createActions({ connectors, logger: inputLogger, runtime, store 
 	}
 
 	/**
+	 * Fetches an address lookup table.
+	 *
+	 * @param addr - Lookup table address.
+	 * @param commitment - Optional commitment override.
+	 * @returns Parsed lookup table data.
+	 */
+	async function fetchLookupTable(addr: Address, commitment?: Commitment): Promise<AddressLookupTableData> {
+		const account = await fetchAddressLookupTable(runtime.rpc, addr, {
+			commitment: getCommitment(commitment),
+		});
+		const { addresses, authority, deactivationSlot, lastExtendedSlot, lastExtendedSlotStartIndex } = account.data;
+		return {
+			addresses,
+			authority: isSome(authority) ? authority.value : undefined,
+			deactivationSlot,
+			lastExtendedSlot,
+			lastExtendedSlotStartIndex,
+		};
+	}
+
+	/**
+	 * Fetches multiple address lookup tables.
+	 *
+	 * @param addresses - Lookup table addresses.
+	 * @param commitment - Optional commitment override.
+	 * @returns Array of parsed lookup table data.
+	 */
+	async function fetchLookupTables(
+		addresses: readonly Address[],
+		commitment?: Commitment,
+	): Promise<readonly AddressLookupTableData[]> {
+		if (addresses.length === 0) return [];
+		const accounts = await fetchAllAddressLookupTable(runtime.rpc, addresses as Address[], {
+			commitment: getCommitment(commitment),
+		});
+		return accounts.map(({ data }) => ({
+			addresses: data.addresses,
+			authority: isSome(data.authority) ? data.authority.value : undefined,
+			deactivationSlot: data.deactivationSlot,
+			lastExtendedSlot: data.lastExtendedSlot,
+			lastExtendedSlotStartIndex: data.lastExtendedSlotStartIndex,
+		}));
+	}
+
+	/**
+	 * Fetches a nonce account.
+	 *
+	 * @param addr - Nonce account address.
+	 * @param commitment - Optional commitment override.
+	 * @returns Parsed nonce data.
+	 */
+	async function fetchNonceAccount(addr: Address, commitment?: Commitment): Promise<NonceAccountData> {
+		const account = await fetchNonce(runtime.rpc, addr, {
+			commitment: getCommitment(commitment),
+		});
+		return { authority: account.data.authority, blockhash: account.data.blockhash };
+	}
+
+	/**
 	 * Sends a transaction and waits for confirmation using the runtime helpers.
 	 *
 	 * @param transaction - Transaction to submit.
@@ -471,24 +544,30 @@ export function createActions({ connectors, logger: inputLogger, runtime, store 
 	 * @returns Promise resolving with the signature for the airdrop transaction.
 	 */
 	async function requestAirdrop(address: Address, lamports: Lamports) {
-		if (!('requestAirdrop' in runtime.rpc)) {
-			throw new Error('The current RPC endpoint does not support airdrops.');
+		try {
+			const factory = airdropFactory({
+				rpc: runtime.rpc,
+				rpcSubscriptions: runtime.rpcSubscriptions,
+			} as Parameters<typeof airdropFactory>[0]);
+			const signature = await factory({
+				commitment: getCommitment('confirmed'),
+				lamports,
+				recipientAddress: address,
+			});
+			logger({
+				data: { address: address.toString(), lamports: lamports.toString(), signature },
+				level: 'info',
+				message: 'airdrop requested',
+			});
+			return signature;
+		} catch (error) {
+			logger({
+				data: { address: address.toString(), lamports: lamports.toString(), ...formatError(error) },
+				level: 'error',
+				message: 'airdrop request failed',
+			});
+			throw error;
 		}
-		const factory = airdropFactory({
-			rpc: runtime.rpc,
-			rpcSubscriptions: runtime.rpcSubscriptions,
-		} as Parameters<typeof airdropFactory>[0]);
-		const signature = await factory({
-			commitment: getCommitment('confirmed'),
-			lamports,
-			recipientAddress: address,
-		});
-		logger({
-			data: { address: address.toString(), lamports: lamports.toString(), signature },
-			level: 'info',
-			message: 'airdrop requested',
-		});
-		return signature;
 	}
 
 	return {
@@ -496,6 +575,9 @@ export function createActions({ connectors, logger: inputLogger, runtime, store 
 		disconnectWallet,
 		fetchAccount,
 		fetchBalance,
+		fetchLookupTable,
+		fetchLookupTables,
+		fetchNonceAccount,
 		requestAirdrop,
 		sendTransaction,
 		setCluster,

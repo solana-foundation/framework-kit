@@ -102,7 +102,7 @@ describe('createClient', () => {
 		expect(createSolanaRpcClientMock).toHaveBeenCalledWith({
 			commitment: 'finalized',
 			endpoint: 'https://rpc.example',
-			websocketEndpoint: 'https://rpc.example',
+			websocketEndpoint: 'wss://rpc.example',
 		});
 		expect(createWalletRegistryMock).toHaveBeenCalledWith(config.walletConnectors);
 		expect(createActionsMock).toHaveBeenCalled();
@@ -112,7 +112,7 @@ describe('createClient', () => {
 		const actions = createActionsMock.mock.results[0].value as ActionSet;
 		expect(actions.setCluster).toHaveBeenCalledWith('https://rpc.example', {
 			commitment: 'finalized',
-			websocketEndpoint: 'https://rpc.example',
+			websocketEndpoint: 'wss://rpc.example',
 		});
 
 		const helpers = createClientHelpersMock.mock.results[0].value as Helpers;
@@ -141,6 +141,33 @@ describe('createClient', () => {
 			rpcClient,
 		});
 		expect(createSolanaRpcClientMock).not.toHaveBeenCalled();
+	});
+
+	it('applies initialState overrides to config', () => {
+		const state = {
+			autoconnect: false,
+			commitment: 'processed',
+			endpoint: 'https://rpc.state',
+			lastConnectorId: null,
+			lastPublicKey: null,
+			version: 1,
+			websocketEndpoint: 'wss://rpc.state',
+		};
+		createClient({
+			...config,
+			endpoint: 'https://rpc.config',
+			initialState: state,
+		});
+		expect(createSolanaRpcClientMock).toHaveBeenCalledWith({
+			commitment: 'processed',
+			endpoint: 'https://rpc.state',
+			websocketEndpoint: 'wss://rpc.state',
+		});
+		const actions = createActionsMock.mock.results[createActionsMock.mock.results.length - 1].value as ActionSet;
+		expect(actions.setCluster).toHaveBeenCalledWith('https://rpc.state', {
+			commitment: 'processed',
+			websocketEndpoint: 'wss://rpc.state',
+		});
 	});
 
 	it('logs errors when initial cluster setup fails', async () => {

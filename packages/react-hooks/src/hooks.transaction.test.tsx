@@ -4,7 +4,7 @@ import type { TransactionPrepareAndSendRequest } from '@solana/client';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createAddress, createWalletSession } from '../test/fixtures';
-import { act, renderHookWithClient } from '../test/utils';
+import { act, renderHookWithClient, waitFor } from '../test/utils';
 
 import { useSendTransaction, useTransactionPool } from './hooks';
 
@@ -70,7 +70,8 @@ describe('useTransactionPool.prepareAndSend', () => {
 describe('useSendTransaction', () => {
 	it('calls prepareAndSend and tracks status', async () => {
 		const instructions = [createInstruction(4)];
-		const request: TransactionPrepareAndSendRequest = { instructions };
+		const authority = createWalletSession();
+		const request: TransactionPrepareAndSendRequest = { authority, instructions };
 		const { client, result } = renderHookWithClient(() => useSendTransaction());
 
 		await act(async () => {
@@ -125,13 +126,11 @@ describe('useSendTransaction', () => {
 		const { client, result } = renderHookWithClient(() => useSendTransaction());
 		client.transaction.send.mockRejectedValueOnce(error);
 
-		await expect(
-			act(async () => {
-				await result.current.sendPrepared({} as never);
-			}),
-		).rejects.toThrowError(error);
+		await act(async () => {
+			await expect(result.current.sendPrepared({} as never)).rejects.toThrowError(error);
+		});
 
-		expect(result.current.status).toBe('error');
+		await waitFor(() => expect(result.current.status).toBe('error'));
 		expect(result.current.error).toBe(error);
 	});
 });

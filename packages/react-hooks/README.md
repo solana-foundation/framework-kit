@@ -1,373 +1,352 @@
 # @solana/react-hooks
 
-React hooks for `@solana/client`. Drop in the provider and call hooks instead of juggling RPC
-clients, wallets, and stores yourself.
-
-> **Status:** Experimental – breaking changes may land often.
+React hooks for `@solana/client`. Wrap your app once and reach for hooks instead of wiring RPC, wallets, and stores by hand.
 
 ## Install
 
 ```bash
-pnpm add @solana/react-hooks
+npm install @solana/client @solana/react-hooks
 ```
 
-## Minimal example
+## Quickstart
 
-Mount the provider once and call hooks anywhere in the subtree.
+1. Choose wallet connectors (auto-discovery is the fastest way to start).
+2. Create a Solana client.
+3. Wrap your tree with `SolanaProvider` and use the hooks.
 
 ```tsx
+import { autoDiscover, createClient } from "@solana/client";
 import {
-    SolanaClientProvider,
-    useBalance,
-    useConnectWallet,
-    useWallet,
-} from '@solana/react-hooks';
+  SolanaProvider,
+  useBalance,
+  useWalletConnection,
+} from "@solana/react-hooks";
 
-function WalletButton() {
-    const connectWallet = useConnectWallet();
-    return <button onClick={() => connectWallet('phantom')}>Connect Phantom</button>;
-}
-
-function WalletBalance() {
-    const wallet = useWallet();
-    const balance = useBalance(wallet.status === 'connected' ? wallet.session.account.address : undefined);
-
-    if (wallet.status !== 'connected') return <p>Connect a wallet</p>;
-    if (balance.fetching) return <p>Loading…</p>;
-
-    return <p>Lamports: {balance.lamports?.toString() ?? '0'}</p>;
-}
-
-export function App() {
-    return (
-        <SolanaClientProvider
-            config={{
-                endpoint: 'https://api.devnet.solana.com',
-                websocketEndpoint: 'wss://api.devnet.solana.com',
-            }}
-        >
-            <WalletButton />
-            <WalletBalance />
-        </SolanaClientProvider>
-    );
-}
-```
-
-## Hooks at a glance
-
-- `useWallet`, `useConnectWallet`, `useDisconnectWallet` – read or update the current wallet session.
-- `useBalance` / `useAccount` – fetch lamports once or keep account data in sync.
-- `useSolTransfer`, `useSplToken`, `useTransactionPool` – helper-driven flows for SOL, SPL, and
-  general transactions.
-- `useSendTransaction` – prepare and submit arbitrary instructions with shared mutation state.
-- `useSignatureStatus`, `useWaitForSignature` – declarative helpers for tracking confirmations.
-- `useClientStore` – access the underlying Zustand store if you need low-level state.
-
-### Wallet helpers
-
-Read the current wallet session and expose connect/disconnect buttons.
-
-```tsx
-const WalletActions = () => {
-    const wallet = useWallet();
-    const connect = useConnectWallet();
-    const disconnect = useDisconnectWallet();
-
-    if (wallet.status === 'connected') {
-        return (
-            <div>
-                <p>{wallet.session.account.address.toString()}</p>
-                <button onClick={() => disconnect()}>Disconnect</button>
-            </div>
-        );
-    }
-
-    return <button onClick={() => connect('phantom')}>Connect Phantom</button>;
-};
-```
-
-### Balance watcher
-
-Read lamports (cached plus live updates) for any address.
-
-```tsx
-import { useBalance } from '@solana/react-hooks';
-
-function BalanceCard({ address }) {
-    const { lamports, fetching, slot } = useBalance(address);
-    if (fetching) return <p>Loading…</p>;
-    return (
-        <div>
-            <p>Lamports: {lamports?.toString() ?? '0'}</p>
-            <small>Last slot: {slot?.toString() ?? 'unknown'}</small>
-        </div>
-    );
-}
-```
-
-### Account cache
-
-Fetch account data and optionally keep it in sync via subscriptions.
-
-```tsx
-import { useAccount } from '@solana/react-hooks';
-
-function AccountInspector({ address }) {
-    const account = useAccount(address, { watch: true });
-
-    if (!account) return <p>Loading…</p>;
-    if (account.error) return <p>Error loading account</p>;
-
-    return <pre>{JSON.stringify(account.data, null, 2)}</pre>;
-}
-```
-
-### SOL transfers
-
-Trigger SOL transfers with built-in status tracking.
-
-```tsx
-import { useSolTransfer } from '@solana/react-hooks';
-
-const SendSolButton = ({ destination, amount }) => {
-    const { send, isSending } = useSolTransfer();
-
-    return (
-        <button
-            disabled={isSending}
-            onClick={() =>
-                send({
-                    destination,
-                    lamports: amount,
-                })
-            }
-        >
-            {isSending ? 'Sending…' : 'Send SOL'}
-        </button>
-    );
-};
-```
-
-### SPL tokens
-
-Scope SPL helpers by mint and reuse the same API for balances and transfers.
-
-```tsx
-const SplBalance = ({ mint }) => {
-    const { balance, send, isSending } = useSplToken(mint);
-
-    return (
-        <div>
-            <p>Amount: {balance?.uiAmount ?? '0'}</p>
-            <button
-                disabled={isSending}
-                onClick={() =>
-                    send({
-                        amount: 1n,
-                        destinationOwner: 'Destination111111111111111111111111',
-                    })
-                }
-            >
-                Send 1 token
-            </button>
-        </div>
-    );
-};
-```
-
-### Transaction pool
-
-Compose instructions, refresh blockhashes automatically, and send transactions from one hook.
-
-```tsx
-import type { TransactionInstructionInput } from '@solana/client';
-
-const useMemoizedInstruction = (): TransactionInstructionInput => ({
-    accounts: [],
-    data: new Uint8Array(),
-    programAddress: 'Example1111111111111111111111111111111111',
+const client = createClient({
+  endpoint: "https://api.devnet.solana.com",
+  walletConnectors: autoDiscover(),
 });
 
-const TransactionFlow = () => {
-    const instruction = useMemoizedInstruction();
-    const {
-        addInstruction,
-        prepareAndSend,
-        sendStatus,
-        latestBlockhash,
-    } = useTransactionPool();
-
-    return (
-        <div>
-            <button onClick={() => addInstruction(instruction)}>Add instruction</button>
-            <button disabled={sendStatus === 'loading'} onClick={() => prepareAndSend()}>
-                {sendStatus === 'loading' ? 'Sending…' : 'Prepare & Send'}
-            </button>
-            <p>Recent blockhash: {latestBlockhash.blockhash ?? 'loading…'}</p>
-        </div>
-    );
-};
+export function App() {
+  return (
+    <SolanaProvider client={client}>
+      {/* your components that call hooks go here */}
+    </SolanaProvider>
+  );
+}
 ```
 
-### Client store access
+> **Next.js / RSC:** Components that call these hooks must be marked with `'use client'`.
 
-Drop down to the underlying Zustand store when you need bespoke selectors.
+## Common Solana flows (copy/paste)
+
+These snippets assume a parent already handled wallet connection and can pass an address where needed.
+
+### Connect, disconnect, and show balance
 
 ```tsx
-import { useClientStore } from '@solana/react-hooks';
+function WalletPanel() {
+  const { connectors, connect, disconnect, wallet, status } =
+    useWalletConnection();
+  const address = wallet?.account.address;
+  const balance = useBalance(address);
 
-function ClusterStatus() {
-    const cluster = useClientStore((state) => state.cluster);
-    return <p>Cluster: {cluster.status.status}</p>;
+  if (status === "connected") {
+    return (
+      <div>
+        <p>{address?.toString()}</p>
+        <p>Lamports: {balance.lamports?.toString() ?? "loading…"}</p>
+        <button onClick={disconnect}>Disconnect</button>
+      </div>
+    );
+  }
+
+  return connectors.map((c) => (
+    <button key={c.id} onClick={() => connect(c.id)}>
+      Connect {c.name}
+    </button>
+  ));
 }
 ```
 
-### General transaction sender
-
-Use `useSendTransaction` when you already have instructions/messages and just need a mutation helper
-that exposes `{ send, sendPrepared, status, error, signature }`. When no authority is supplied, it
-will use the currently connected wallet session by default.
+### Read lamport balance (auto fetch + watch)
 
 ```tsx
-import { useSendTransaction } from '@solana/react-hooks';
+import { useBalance } from "@solana/react-hooks";
 
-function SendAnythingButton({ instructions }) {
-    const { send, isSending, signature, error } = useSendTransaction();
-
-    return (
-        <div>
-            <button disabled={isSending} onClick={() => send({ instructions })}>
-                {isSending ? 'Submitting…' : 'Send transaction'}
-            </button>
-            {signature ? <p>Signature: {signature}</p> : null}
-            {error ? <p role="alert">Failed to send: {String(error)}</p> : null}
-        </div>
-    );
+function BalanceCard({ address }: { address: string }) {
+  const { lamports, fetching, slot } = useBalance(address);
+  if (fetching) return <p>Loading…</p>;
+  return (
+    <p>
+      Lamports: {lamports?.toString() ?? "0"} (slot {slot?.toString() ?? "—"})
+    </p>
+  );
 }
 ```
 
-### Signature helpers
-
-Poll RPC for signature metadata or wait for a confirmation level without writing loops.
+### Send SOL
 
 ```tsx
-import { useSignatureStatus, useWaitForSignature } from '@solana/react-hooks';
+import { useSolTransfer } from "@solana/react-hooks";
 
-function SignatureStatusCard({ signature }) {
-    const status = useSignatureStatus(signature);
-
-    if (status.isLoading) return <p>Loading…</p>;
-    if (status.isError) return <p>RPC error.</p>;
-
-    return (
-        <div>
-            <p>Confirmation: {status.confirmationStatus ?? 'pending'}</p>
-            <button onClick={() => status.refresh()}>Refresh</button>
-        </div>
-    );
-}
-
-function WaitForSignature({ signature }) {
-    const wait = useWaitForSignature(signature, { commitment: 'finalized' });
-
-    if (wait.waitStatus === 'error') return <p role="alert">Failed: {JSON.stringify(wait.waitError)}</p>;
-    if (wait.waitStatus === 'success') return <p>Finalized!</p>;
-    if (wait.waitStatus === 'waiting') return <p>Waiting for confirmation…</p>;
-    return <p>Provide a signature</p>;
+function SendSol({ destination }: { destination: string }) {
+  const { send, isSending, status, signature, error } = useSolTransfer(); // expects a connected wallet
+  return (
+    <div>
+      <button
+        disabled={isSending}
+        onClick={() =>
+          send({ destination, lamports: 100_000_000n /* 0.1 SOL */ })
+        }
+      >
+        {isSending ? "Sending…" : "Send 0.1 SOL"}
+      </button>
+      <p>Status: {status}</p>
+      {signature ? <p>Signature: {signature}</p> : null}
+      {error ? <p role="alert">Error: {String(error)}</p> : null}
+    </div>
+  );
 }
 ```
 
-## Query hooks
-
-Wrap a subtree with `<SolanaQueryProvider>` and call hooks like `useLatestBlockhash`,
-`useProgramAccounts`, `useSignatureStatus`, or `useSimulateTransaction`. Every hook returns
-`{ data, status, refresh }` so you can read the current value and trigger a refetch:
-
-### Latest blockhash
-
-Poll or refetch the cluster's latest blockhash.
+### SPL token balance + transfer
 
 ```tsx
-import { useLatestBlockhash } from '@solana/react-hooks';
+import { useSplToken } from "@solana/react-hooks";
 
-function BlockhashTicker() {
-    const { blockhash, status, refresh } = useLatestBlockhash({ refreshInterval: 20_000 });
-
-    return (
-        <div>
-            <button onClick={() => refresh()}>Refresh</button>
-            <p>Status: {status}</p>
-            <p>Blockhash: {blockhash ?? 'loading…'}</p>
-        </div>
-    );
+function TokenPanel({
+  mint,
+  destinationOwner,
+}: {
+  mint: string;
+  destinationOwner: string;
+}) {
+  const { balance, send, isSending, owner } = useSplToken(mint);
+  return (
+    <div>
+      <p>Owner: {owner ?? "Connect wallet"}</p>
+      <p>Balance: {balance?.uiAmount ?? "0"}</p>
+      <button
+        disabled={isSending || !owner}
+        onClick={() => send({ amount: 1n, destinationOwner })}
+      >
+        {isSending ? "Sending…" : "Send 1 token"}
+      </button>
+    </div>
+  );
 }
 ```
 
-### Program accounts
+### Fetch address lookup tables
 
 ```tsx
-import { SolanaQueryProvider, useProgramAccounts } from '@solana/react-hooks';
+import { useLookupTable } from "@solana/react-hooks";
 
-function ProgramAccountsList({ programAddress }) {
-    const { data, status, refresh } = useProgramAccounts(programAddress);
-
-    if (status === 'loading') return <p>Loading…</p>;
-    if (status === 'error') return <p>Retry later.</p>;
-
-    return (
-        <div>
-            <button onClick={() => refresh()}>Refresh</button>
-            <ul>
-                {data?.map(({ pubkey }) => (
-                    <li key={pubkey.toString()}>{pubkey.toString()}</li>
-                ))}
-            </ul>
-        </div>
-    );
-}
-
-export function QueryDemo({ programAddress }) {
-    return (
-        <SolanaClientProvider config={{ endpoint: 'https://api.devnet.solana.com' }}>
-            <SolanaQueryProvider>
-                <ProgramAccountsList programAddress={programAddress} />
-            </SolanaQueryProvider>
-        </SolanaClientProvider>
-    );
+function LookupTableInfo({ address }: { address: string }) {
+  const { data, isLoading, error } = useLookupTable(address);
+  if (isLoading) return <p>Loading…</p>;
+  if (error) return <p role="alert">Error loading LUT</p>;
+  return (
+    <div>
+      <p>Addresses in LUT: {data?.addresses.length ?? 0}</p>
+      <p>Authority: {data?.authority ?? "None"}</p>
+    </div>
+  );
 }
 ```
 
-### Transaction simulation
-
-Simulate any transaction payload (wire string or object) and read RPC logs.
+### Fetch nonce accounts
 
 ```tsx
-import { useSimulateTransaction } from '@solana/react-hooks';
+import { useNonceAccount } from "@solana/react-hooks";
 
-function SimulationLogs({ transaction }) {
-    const { logs, status, refresh } = useSimulateTransaction(transaction);
-
-    if (status === 'loading') return <p>Simulating…</p>;
-    if (status === 'error') return <p>Simulation failed.</p>;
-
-    return (
-        <div>
-            <button onClick={() => refresh()}>Re-run</button>
-            <pre>{JSON.stringify(logs ?? [], null, 2)}</pre>
-        </div>
-    );
+function NonceInfo({ address }: { address: string }) {
+  const { data, isLoading, error } = useNonceAccount(address);
+  if (isLoading) return <p>Loading…</p>;
+  if (error) return <p role="alert">Error loading nonce</p>;
+  return (
+    <div>
+      <p>Nonce: {data?.blockhash}</p>
+      <p>Authority: {data?.authority}</p>
+    </div>
+  );
 }
 ```
 
-## Going further
+### Build and send arbitrary transactions
 
-- Need Wallet Standard buttons or sign/send helpers? Use `useSignIn`, `useSignMessage`,
-  `useSignTransaction`, and friends from `walletStandardHooks.ts`.
-- Looking for examples? See `examples/react-hooks` for a ready-to-run, tabbed playground that wires
-  the provider, hooks, and mock UIs together across wallet/state, transaction, and query demos.
+```tsx
+import type { TransactionInstructionInput } from "@solana/client";
+import { useTransactionPool } from "@solana/react-hooks";
 
-## Scripts
+function TransactionFlow({ ix }: { ix: TransactionInstructionInput }) {
+  const pool = useTransactionPool();
+  return (
+    <div>
+      <button onClick={() => pool.addInstruction(ix)}>Add instruction</button>
+      <button disabled={pool.isSending} onClick={() => pool.prepareAndSend()}>
+        {pool.isSending ? "Sending…" : "Prepare & Send"}
+      </button>
+      <p>Blockhash: {pool.latestBlockhash.blockhash ?? "loading…"}</p>
+    </div>
+  );
+}
+```
 
-- `pnpm build` – run both JS compilation and type definition emit
-- `pnpm test:typecheck` – strict type-checking without emit
-- `pnpm lint` / `pnpm format` – Biome-powered linting and formatting
+### Simple mutation helper (when you already have instructions)
+
+```tsx
+import { useSendTransaction } from "@solana/react-hooks";
+
+function SendPrepared({ instructions }) {
+  const { send, isSending, signature, error } = useSendTransaction();
+  return (
+    <div>
+      <button disabled={isSending} onClick={() => send({ instructions })}>
+        {isSending ? "Submitting…" : "Send transaction"}
+      </button>
+      {signature ? <p>Signature: {signature}</p> : null}
+      {error ? <p role="alert">{String(error)}</p> : null}
+    </div>
+  );
+}
+```
+
+### Track confirmations for a signature
+
+```tsx
+import { useWaitForSignature } from "@solana/react-hooks";
+
+function SignatureWatcher({ signature }: { signature: string }) {
+  const wait = useWaitForSignature(signature, { commitment: "finalized" });
+  if (wait.waitStatus === "error") return <p role="alert">Failed</p>;
+  if (wait.waitStatus === "success") return <p>Finalized ✅</p>;
+  if (wait.waitStatus === "waiting") return <p>Waiting…</p>;
+  return <p>Provide a signature</p>;
+}
+```
+
+### Query program accounts
+
+```tsx
+import { SolanaQueryProvider, useProgramAccounts } from "@solana/react-hooks";
+
+function ProgramAccounts({ program }: { program: string }) {
+  const query = useProgramAccounts(program);
+  if (query.isLoading) return <p>Loading…</p>;
+  if (query.isError) return <p role="alert">RPC error</p>;
+  return (
+    <div>
+      <button onClick={() => query.refresh()}>Refresh</button>
+      <ul>
+        {query.accounts.map(({ pubkey }) => (
+          <li key={pubkey.toString()}>{pubkey.toString()}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function ProgramAccountsSection({ program }: { program: string }) {
+  return (
+    <SolanaQueryProvider>
+      <ProgramAccounts program={program} />
+    </SolanaQueryProvider>
+  );
+}
+```
+
+### Simulate a transaction
+
+```tsx
+import { useSimulateTransaction } from "@solana/react-hooks";
+
+function Simulation({ wire }: { wire: string }) {
+  const sim = useSimulateTransaction(wire);
+  if (sim.isLoading) return <p>Simulating…</p>;
+  if (sim.isError) return <p role="alert">Simulation failed</p>;
+  return (
+    <div>
+      <button onClick={() => sim.refresh()}>Re-run</button>
+      <pre>{JSON.stringify(sim.logs, null, 2)}</pre>
+    </div>
+  );
+}
+```
+
+## Using Suspense (opt-in)
+
+Enable Suspense per subtree by setting `suspense` on `SolanaQueryProvider` and wrapping content in a React `<Suspense>` boundary. This keeps the rest of the UI non-blocking.
+
+```tsx
+import { SolanaQueryProvider, useBalance } from "@solana/react-hooks";
+import { Suspense } from "react";
+
+function BalanceDetails({ address }: { address: string }) {
+  const balance = useBalance(address);
+  return <p>Lamports: {balance.lamports?.toString() ?? "0"}</p>;
+}
+
+export function WalletPanel({ address }: { address: string }) {
+  return (
+    <SolanaQueryProvider suspense>
+      <Suspense fallback={<p>Loading balance…</p>}>
+        <BalanceDetails address={address} />
+      </Suspense>
+    </SolanaQueryProvider>
+  );
+}
+```
+
+## Provider SWR config (optional)
+
+```tsx
+export function App() {
+  return (
+    <SolanaProvider
+      client={client}
+      query={{
+        config: {
+          revalidateOnFocus: false,
+          revalidateOnReconnect: false,
+          refreshInterval: 30_000,
+        },
+      }}
+    >
+      <WalletPanel />
+    </SolanaProvider>
+  );
+}
+```
+
+Defaults when you omit `query.config`:
+- `revalidateOnFocus` / `revalidateOnReconnect` / `revalidateIfStale`: `true`
+- `dedupingInterval`: `2000ms`
+- `focusThrottleInterval`: `5000ms`
+
+SWR background: stale-while-revalidate (RFC 5861): https://datatracker.ietf.org/doc/html/rfc5861
+
+### Work with the client store directly
+
+```tsx
+import { useClientStore } from "@solana/react-hooks";
+
+function ClusterBadge() {
+  const cluster = useClientStore((s) => s.cluster);
+  return <p>Endpoint: {cluster.endpoint}</p>;
+}
+```
+
+## Notes and defaults
+
+- Wallet connectors: use `autoDiscover()` to pick up Wallet Standard injectables; or explicitly compose `phantom()`, `solflare()`, `backpack()`, etc.
+- Queries: all RPC query hooks accept `swr` options under `swr` and `disabled` flags. Suspense is opt-in via `SolanaQueryProvider`’s `suspense` prop.
+- Authorities: transaction helpers default to the connected wallet session when `authority` is omitted.
+- Types: every hook exports `UseHookNameParameters` / `UseHookNameReturnType` aliases.
+
+## More resources
+
+- Playground: `examples/vite-react` (run with `pnpm install && pnpm dev`).
+- Next.js reference app: `examples/nextjs`.
+- Hook JSDoc lives in `src/hooks.ts`, `src/queryHooks.ts`, `src/ui.tsx`.

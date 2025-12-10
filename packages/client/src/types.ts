@@ -12,10 +12,12 @@ import type { TransactionWithLastValidBlockHeight } from '@solana/transaction-co
 import type { StoreApi } from 'zustand/vanilla';
 import type { SolTransferHelper } from './features/sol';
 import type { SplTokenHelper, SplTokenHelperConfig } from './features/spl';
+import type { StakeHelper } from './features/stake';
 import type { TransactionHelper } from './features/transactions';
 import type { SolanaRpcClient } from './rpc/createSolanaRpcClient';
 import type { SolanaClientRuntime } from './rpc/types';
 import type { PrepareTransactionMessage, PrepareTransactionOptions } from './transactions/prepareTransaction';
+import type { ClusterMoniker } from './utils/cluster';
 import type { WalletConnector, WalletRegistry, WalletSession, WalletStatus } from './wallet/types';
 
 export type LogLevel = 'debug' | 'error' | 'info' | 'warn';
@@ -56,6 +58,19 @@ export type AccountCacheEntry = Readonly<{
 }>;
 
 export type AccountCache = Record<string, AccountCacheEntry>;
+
+export type AddressLookupTableData = Readonly<{
+	addresses: readonly Address[];
+	authority?: Address;
+	deactivationSlot: bigint;
+	lastExtendedSlot: bigint;
+	lastExtendedSlotStartIndex: number;
+}>;
+
+export type NonceAccountData = Readonly<{
+	authority: Address;
+	blockhash: string;
+}>;
 
 export type TransactionRecord = Readonly<{
 	error?: unknown;
@@ -99,12 +114,26 @@ export type ClientStore = StoreApi<ClientState>;
 export type CreateStoreFn = (state: ClientState) => ClientStore;
 
 export type SolanaClientConfig = Readonly<{
+	cluster?: ClusterMoniker;
 	commitment?: Commitment;
 	createStore?: CreateStoreFn;
-	endpoint: ClusterUrl;
+	endpoint?: ClusterUrl;
+	initialState?: SerializableSolanaState;
 	logger?: ClientLogger;
+	rpc?: ClusterUrl;
 	rpcClient?: SolanaRpcClient;
 	walletConnectors?: readonly WalletConnector[];
+	websocket?: ClusterUrl;
+	websocketEndpoint?: ClusterUrl;
+}>;
+
+export type SerializableSolanaState = Readonly<{
+	autoconnect?: boolean;
+	commitment?: Commitment;
+	endpoint?: ClusterUrl;
+	lastConnectorId?: string | null;
+	lastPublicKey?: string | null;
+	version: number;
 	websocketEndpoint?: ClusterUrl;
 }>;
 
@@ -128,20 +157,111 @@ export type WatchSubscription = Readonly<{
 	abort(): void;
 }>;
 
+export type ConnectWalletParameters = Readonly<{
+	connectorId: string;
+	options?: Readonly<{ autoConnect?: boolean; allowInteractiveFallback?: boolean }>;
+}>;
+
+export type ConnectWalletReturnType = Promise<WalletSession>;
+
+export type DisconnectWalletParameters = undefined;
+
+export type DisconnectWalletReturnType = Promise<void>;
+
+export type FetchAccountParameters = Readonly<{
+	address: Address;
+	commitment?: Commitment;
+}>;
+
+export type FetchAccountReturnType = Promise<AccountCacheEntry>;
+
+export type FetchBalanceParameters = Readonly<{
+	address: Address;
+	commitment?: Commitment;
+}>;
+
+export type FetchBalanceReturnType = Promise<Lamports>;
+
+export type FetchLookupTableParameters = Readonly<{
+	address: Address;
+	commitment?: Commitment;
+}>;
+
+export type FetchLookupTableReturnType = Promise<AddressLookupTableData>;
+
+export type FetchLookupTablesParameters = Readonly<{
+	addresses: readonly Address[];
+	commitment?: Commitment;
+}>;
+
+export type FetchLookupTablesReturnType = Promise<readonly AddressLookupTableData[]>;
+
+export type FetchNonceAccountParameters = Readonly<{
+	address: Address;
+	commitment?: Commitment;
+}>;
+
+export type FetchNonceAccountReturnType = Promise<NonceAccountData>;
+
+export type RequestAirdropParameters = Readonly<{
+	address: Address;
+	lamports: Lamports;
+}>;
+
+export type RequestAirdropReturnType = Promise<Signature>;
+
+export type SendTransactionParameters = Readonly<{
+	commitment?: Commitment;
+	transaction: SendableTransaction & Transaction & TransactionWithLastValidBlockHeight;
+}>;
+
+export type SendTransactionReturnType = Promise<Signature>;
+
+export type SetClusterParameters = Readonly<{
+	config?: Readonly<{ commitment?: Commitment; websocketEndpoint?: ClusterUrl }>;
+	endpoint: ClusterUrl;
+}>;
+
+export type SetClusterReturnType = Promise<void>;
+
 export type ClientActions = Readonly<{
-	connectWallet(connectorId: string, options?: Readonly<{ autoConnect?: boolean }>): Promise<WalletSession>;
-	disconnectWallet(): Promise<void>;
-	fetchAccount(address: Address, commitment?: Commitment): Promise<AccountCacheEntry>;
-	fetchBalance(address: Address, commitment?: Commitment): Promise<Lamports>;
-	requestAirdrop(address: Address, lamports: Lamports): Promise<Signature>;
+	connectWallet(
+		connectorId: ConnectWalletParameters['connectorId'],
+		options?: ConnectWalletParameters['options'],
+	): ConnectWalletReturnType;
+	disconnectWallet(): DisconnectWalletReturnType;
+	fetchAccount(
+		address: FetchAccountParameters['address'],
+		commitment?: FetchAccountParameters['commitment'],
+	): FetchAccountReturnType;
+	fetchBalance(
+		address: FetchBalanceParameters['address'],
+		commitment?: FetchBalanceParameters['commitment'],
+	): FetchBalanceReturnType;
+	fetchLookupTable(
+		address: FetchLookupTableParameters['address'],
+		commitment?: FetchLookupTableParameters['commitment'],
+	): FetchLookupTableReturnType;
+	fetchLookupTables(
+		addresses: FetchLookupTablesParameters['addresses'],
+		commitment?: FetchLookupTablesParameters['commitment'],
+	): FetchLookupTablesReturnType;
+	fetchNonceAccount(
+		address: FetchNonceAccountParameters['address'],
+		commitment?: FetchNonceAccountParameters['commitment'],
+	): FetchNonceAccountReturnType;
+	requestAirdrop(
+		address: RequestAirdropParameters['address'],
+		lamports: RequestAirdropParameters['lamports'],
+	): RequestAirdropReturnType;
 	sendTransaction(
-		transaction: SendableTransaction & Transaction & TransactionWithLastValidBlockHeight,
-		commitment?: Commitment,
-	): Promise<Signature>;
+		transaction: SendTransactionParameters['transaction'],
+		commitment?: SendTransactionParameters['commitment'],
+	): SendTransactionReturnType;
 	setCluster(
-		endpoint: ClusterUrl,
-		config?: Readonly<{ commitment?: Commitment; websocketEndpoint?: ClusterUrl }>,
-	): Promise<void>;
+		endpoint: SetClusterParameters['endpoint'],
+		config?: SetClusterParameters['config'],
+	): SetClusterReturnType;
 }>;
 
 export type ClientWatchers = Readonly<{
@@ -153,6 +273,7 @@ export type ClientWatchers = Readonly<{
 export type ClientHelpers = Readonly<{
 	solTransfer: SolTransferHelper;
 	splToken(config: SplTokenHelperConfig): SplTokenHelper;
+	stake: StakeHelper;
 	transaction: TransactionHelper;
 	prepareTransaction<TMessage extends PrepareTransactionMessage>(
 		config: PrepareTransactionOptions<TMessage>,
@@ -173,6 +294,7 @@ export type SolanaClient = Readonly<{
 	splToken(config: SplTokenHelperConfig): SplTokenHelper;
 	SplToken(config: SplTokenHelperConfig): SplTokenHelper;
 	SplHelper(config: SplTokenHelperConfig): SplTokenHelper;
+	stake: StakeHelper;
 	transaction: TransactionHelper;
 	prepareTransaction: ClientHelpers['prepareTransaction'];
 }>;

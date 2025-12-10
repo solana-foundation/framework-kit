@@ -2,8 +2,15 @@ name: Version & Publish Packages
 
 on:
   workflow_dispatch:
-    branches:
-      - main
+    inputs:
+      release_type:
+        description: 'Choose which release pipeline to run'
+        required: false
+        default: regular
+        type: choice
+        options:
+          - regular
+          - canary
   push:
     branches:
       - main
@@ -11,9 +18,17 @@ on:
 env:
   DO_NOT_TRACK: '1'
 
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+
 jobs:
   build-and-publish-to-npm:
     runs-on: ubuntu-latest
+    env:
+      RELEASE_TYPE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.release_type || 'regular' }}
+      NPM_CONFIG_PROVENANCE: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,25 +45,35 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Configure npm token
-        run: pnpm config set '//registry.npmjs.org/:_authToken' "${NPM_TOKEN}"
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
       - name: Create Changesets Pull Request or Trigger an npm Publish
+        if: env.RELEASE_TYPE == 'regular'
         id: changesets
         uses: changesets/action@v1
+        with:
+          createGithubReleases: true
         env:
+          HUSKY: '0'
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Choose final step
+        if: env.RELEASE_TYPE == 'regular'
         id: build-step-decider
         run: |
           echo "step-name=${{ steps.changesets.outputs.hasChangesets == 'false' && 'publish-packages' || 'build' }}" >> "$GITHUB_OUTPUT"
 
       - name: Run final step
+        if: env.RELEASE_TYPE == 'regular'
         run: pnpm ${{ steps.build-step-decider.outputs.step-name }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish Canary Snapshot
+        if: env.RELEASE_TYPE == 'canary'
+        run: |
+          pnpm changeset version --snapshot canary
+          pnpm build
+          pnpm changeset publish --tag canary --filter @solana/client --filter @solana/react-hooks --filter @solana/web3-compat
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

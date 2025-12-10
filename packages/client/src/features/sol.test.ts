@@ -55,16 +55,27 @@ const getTransferSolInstructionMock = vi.hoisted(() =>
 	vi.fn((config: unknown) => ({ instruction: 'transfer', config })),
 );
 const getBase58DecoderMock = vi.hoisted(() => vi.fn(() => ({ decode: () => 'decoded-signature' })));
+const createTransactionPlanExecutorMock = vi.hoisted(() =>
+	vi.fn((config: { executeTransactionMessage: (message: MutableMessage) => Promise<void> }) =>
+		vi.fn(async (plan: { message: MutableMessage }) => {
+			await config.executeTransactionMessage(plan.message);
+			return { kind: 'single', message: plan.message };
+		}),
+	),
+);
+const singleTransactionPlanMock = vi.hoisted(() => vi.fn((message: MutableMessage) => ({ kind: 'single', message })));
 
 vi.mock('@solana/kit', () => ({
 	address: addressMock,
 	appendTransactionMessageInstruction: appendTransactionMessageInstructionMock,
 	createTransactionMessage: createTransactionMessageMock,
+	createTransactionPlanExecutor: createTransactionPlanExecutorMock,
 	getBase64EncodedWireTransaction: getBase64EncodedWireTransactionMock,
 	isTransactionSendingSigner: isTransactionSendingSignerGuardMock,
 	pipe: pipeMock,
 	setTransactionMessageFeePayer: setTransactionMessageFeePayerMock,
 	setTransactionMessageLifetimeUsingBlockhash: setTransactionMessageLifetimeUsingBlockhashMock,
+	singleTransactionPlan: singleTransactionPlanMock,
 	signAndSendTransactionMessageWithSigners: signAndSendTransactionMessageWithSignersMock,
 	signature: signatureMock,
 	signTransactionMessageWithSigners: signTransactionMessageWithSignersMock,
@@ -129,6 +140,7 @@ describe('createSolTransferHelper', () => {
 		expect(prepared.mode).toBe('partial');
 		expect(prepared.commitment).toBeUndefined();
 		expect(appendTransactionMessageInstructionMock).toHaveBeenCalled();
+		expect(singleTransactionPlanMock).toHaveBeenCalledWith(prepared.message);
 	});
 
 	it('sends prepared transfers using sending signers when possible', async () => {
@@ -150,12 +162,14 @@ describe('createSolTransferHelper', () => {
 
 	it('sends prepared transfers via RPC when partial signing is required', async () => {
 		const helper = createSolTransferHelper(runtime as never);
+		const message = { instructions: [] };
 		const prepared = {
 			commitment: 'processed',
 			lifetime: { blockhash: 'hash', lastValidBlockHeight: 123n },
-			message: { instructions: [] },
+			message,
 			mode: 'partial' as const,
 			signer: { address: 'payer' } as TransactionSigner,
+			plan: { kind: 'single', message },
 		};
 		const signature = await helper.sendPreparedTransfer(prepared, { commitment: 'processed' });
 		expect(signTransactionMessageWithSignersMock).toHaveBeenCalled();
@@ -163,6 +177,7 @@ describe('createSolTransferHelper', () => {
 			'wire-data',
 			expect.objectContaining({ preflightCommitment: 'processed' }),
 		);
+		expect(createTransactionPlanExecutorMock).toHaveBeenCalled();
 		expect(signature).toBe('signature:wire-signature');
 	});
 

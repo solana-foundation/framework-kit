@@ -7,6 +7,7 @@ const CONNECTORS: ReadonlyArray<{ id: string; label: string }> = [
 	{ id: 'wallet-standard:phantom', label: 'Connect Phantom' },
 	{ id: 'wallet-standard:solflare', label: 'Connect Solflare' },
 	{ id: 'wallet-standard:backpack', label: 'Connect Backpack' },
+	{ id: 'wallet-standard:metamask', label: 'Connect MetaMask' },
 ];
 
 function WalletPanel() {

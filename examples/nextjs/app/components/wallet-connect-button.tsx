@@ -7,6 +7,7 @@ const CONNECTORS: ReadonlyArray<{ id: string; label: string }> = [
 	{ id: 'wallet-standard:phantom', label: 'Phantom' },
 	{ id: 'wallet-standard:solflare', label: 'Solflare' },
 	{ id: 'wallet-standard:backpack', label: 'Backpack' },
+	{ id: 'wallet-standard:metamask', label: 'MetaMask' },
 ];
 
 function truncate(address: string): string {

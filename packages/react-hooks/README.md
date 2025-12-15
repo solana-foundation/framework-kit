@@ -340,7 +340,7 @@ function ClusterBadge() {
 
 ## Notes and defaults
 
-- Wallet connectors: use `autoDiscover()` to pick up Wallet Standard injectables; or explicitly compose `phantom()`, `solflare()`, `backpack()`, etc.
+- Wallet connectors: use `autoDiscover()` to pick up Wallet Standard injectables; or explicitly compose `phantom()`, `solflare()`, `backpack()`, `metamask()`, etc.
 - Queries: all RPC query hooks accept `swr` options under `swr` and `disabled` flags. Suspense is opt-in via `SolanaQueryProvider`’s `suspense` prop.
 - Authorities: transaction helpers default to the connected wallet session when `authority` is omitted.
 - Types: every hook exports `UseHookNameParameters` / `UseHookNameReturnType` aliases.

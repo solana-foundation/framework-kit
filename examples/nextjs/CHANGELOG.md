@@ -1,5 +1,11 @@
 # @solana/example-nextjs
 
+## 0.0.9
+
+### Patch Changes
+
+- [#91](https://github.com/solana-foundation/framework-kit/pull/91) [`f43851d`](https://github.com/solana-foundation/framework-kit/commit/f43851d616ef384bb5162e4f884ae424dcc5d659) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - fix: update next.js to 16.0.9 to address security vulnerabilities (CVE DoS and source code exposure)
+
 ## 0.0.8
 
 ### Patch Changes

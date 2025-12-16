@@ -1,7 +1,7 @@
 # @solana/example-nextjs
 
 Minimal Next.js (App Router) example for `@solana/react-hooks` using Tailwind CSS v4 (config-less).
-It wires the Wallet Standard connectors (Phantom, Solflare, Backpack + auto-discovery) and shows a
+It wires the Wallet Standard connectors (Phantom, Solflare, Backpack, MetaMask + auto-discovery) and shows a
 memo-sending flow: connect a wallet, type a memo, and submit a Memo program transaction with the
 connected signer.
 

@@ -10,10 +10,10 @@ The app starts with connector-first setup: build connectors, create a client, an
 includes the query layer). Cluster URLs are resolved from the `cluster` moniker (Devnet here).
 
 ```tsx
-import { autoDiscover, backpack, createClient, phantom, solflare } from '@solana/client';
+import { autoDiscover, backpack, createClient, metamask, phantom, solflare } from '@solana/client';
 import { SolanaProvider } from '@solana/react-hooks';
 
-const walletConnectors = [...phantom(), ...solflare(), ...backpack(), ...autoDiscover()];
+const walletConnectors = [...phantom(), ...solflare(), ...backpack(), ...metamask(), ...autoDiscover()];
 const client = createClient({
 	cluster: 'devnet',
 	walletConnectors,

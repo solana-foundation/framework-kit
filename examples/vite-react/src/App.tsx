@@ -1,4 +1,4 @@
-import { autoDiscover, backpack, createClient, phantom, solflare } from '@solana/client';
+import { autoDiscover, backpack, createClient, metamask, phantom, solflare } from '@solana/client';
 import { SolanaProvider } from '@solana/react-hooks';
 import { Suspense } from 'react';
 
@@ -19,7 +19,7 @@ import { TransactionPoolPanel } from './components/TransactionPoolPanel.tsx';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs.tsx';
 import { WalletControls } from './components/WalletControls.tsx';
 
-const walletConnectors = [...phantom(), ...solflare(), ...backpack(), ...autoDiscover()];
+const walletConnectors = [...phantom(), ...solflare(), ...backpack(), ...metamask(), ...autoDiscover()];
 const client = createClient({
 	commitment: 'confirmed',
 	cluster: 'devnet',

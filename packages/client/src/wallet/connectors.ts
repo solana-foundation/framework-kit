@@ -88,3 +88,13 @@ export function backpack(options?: Parameters<typeof createWalletStandardConnect
 		overrides: () => ({ ...options, id: 'wallet-standard:backpack' }),
 	});
 }
+
+/**
+ * Factory for a MetaMask-only connector.
+ */
+export function metamask(options?: Parameters<typeof createWalletStandardConnector>[1]): readonly WalletConnector[] {
+	return autoDiscover({
+		filter: filterByName('metamask'),
+		overrides: () => ({ ...options, id: 'wallet-standard:metamask' }),
+	});
+}

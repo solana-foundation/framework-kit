@@ -219,9 +219,37 @@ Notes:
 - Default moniker is `devnet` when nothing is provided; moniker becomes `custom` when you pass a raw `endpoint`.
 - `createClient`, `createDefaultClient` (`resolveClientConfig`), and `SolanaProvider` all use `resolveCluster` under the hood, so the moniker/endpoint behavior is consistent across entrypoints.
 
+## Wallet connector filtering
+
+Use `filterByNames` with `autoDiscover()` to filter wallets by name without wallet-specific code:
+
+```ts
+import { autoDiscover, filterByNames } from "@solana/client";
+
+// Only show Phantom and Solflare
+const connectors = autoDiscover({
+  filter: filterByNames("phantom", "solflare"),
+});
+
+const client = createClient({
+  cluster: "devnet",
+  walletConnectors: connectors,
+});
+```
+
+This approach follows Wallet Standard's wallet-agnostic discovery pattern while still allowing you to curate which wallets appear in your app.
+
+You can also write custom filter functions:
+
+```ts
+const connectors = autoDiscover({
+  filter: (wallet) => wallet.name.toLowerCase().includes("phantom"),
+});
+```
+
 ## Notes and defaults
 
-- Wallet connectors: `autoDiscover()` picks up Wallet Standard injectables; compose `phantom()`, `solflare()`, `backpack()`, or `injected()` when you need explicit control.
+- Wallet connectors: `autoDiscover()` picks up Wallet Standard injectables; use `filterByNames()` to filter by name, or compose `phantom()`, `solflare()`, `backpack()`, etc. when you need explicit control.
 - Store: built on Zustand; pass `createStore` to `createClient` for custom persistence or server-side stores. `serializeSolanaState` / `deserializeSolanaState` help save and restore cluster + wallet metadata.
 - Actions: `fetchAccount`, `fetchBalance`, `fetchLookupTable`, `fetchLookupTables`, `fetchNonceAccount`, `setCluster`, `requestAirdrop`, `sendTransaction`, and wallet connect/disconnect keep the store in sync.
 - Watchers: `watchAccount`, `watchBalance`, and `watchSignature` stream updates into the store and return an `abort()` handle for cleanup.

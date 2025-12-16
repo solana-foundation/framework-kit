@@ -338,9 +338,27 @@ function ClusterBadge() {
 }
 ```
 
+## Wallet connector filtering
+
+Use `filterByNames` with `autoDiscover()` to filter wallets by name without wallet-specific code:
+
+```tsx
+import { autoDiscover, createClient, filterByNames } from "@solana/client";
+
+// Only show Phantom and Solflare
+const client = createClient({
+  cluster: "devnet",
+  walletConnectors: autoDiscover({
+    filter: filterByNames("phantom", "solflare"),
+  }),
+});
+```
+
+This approach follows Wallet Standard's wallet-agnostic discovery pattern while still allowing you to curate which wallets appear in your app.
+
 ## Notes and defaults
 
-- Wallet connectors: use `autoDiscover()` to pick up Wallet Standard injectables; or explicitly compose `phantom()`, `solflare()`, `backpack()`, `metamask()`, etc.
+- Wallet connectors: use `autoDiscover()` to pick up Wallet Standard injectables; use `filterByNames()` to filter by name, or explicitly compose `phantom()`, `solflare()`, `backpack()`, `metamask()`, etc.
 - Queries: all RPC query hooks accept `swr` options under `swr` and `disabled` flags. Suspense is opt-in via `SolanaQueryProvider`’s `suspense` prop.
 - Authorities: transaction helpers default to the connected wallet session when `authority` is omitted.
 - Types: every hook exports `UseHookNameParameters` / `UseHookNameReturnType` aliases.

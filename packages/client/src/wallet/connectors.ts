@@ -60,6 +60,23 @@ function filterByName(name: string) {
 }
 
 /**
+ * Creates a filter function for autoDiscover that matches wallets by name.
+ * Useful for filtering to specific wallets without using wallet-specific connector functions.
+ *
+ * @example
+ * ```ts
+ * // Filter to only Phantom and Solflare wallets
+ * const connectors = autoDiscover({
+ *   filter: filterByNames('phantom', 'solflare')
+ * });
+ * ```
+ */
+export function filterByNames(...names: string[]) {
+	const lowerNames = names.map((n) => n.toLowerCase());
+	return (wallet: Wallet) => lowerNames.some((name) => wallet.name.toLowerCase().includes(name));
+}
+
+/**
  * Factory for a Phantom-only connector.
  */
 export function phantom(options?: Parameters<typeof createWalletStandardConnector>[1]): readonly WalletConnector[] {

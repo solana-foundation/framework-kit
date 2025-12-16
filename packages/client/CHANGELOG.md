@@ -1,5 +1,15 @@
 # @solana/client
 
+## 1.2.0
+
+### Minor Changes
+
+- [#96](https://github.com/solana-foundation/framework-kit/pull/96) [`bf45b6e`](https://github.com/solana-foundation/framework-kit/commit/bf45b6e99ea1062688a22bd6d9b83bf693fcd562) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Add MetaMask Connector for Solana wallet integration
+
+  - Added `createMetaMaskConnector` to the wallet connectors module
+  - MetaMask connector enables Solana dApps to connect with MetaMask wallet
+  - Updated examples (Next.js and Vite+React) to demonstrate MetaMask integration
+
 ## 1.1.4
 
 ### Patch Changes

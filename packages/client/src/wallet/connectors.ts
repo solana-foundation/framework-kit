@@ -98,3 +98,13 @@ export function metamask(options?: Parameters<typeof createWalletStandardConnect
 		overrides: () => ({ ...options, id: 'wallet-standard:metamask' }),
 	});
 }
+
+/**
+ * Factory for a Samui-only connector.
+ */
+export function samui(options?: Parameters<typeof createWalletStandardConnector>[1]): readonly WalletConnector[] {
+	return autoDiscover({
+		filter: filterByName('samui'),
+		overrides: () => ({ ...options, id: 'wallet-standard:samui' }),
+	});
+}

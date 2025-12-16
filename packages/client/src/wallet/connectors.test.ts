@@ -3,7 +3,7 @@ import type { Wallet } from '@wallet-standard/base';
 import { StandardConnect } from '@wallet-standard/features';
 import { describe, expect, it, vi } from 'vitest';
 
-import { autoDiscover, backpack, injected, metamask, phantom, solflare } from './connectors';
+import { autoDiscover, backpack, injected, metamask, phantom, samui, solflare } from './connectors';
 
 vi.mock('@wallet-standard/app', () => {
 	let wallets: Wallet[] = [];
@@ -66,12 +66,13 @@ describe('wallet connectors factories', () => {
 		});
 	});
 
-	it('phantom/solflare/backpack/metamask filters by name and overrides ids', () => {
+	it('phantom/solflare/backpack/metamask/samui filters by name and overrides ids', () => {
 		mockApp.__setWallets([
 			stubWallet('Phantom', '11111111111111111111111111111111'),
 			stubWallet('Solflare', '22222222222222222222222222222222'),
 			stubWallet('Backpack', '33333333333333333333333333333333'),
 			stubWallet('MetaMask', '44444444444444444444444444444444'),
+			stubWallet('Samui', '55555555555555555555555555555555'),
 		]);
 
 		expect(phantom()).toHaveLength(1);
@@ -85,5 +86,8 @@ describe('wallet connectors factories', () => {
 
 		expect(metamask()).toHaveLength(1);
 		expect(metamask()[0].id).toBe('wallet-standard:metamask');
+
+		expect(samui()).toHaveLength(1);
+		expect(samui()[0].id).toBe('wallet-standard:samui');
 	});
 });

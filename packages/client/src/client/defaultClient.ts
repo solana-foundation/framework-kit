@@ -2,7 +2,7 @@ import type { ClusterUrl, Commitment } from '@solana/kit';
 
 import type { SolanaClient, SolanaClientConfig, WalletConnector } from '../types';
 import { type ClusterMoniker, resolveCluster } from '../utils/cluster';
-import { autoDiscover, backpack, phantom, solflare } from '../wallet/connectors';
+import { autoDiscover, backpack, phantom, samui, solflare } from '../wallet/connectors';
 import { createClient } from './createClient';
 
 type BasePassthrough = Omit<SolanaClientConfig, 'endpoint' | 'websocketEndpoint' | 'walletConnectors'>;
@@ -28,7 +28,7 @@ export type CreateDefaultClientOptions = Readonly<
 >;
 
 export function defaultWalletConnectors(): readonly WalletConnector[] {
-	return [...phantom(), ...solflare(), ...backpack(), ...autoDiscover()];
+	return [...phantom(), ...solflare(), ...backpack(), ...samui(), ...autoDiscover()];
 }
 
 function normalizeUrl(value?: string | null): ClusterUrl | undefined {

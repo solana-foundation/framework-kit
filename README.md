@@ -37,10 +37,10 @@ Framework for Solana dApps: evolving multi-framework client core (React-first to
 ## React quick start
 
 ```tsx
-import { createSolanaClient } from "@solana/client";
+import { createClient } from "@solana/client";
 import { SolanaProvider, useWalletConnection } from "@solana/react-hooks";
 
-const client = createSolanaClient({
+const client = createClient({
   endpoint: "https://api.devnet.solana.com",
 });
 

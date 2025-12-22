@@ -1,5 +1,11 @@
 # @solana/client
 
+## 1.2.1
+
+### Patch Changes
+
+- [#105](https://github.com/solana-foundation/framework-kit/pull/105) [`06b4ad0`](https://github.com/solana-foundation/framework-kit/commit/06b4ad0657cd20968f0eed4aa87394df6736225a) Thanks [@resourcefulmind](https://github.com/resourcefulmind)! - Improve main README documentation with clearer quickstart guide and better developer experience
+
 ## 1.2.0
 
 ### Minor Changes

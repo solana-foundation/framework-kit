@@ -6,7 +6,7 @@ export type {
 	UseSolanaClientParameters,
 	UseSolanaClientReturnType,
 } from './context';
-export { SolanaClientProvider, useSolanaClient } from './context';
+export { SolanaClientContext, SolanaClientProvider, useSolanaClient } from './context';
 export type {
 	SignatureWaitStatus,
 	UseAccountParameters,

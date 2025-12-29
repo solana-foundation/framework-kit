@@ -1,5 +1,11 @@
 # @solana/client
 
+## 1.2.2
+
+### Patch Changes
+
+- [#117](https://github.com/solana-foundation/framework-kit/pull/117) [`7aaf0a7`](https://github.com/solana-foundation/framework-kit/commit/7aaf0a706a3c09bedaf153ef8fbf109ca24a9204) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Fix SSR compatibility by using browser entry as default export
+
 ## 1.2.1
 
 ### Patch Changes

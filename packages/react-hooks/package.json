@@ -4,14 +4,14 @@
 	"description": "React hooks for the @solana/client Solana client",
 	"exports": {
 		"browser": "./dist/index.browser.mjs",
-		"edge-light": "./dist/index.node.mjs",
-		"workerd": "./dist/index.node.mjs",
+		"edge-light": "./dist/index.browser.mjs",
+		"workerd": "./dist/index.browser.mjs",
 		"node": "./dist/index.node.mjs",
 		"react-native": "./dist/index.native.mjs",
 		"types": "./dist/types/index.d.ts",
-		"default": "./dist/index.node.mjs"
+		"default": "./dist/index.browser.mjs"
 	},
-	"module": "./dist/index.node.mjs",
+	"module": "./dist/index.browser.mjs",
 	"react-native": "./dist/index.native.mjs",
 	"types": "./dist/types/index.d.ts",
 	"type": "module",

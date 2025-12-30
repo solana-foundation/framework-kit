@@ -19,6 +19,7 @@
 		"typecheck": "turbo run typecheck",
 		"size": "pnpm build && size-limit",
 		"prepare": "husky",
+		"check:circular-deps": "turbo run check:circular-deps",
 		"changeset": "changeset",
 		"version:packages": "changeset version",
 		"publish-packages": "changeset publish --filter @solana/client --filter @solana/react-hooks --filter @solana/web3-compat"

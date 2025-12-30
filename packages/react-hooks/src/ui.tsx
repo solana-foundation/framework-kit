@@ -9,7 +9,7 @@ type WalletConnectionState = Readonly<{
 	connect(
 		connectorId: string,
 		options?: Readonly<{ autoConnect?: boolean; allowInteractiveFallback?: boolean }>,
-	): Promise<void>;
+	): Promise<WalletSession>;
 	connected: boolean;
 	connecting: boolean;
 	connectors: readonly WalletConnector[];
@@ -154,11 +154,12 @@ export function useWalletModalState(options: WalletModalStateOptions = {}): Wall
 
 	const connect = useCallback(
 		async (connectorId: string, connectOptions?: Readonly<{ autoConnect?: boolean }>) => {
-			await connection.connect(connectorId, connectOptions);
+			const session = await connection.connect(connectorId, connectOptions);
 			setSelectedConnector(connectorId);
 			if (closeOnConnect) {
 				setIsOpen(false);
 			}
+			return session;
 		},
 		[closeOnConnect, connection],
 	);

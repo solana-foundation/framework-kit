@@ -4,12 +4,13 @@ import { createSolTransferHelper, type SolTransferHelper } from '../features/sol
 import { createSplTokenHelper, type SplTokenHelper, type SplTokenHelperConfig } from '../features/spl';
 import { createStakeHelper, type StakeHelper } from '../features/stake';
 import { createTransactionHelper, type TransactionHelper } from '../features/transactions';
+import type { SolanaClientRuntime } from '../rpc/types';
 import {
 	type PrepareTransactionMessage,
 	type PrepareTransactionOptions,
 	prepareTransaction as prepareTransactionUtility,
 } from '../transactions/prepareTransaction';
-import type { ClientHelpers, ClientStore, SolanaClientRuntime } from '../types';
+import type { ClientHelpers, ClientStore } from '../types';
 
 type SplTokenCacheEntry = Readonly<{
 	baseCommitment?: Commitment;

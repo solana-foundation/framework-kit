@@ -36,6 +36,7 @@ import type {
 	SetClusterReturnType,
 	SolanaClient,
 } from './types';
+import type { WalletSession } from './wallet/types';
 
 type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
 type Expect<T extends true> = T;
@@ -49,7 +50,7 @@ export type ConnectWalletParametersMatch = Expect<
 		}>
 	>
 >;
-export type ConnectWalletReturnMatch = Expect<Equal<ConnectWalletReturnType, Promise<void>>>;
+export type ConnectWalletReturnMatch = Expect<Equal<ConnectWalletReturnType, Promise<WalletSession>>>;
 export type DisconnectWalletParametersMatch = Expect<Equal<DisconnectWalletParameters, undefined>>;
 export type DisconnectWalletReturnMatch = Expect<Equal<DisconnectWalletReturnType, Promise<void>>>;
 

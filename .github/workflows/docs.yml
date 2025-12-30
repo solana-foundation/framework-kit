@@ -1,0 +1,49 @@
+name: Generate API Documentation
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'packages/client/src/**'
+      - 'packages/client/typedoc.json'
+      - '.github/workflows/docs.yml'
+
+jobs:
+  build-docs:
+    name: Build Documentation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.20.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm build
+
+      - name: Generate API documentation
+        run: pnpm --filter @solana/client docs
+
+      - name: Generate JSON API spec
+        run: pnpm --filter @solana/client docs:json
+
+      - name: Upload docs artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-docs
+          path: ./packages/client/docs
+          retention-days: 30

@@ -21,7 +21,7 @@ import type {
 } from '@wallet-standard/features';
 import { StandardConnect, StandardDisconnect, StandardEvents } from '@wallet-standard/features';
 
-import type { WalletAccount, WalletConnector, WalletConnectorMetadata, WalletSession } from '../types';
+import type { WalletAccount, WalletConnector, WalletConnectorMetadata, WalletSession } from './types';
 
 export type WalletStandardConnectorMetadata = Readonly<{
 	canAutoConnect?: boolean;

@@ -1,8 +1,9 @@
 import type { ClusterUrl, Commitment } from '@solana/kit';
 
-import type { SolanaClient, SolanaClientConfig, WalletConnector } from '../types';
+import type { SolanaClient, SolanaClientConfig } from '../types';
 import { type ClusterMoniker, resolveCluster } from '../utils/cluster';
 import { autoDiscover, backpack, phantom, solflare } from '../wallet/connectors';
+import type { WalletConnector } from '../wallet/types';
 import { createClient } from './createClient';
 
 type BasePassthrough = Omit<SolanaClientConfig, 'endpoint' | 'websocketEndpoint' | 'walletConnectors'>;

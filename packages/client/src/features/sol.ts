@@ -24,8 +24,9 @@ import {
 import { getTransferSolInstruction } from '@solana-program/system';
 
 import { lamportsMath } from '../numeric/lamports';
+import type { SolanaClientRuntime } from '../rpc/types';
 import { createWalletTransactionSigner, isWalletSession, resolveSignerMode } from '../signers/walletTransactionSigner';
-import type { SolanaClientRuntime, WalletSession } from '../types';
+import type { WalletSession } from '../wallet/types';
 
 type BlockhashLifetime = Readonly<{
 	blockhash: Blockhash;

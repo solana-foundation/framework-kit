@@ -1,7 +1,8 @@
 import { createLogger, formatError } from '../logging/logger';
 import { createSolanaRpcClient } from '../rpc/createSolanaRpcClient';
+import type { SolanaClientRuntime } from '../rpc/types';
 import { applySerializableState } from '../serialization/state';
-import type { ClientStore, SolanaClient, SolanaClientConfig, SolanaClientRuntime } from '../types';
+import type { ClientStore, SolanaClient, SolanaClientConfig } from '../types';
 import { now } from '../utils';
 import { resolveCluster } from '../utils/cluster';
 import { createWalletRegistry } from '../wallet/registry';

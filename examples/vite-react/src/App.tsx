@@ -18,6 +18,7 @@ import { StoreInspectorCard } from './components/StoreInspectorCard.tsx';
 import { TransactionPoolPanel } from './components/TransactionPoolPanel.tsx';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs.tsx';
 import { WalletControls } from './components/WalletControls.tsx';
+import { WrapSolPanel } from './components/WrapSolPanel.tsx';
 
 const walletConnectors = [...phantom(), ...solflare(), ...backpack(), ...metamask(), ...autoDiscover()];
 const client = createClient({
@@ -82,6 +83,7 @@ function DemoApp() {
 							<div className="grid gap-6 lg:grid-cols-2">
 								<SolTransferForm />
 								<SendTransactionCard />
+								<WrapSolPanel />
 								<SplTokenPanel />
 								<StakePanel />
 								<TransactionPoolPanel />

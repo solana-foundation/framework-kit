@@ -39,6 +39,13 @@ export {
 	type WithdrawInput,
 } from './controllers/stakeController';
 export {
+	createWsolController,
+	type WsolController,
+	type WsolControllerConfig,
+	type WsolUnwrapInput,
+	type WsolWrapInput,
+} from './controllers/wsolController';
+export {
 	createSolTransferHelper,
 	type SolTransferHelper,
 	type SolTransferPrepareConfig,
@@ -75,6 +82,14 @@ export {
 	type TransactionSendOptions,
 	type TransactionSignOptions,
 } from './features/transactions';
+export {
+	createWsolHelper,
+	WRAPPED_SOL_MINT,
+	type WsolBalance,
+	type WsolHelper,
+	type WsolUnwrapPrepareConfig,
+	type WsolWrapPrepareConfig,
+} from './features/wsol';
 export {
 	createTokenAmount,
 	type FormatAmountOptions,

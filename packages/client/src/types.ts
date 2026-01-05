@@ -14,6 +14,7 @@ import type { SolTransferHelper } from './features/sol';
 import type { SplTokenHelper, SplTokenHelperConfig } from './features/spl';
 import type { StakeHelper } from './features/stake';
 import type { TransactionHelper } from './features/transactions';
+import type { WsolHelper } from './features/wsol';
 import type { SolanaRpcClient } from './rpc/createSolanaRpcClient';
 import type { SolanaClientRuntime } from './rpc/types';
 import type { PrepareTransactionMessage, PrepareTransactionOptions } from './transactions/prepareTransaction';
@@ -277,6 +278,7 @@ export type ClientHelpers = Readonly<{
 	splToken(config: SplTokenHelperConfig): SplTokenHelper;
 	stake: StakeHelper;
 	transaction: TransactionHelper;
+	wsol: WsolHelper;
 	prepareTransaction<TMessage extends PrepareTransactionMessage>(
 		config: PrepareTransactionOptions<TMessage>,
 	): Promise<TMessage & TransactionMessageWithBlockhashLifetime>;
@@ -298,5 +300,6 @@ export type SolanaClient = Readonly<{
 	SplHelper(config: SplTokenHelperConfig): SplTokenHelper;
 	stake: StakeHelper;
 	transaction: TransactionHelper;
+	wsol: WsolHelper;
 	prepareTransaction: ClientHelpers['prepareTransaction'];
 }>;

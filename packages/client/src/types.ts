@@ -14,80 +14,16 @@ import type { SolTransferHelper } from './features/sol';
 import type { SplTokenHelper, SplTokenHelperConfig } from './features/spl';
 import type { StakeHelper } from './features/stake';
 import type { TransactionHelper } from './features/transactions';
+import type { WsolHelper } from './features/wsol';
 import type { SolanaRpcClient } from './rpc/createSolanaRpcClient';
+import type { SolanaClientRuntime } from './rpc/types';
 import type { PrepareTransactionMessage, PrepareTransactionOptions } from './transactions/prepareTransaction';
 import type { ClusterMoniker } from './utils/cluster';
-
-type SolanaRpcInstance = ReturnType<typeof import('@solana/kit')['createSolanaRpc']>;
-type SolanaSubscriptionsInstance = ReturnType<typeof import('@solana/kit')['createSolanaRpcSubscriptions']>;
+import type { WalletConnector, WalletRegistry, WalletSession, WalletStatus } from './wallet/types';
 
 export type LogLevel = 'debug' | 'error' | 'info' | 'warn';
 
 export type ClientLogger = (event: { data?: Record<string, unknown>; level: LogLevel; message: string }) => void;
-
-export type WalletConnectorMetadata = Readonly<{
-	canAutoConnect?: boolean;
-	icon?: string;
-	id: string;
-	kind?: string;
-	name: string;
-	ready?: boolean;
-}>;
-
-export type WalletAccount = Readonly<{
-	address: Address;
-	label?: string;
-	publicKey: Uint8Array;
-}>;
-
-export type WalletSession = Readonly<{
-	account: WalletAccount;
-	connector: WalletConnectorMetadata;
-	disconnect(): Promise<void>;
-	onAccountsChanged?: (listener: (accounts: WalletAccount[]) => void) => () => void;
-	sendTransaction?(
-		transaction: SendableTransaction & Transaction,
-		config?: Readonly<{ commitment?: Commitment }>,
-	): Promise<Signature>;
-	signMessage?(message: Uint8Array): Promise<Uint8Array>;
-	signTransaction?(transaction: SendableTransaction & Transaction): Promise<SendableTransaction & Transaction>;
-}>;
-
-export type WalletConnector = WalletConnectorMetadata & {
-	connect(opts?: Readonly<{ autoConnect?: boolean; allowInteractiveFallback?: boolean }>): Promise<WalletSession>;
-	disconnect(): Promise<void>;
-	isSupported(): boolean;
-};
-
-type WalletStatusConnected = Readonly<{
-	autoConnect?: boolean;
-	connectorId: string;
-	session: WalletSession;
-	status: 'connected';
-}>;
-
-type WalletStatusConnecting = Readonly<{
-	autoConnect?: boolean;
-	connectorId: string;
-	status: 'connecting';
-}>;
-
-type WalletStatusDisconnected = Readonly<{
-	status: 'disconnected';
-}>;
-
-type WalletStatusError = Readonly<{
-	autoConnect?: boolean;
-	connectorId?: string;
-	error: unknown;
-	status: 'error';
-}>;
-
-export type WalletStatus =
-	| WalletStatusConnected
-	| WalletStatusConnecting
-	| WalletStatusDisconnected
-	| WalletStatusError;
 
 type ClusterStatusConnecting = Readonly<{ status: 'connecting' }>;
 
@@ -116,9 +52,11 @@ export type AccountCacheEntry = Readonly<{
 	address: Address;
 	data?: unknown;
 	error?: unknown;
+	executable: boolean | null;
 	fetching: boolean;
 	lamports: Lamports | null;
 	lastFetchedAt?: number;
+	owner: Address | null;
 	slot: bigint | null;
 }>;
 
@@ -202,11 +140,6 @@ export type SerializableSolanaState = Readonly<{
 	websocketEndpoint?: ClusterUrl;
 }>;
 
-export type SolanaClientRuntime = {
-	rpc: SolanaRpcInstance;
-	rpcSubscriptions: SolanaSubscriptionsInstance;
-};
-
 export type BalanceWatcherConfig = Readonly<{
 	address: Address;
 	commitment?: Commitment;
@@ -232,7 +165,7 @@ export type ConnectWalletParameters = Readonly<{
 	options?: Readonly<{ autoConnect?: boolean; allowInteractiveFallback?: boolean }>;
 }>;
 
-export type ConnectWalletReturnType = Promise<void>;
+export type ConnectWalletReturnType = Promise<WalletSession>;
 
 export type DisconnectWalletParameters = undefined;
 
@@ -345,14 +278,10 @@ export type ClientHelpers = Readonly<{
 	splToken(config: SplTokenHelperConfig): SplTokenHelper;
 	stake: StakeHelper;
 	transaction: TransactionHelper;
+	wsol: WsolHelper;
 	prepareTransaction<TMessage extends PrepareTransactionMessage>(
 		config: PrepareTransactionOptions<TMessage>,
 	): Promise<TMessage & TransactionMessageWithBlockhashLifetime>;
-}>;
-
-export type WalletRegistry = Readonly<{
-	all: readonly WalletConnector[];
-	get(id: string): WalletConnector | undefined;
 }>;
 
 export type SolanaClient = Readonly<{
@@ -371,5 +300,6 @@ export type SolanaClient = Readonly<{
 	SplHelper(config: SplTokenHelperConfig): SplTokenHelper;
 	stake: StakeHelper;
 	transaction: TransactionHelper;
+	wsol: WsolHelper;
 	prepareTransaction: ClientHelpers['prepareTransaction'];
 }>;

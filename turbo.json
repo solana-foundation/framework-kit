@@ -35,6 +35,9 @@
 		"typecheck": {
 			"dependsOn": ["^build"],
 			"outputs": []
+		},
+		"check:circular-deps": {
+			"outputs": []
 		}
 	}
 }

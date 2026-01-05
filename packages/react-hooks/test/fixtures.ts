@@ -33,9 +33,11 @@ export function createAccountEntry(overrides: Partial<AccountCacheEntry> = {}): 
 		address: overrides.address ?? createAddress(0),
 		data: overrides.data,
 		error: overrides.error,
+		executable: overrides.executable ?? null,
 		fetching: overrides.fetching ?? false,
 		lamports: overrides.lamports ?? createLamports(0),
 		lastFetchedAt: overrides.lastFetchedAt,
+		owner: overrides.owner ?? null,
 		slot: overrides.slot ?? null,
 		...overrides,
 	};

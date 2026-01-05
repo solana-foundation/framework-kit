@@ -12,6 +12,7 @@ import {
 	createSplTransferController,
 	createStakeController,
 	createTransactionPoolController,
+	createWsolController,
 	deriveConfirmationStatus,
 	type LatestBlockhashCache,
 	type NonceAccountData,
@@ -49,6 +50,11 @@ import {
 	type WalletStatus,
 	type WithdrawInput,
 	type WithdrawSendOptions,
+	type WsolBalance,
+	type WsolController,
+	type WsolHelper,
+	type WsolUnwrapInput,
+	type WsolWrapInput,
 } from '@solana/client';
 import type { Commitment, Lamports, Signature } from '@solana/kit';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
@@ -237,7 +243,7 @@ export function useWalletActions() {
 export function useConnectWallet(): (
 	connectorId: string,
 	options?: Readonly<{ autoConnect?: boolean; allowInteractiveFallback?: boolean }>,
-) => Promise<void> {
+) => Promise<WalletSession> {
 	const client = useSolanaClient();
 	return useCallback(
 		(connectorId: string, options?: Readonly<{ autoConnect?: boolean; allowInteractiveFallback?: boolean }>) =>
@@ -617,24 +623,44 @@ export function useSplToken(
  */
 export function useAccount(addressLike?: AddressLike, options: UseAccountOptions = {}): AccountCacheEntry | undefined {
 	const client = useSolanaClient();
-	const shouldSkip = options.skip ?? !addressLike;
-	const address = useMemo(() => {
+	const mergedOptions = useMemo(
+		() => ({
+			commitment: options.commitment,
+			fetch: options.fetch ?? true,
+			skip: options.skip,
+			watch: options.watch ?? true,
+		}),
+		[options.commitment, options.fetch, options.skip, options.watch],
+	);
+	const shouldSkip = mergedOptions.skip ?? !addressLike;
+	const { address, addressError } = useMemo(() => {
 		if (shouldSkip || !addressLike) {
-			return undefined;
+			return { address: undefined, addressError: undefined };
 		}
-		return toAddress(addressLike);
+		try {
+			return { address: toAddress(addressLike), addressError: undefined };
+		} catch (e) {
+			return { address: undefined, addressError: e };
+		}
 	}, [addressLike, shouldSkip]);
+
+	// Log address validation errors to console for developer visibility
+	useEffect(() => {
+		if (addressError) {
+			console.warn('[useAccount] Invalid address provided:', addressError);
+		}
+	}, [addressError]);
 	const accountKey = useMemo(() => address?.toString(), [address]);
 	const selector = useMemo(() => createAccountSelector(accountKey), [accountKey]);
 	const account = useClientStore(selector);
 
 	useSuspenseFetcher({
-		enabled: options.fetch !== false && !shouldSkip && Boolean(address),
+		enabled: mergedOptions.fetch !== false && !shouldSkip && Boolean(address),
 		fetcher: () => {
 			if (!address) {
 				throw new Error('Provide an address before fetching account data.');
 			}
-			return client.actions.fetchAccount(address, options.commitment);
+			return client.actions.fetchAccount(address, mergedOptions.commitment);
 		},
 		key: accountKey ?? null,
 		ready: account !== undefined,
@@ -644,18 +670,18 @@ export function useAccount(addressLike?: AddressLike, options: UseAccountOptions
 		if (!address) {
 			return;
 		}
-		const commitment = options.commitment;
-		if (options.fetch !== false && account === undefined) {
+		const commitment = mergedOptions.commitment;
+		if (mergedOptions.fetch !== false && account === undefined) {
 			void client.actions.fetchAccount(address, commitment).catch(() => undefined);
 		}
-		if (options.watch) {
+		if (mergedOptions.watch) {
 			const subscription = client.watchers.watchAccount({ address, commitment }, () => undefined);
 			return () => {
 				subscription.abort();
 			};
 		}
 		return undefined;
-	}, [account, address, client, options.commitment, options.fetch, options.watch]);
+	}, [account, address, client, mergedOptions.commitment, mergedOptions.fetch, mergedOptions.watch]);
 
 	return account;
 }
@@ -689,12 +715,23 @@ export function useBalance(
 	);
 	const client = useSolanaClient();
 	const shouldSkip = mergedOptions.skip ?? !addressLike;
-	const address = useMemo(() => {
+	const { address, addressError } = useMemo(() => {
 		if (shouldSkip || !addressLike) {
-			return undefined;
+			return { address: undefined, addressError: undefined };
 		}
-		return toAddress(addressLike);
+		try {
+			return { address: toAddress(addressLike), addressError: undefined };
+		} catch (e) {
+			return { address: undefined, addressError: e };
+		}
 	}, [addressLike, shouldSkip]);
+
+	// Log address validation errors to console for developer visibility
+	useEffect(() => {
+		if (addressError) {
+			console.warn('[useBalance] Invalid address provided:', addressError);
+		}
+	}, [addressError]);
 	const accountKey = useMemo(() => address?.toString(), [address]);
 	const selector = useMemo(() => createAccountSelector(accountKey), [accountKey]);
 	const account = useClientStore(selector);
@@ -731,7 +768,7 @@ export function useBalance(
 	const lamports = account?.lamports ?? null;
 	const fetching = account?.fetching ?? false;
 	const slot = account?.slot;
-	const error = account?.error;
+	const error = addressError ?? account?.error;
 
 	return useMemo(
 		() => ({
@@ -964,6 +1001,175 @@ export function useSendTransaction(): UseSendTransactionResult {
 		sendPrepared,
 		signature: state.data ?? null,
 		status: state.status,
+	};
+}
+
+type WsolWrapSignature = Awaited<ReturnType<WsolHelper['sendWrap']>>;
+type WsolUnwrapSignature = Awaited<ReturnType<WsolHelper['sendUnwrap']>>;
+
+type UseWrapSolOptions = Readonly<{
+	commitment?: Commitment;
+	owner?: AddressLike;
+	revalidateOnFocus?: boolean;
+	swr?: Omit<SWRConfiguration<WsolBalance, unknown, BareFetcher<WsolBalance>>, 'fallback' | 'suspense'>;
+}>;
+
+/**
+ * Convenience hook for wrapping and unwrapping SOL to/from wSOL.
+ *
+ * @example
+ * ```ts
+ * const { balance, wrap, unwrap, isWrapping, isUnwrapping } = useWrapSol();
+ * // Wrap 1 SOL to wSOL
+ * await wrap({ amount: 1_000_000_000n });
+ * // Unwrap all wSOL back to SOL
+ * await unwrap({});
+ * ```
+ */
+export function useWrapSol(options: UseWrapSolOptions = {}): Readonly<{
+	balance: WsolBalance | null;
+	error: unknown;
+	helper: WsolHelper;
+	isFetching: boolean;
+	isUnwrapping: boolean;
+	isWrapping: boolean;
+	owner: string | null;
+	refresh(): Promise<WsolBalance | undefined>;
+	refreshing: boolean;
+	resetUnwrap(): void;
+	resetWrap(): void;
+	unwrap(config: Omit<WsolUnwrapInput, 'owner'>, options?: SolTransferSendOptions): Promise<WsolUnwrapSignature>;
+	unwrapError: unknown;
+	unwrapSignature: WsolUnwrapSignature | null;
+	unwrapStatus: AsyncState<WsolUnwrapSignature>['status'];
+	wrap(config: Omit<WsolWrapInput, 'owner'>, options?: SolTransferSendOptions): Promise<WsolWrapSignature>;
+	wrapError: unknown;
+	wrapSignature: WsolWrapSignature | null;
+	wrapStatus: AsyncState<WsolWrapSignature>['status'];
+	status: 'disconnected' | 'error' | 'loading' | 'ready';
+}> {
+	const client = useSolanaClient();
+	const session = useWalletSession();
+	const suspense = Boolean(useQuerySuspensePreference());
+	const helper = client.wsol;
+
+	const ownerRaw = options.owner ?? session?.account.address;
+	const owner = useMemo(() => (ownerRaw ? String(ownerRaw) : null), [ownerRaw]);
+
+	const balanceKey = owner ? ['wsol-balance', owner, options.commitment ?? null] : null;
+
+	const fetchBalance = useCallback(() => {
+		if (!owner) {
+			throw new Error('Unable to fetch wSOL balance without an owner.');
+		}
+		return helper.fetchWsolBalance(owner, options.commitment);
+	}, [helper, owner, options.commitment]);
+
+	const swrOptions = useMemo(
+		() => ({
+			revalidateOnFocus: options.revalidateOnFocus ?? false,
+			suspense,
+			...(options.swr ?? {}),
+		}),
+		[options.revalidateOnFocus, options.swr, suspense],
+	);
+
+	const { data, error, isLoading, isValidating, mutate } = useSWR<WsolBalance>(balanceKey, fetchBalance, swrOptions);
+
+	const sessionRef = useRef(session);
+	useEffect(() => {
+		sessionRef.current = session;
+	}, [session]);
+
+	const ownerRef = useRef(owner);
+	useEffect(() => {
+		ownerRef.current = owner;
+	}, [owner]);
+
+	const controller = useMemo<WsolController>(
+		() =>
+			createWsolController({
+				authorityProvider: () => sessionRef.current ?? undefined,
+				helper,
+			}),
+		[helper],
+	);
+
+	const wrapState = useSyncExternalStore<AsyncState<WsolWrapSignature>>(
+		controller.subscribeWrap,
+		controller.getWrapState,
+		controller.getWrapState,
+	);
+
+	const unwrapState = useSyncExternalStore<AsyncState<WsolUnwrapSignature>>(
+		controller.subscribeUnwrap,
+		controller.getUnwrapState,
+		controller.getUnwrapState,
+	);
+
+	const refresh = useCallback(() => {
+		if (!owner) {
+			return Promise.resolve(undefined);
+		}
+		return mutate(() => helper.fetchWsolBalance(owner, options.commitment), { revalidate: false });
+	}, [helper, mutate, owner, options.commitment]);
+
+	const wrap = useCallback(
+		async (config: Omit<WsolWrapInput, 'owner'>, sendOptions?: SolTransferSendOptions) => {
+			const fullConfig: WsolWrapInput = ownerRef.current ? { ...config, owner: ownerRef.current } : config;
+			const signature = await controller.wrap(fullConfig, sendOptions);
+			if (owner) {
+				await mutate(() => helper.fetchWsolBalance(owner, options.commitment), { revalidate: false });
+			}
+			return signature;
+		},
+		[controller, helper, mutate, options.commitment, owner],
+	);
+
+	const unwrap = useCallback(
+		async (config: Omit<WsolUnwrapInput, 'owner'>, sendOptions?: SolTransferSendOptions) => {
+			const fullConfig: WsolUnwrapInput = ownerRef.current ? { ...config, owner: ownerRef.current } : config;
+			const signature = await controller.unwrap(fullConfig, sendOptions);
+			if (owner) {
+				await mutate(() => helper.fetchWsolBalance(owner, options.commitment), { revalidate: false });
+			}
+			return signature;
+		},
+		[controller, helper, mutate, options.commitment, owner],
+	);
+
+	const resetWrap = useCallback(() => {
+		controller.resetWrap();
+	}, [controller]);
+
+	const resetUnwrap = useCallback(() => {
+		controller.resetUnwrap();
+	}, [controller]);
+
+	const status: 'disconnected' | 'error' | 'loading' | 'ready' =
+		owner === null ? 'disconnected' : error ? 'error' : isLoading && !data ? 'loading' : 'ready';
+
+	return {
+		balance: data ?? null,
+		error: error ?? null,
+		helper,
+		isFetching: Boolean(owner) && (isLoading || isValidating),
+		isUnwrapping: unwrapState.status === 'loading',
+		isWrapping: wrapState.status === 'loading',
+		owner,
+		refresh,
+		refreshing: Boolean(owner) && isValidating,
+		resetUnwrap,
+		resetWrap,
+		unwrap,
+		unwrapError: unwrapState.error ?? null,
+		unwrapSignature: unwrapState.data ?? null,
+		unwrapStatus: unwrapState.status,
+		wrap,
+		wrapError: wrapState.error ?? null,
+		wrapSignature: wrapState.data ?? null,
+		wrapStatus: wrapState.status,
+		status,
 	};
 }
 
@@ -1255,3 +1461,6 @@ export type UseLookupTableReturnType = ReturnType<typeof useLookupTable>;
 
 export type UseNonceAccountParameters = Readonly<{ address?: AddressLike; options?: UseNonceAccountOptions }>;
 export type UseNonceAccountReturnType = ReturnType<typeof useNonceAccount>;
+
+export type UseWrapSolParameters = Readonly<{ options?: UseWrapSolOptions }>;
+export type UseWrapSolReturnType = ReturnType<typeof useWrapSol>;

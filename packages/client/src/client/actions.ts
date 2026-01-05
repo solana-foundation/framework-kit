@@ -19,16 +19,10 @@ import { fetchNonce } from '@solana-program/system';
 
 import { createLogger, formatError } from '../logging/logger';
 import { createSolanaRpcClient } from '../rpc/createSolanaRpcClient';
-import type {
-	AddressLookupTableData,
-	ClientActions,
-	ClientState,
-	ClientStore,
-	NonceAccountData,
-	SolanaClientRuntime,
-	WalletRegistry,
-} from '../types';
+import type { SolanaClientRuntime } from '../rpc/types';
+import type { AddressLookupTableData, ClientActions, ClientState, ClientStore, NonceAccountData } from '../types';
 import { now } from '../utils';
+import type { WalletRegistry, WalletSession } from '../wallet/types';
 
 type MutableRuntime = SolanaClientRuntime;
 
@@ -162,12 +156,12 @@ export function createActions({ connectors, logger: inputLogger, runtime, store 
 	 * Initiates a wallet connection using a registered connector.
 	 *
 	 * @param connectorId - Identifier for the desired wallet connector.
-	 * @returns Promise that resolves once the connection attempt has completed.
+	 * @returns Promise that resolves to the wallet session once the connection attempt has completed.
 	 */
 	async function connectWallet(
 		connectorId: string,
 		options: Readonly<{ autoConnect?: boolean }> = {},
-	): Promise<void> {
+	): Promise<WalletSession> {
 		walletEventsCleanup?.();
 		walletEventsCleanup = undefined;
 		const connector = connectors.get(connectorId);
@@ -206,6 +200,7 @@ export function createActions({ connectors, logger: inputLogger, runtime, store 
 				level: 'info',
 				message: 'wallet connected',
 			});
+			return session;
 		} catch (error) {
 			store.setState((state) => ({
 				...state,
@@ -268,9 +263,11 @@ export function createActions({ connectors, logger: inputLogger, runtime, store 
 					address,
 					data: state.accounts[key]?.data,
 					error: undefined,
+					executable: state.accounts[key]?.executable ?? null,
 					fetching: true,
 					lamports: state.accounts[key]?.lamports ?? null,
 					lastFetchedAt: now(),
+					owner: state.accounts[key]?.owner ?? null,
 					slot: state.accounts[key]?.slot ?? null,
 				},
 			},
@@ -289,9 +286,11 @@ export function createActions({ connectors, logger: inputLogger, runtime, store 
 						address,
 						data: state.accounts[key]?.data,
 						error: undefined,
+						executable: state.accounts[key]?.executable ?? null,
 						fetching: false,
 						lamports,
 						lastFetchedAt: now(),
+						owner: state.accounts[key]?.owner ?? null,
 						slot: response.context.slot,
 					},
 				},
@@ -307,9 +306,11 @@ export function createActions({ connectors, logger: inputLogger, runtime, store 
 						address,
 						data: state.accounts[key]?.data,
 						error,
+						executable: state.accounts[key]?.executable ?? null,
 						fetching: false,
 						lamports: state.accounts[key]?.lamports ?? null,
 						lastFetchedAt: now(),
+						owner: state.accounts[key]?.owner ?? null,
 						slot: state.accounts[key]?.slot ?? null,
 					},
 				},
@@ -341,9 +342,11 @@ export function createActions({ connectors, logger: inputLogger, runtime, store 
 					address,
 					data: state.accounts[key]?.data,
 					error: undefined,
+					executable: state.accounts[key]?.executable ?? null,
 					fetching: true,
 					lamports: state.accounts[key]?.lamports ?? null,
 					lastFetchedAt: now(),
+					owner: state.accounts[key]?.owner ?? null,
 					slot: state.accounts[key]?.slot ?? null,
 				},
 			},
@@ -355,6 +358,8 @@ export function createActions({ connectors, logger: inputLogger, runtime, store 
 				.send({ abortSignal: AbortSignal.timeout(10_000) });
 			const value = response.value;
 			const lamports = value?.lamports ?? null;
+			const executable = value?.executable ?? null;
+			const owner = value?.owner ?? null;
 			store.setState((state) => ({
 				...state,
 				accounts: {
@@ -363,9 +368,11 @@ export function createActions({ connectors, logger: inputLogger, runtime, store 
 						address,
 						data: value,
 						error: undefined,
+						executable,
 						fetching: false,
 						lamports,
 						lastFetchedAt: now(),
+						owner,
 						slot: response.context.slot,
 					},
 				},
@@ -381,9 +388,11 @@ export function createActions({ connectors, logger: inputLogger, runtime, store 
 						address,
 						data: state.accounts[key]?.data,
 						error,
+						executable: state.accounts[key]?.executable ?? null,
 						fetching: false,
 						lamports: state.accounts[key]?.lamports ?? null,
 						lastFetchedAt: now(),
+						owner: state.accounts[key]?.owner ?? null,
 						slot: state.accounts[key]?.slot ?? null,
 					},
 				},

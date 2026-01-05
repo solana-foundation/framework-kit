@@ -1,16 +1,16 @@
 {
 	"name": "@solana/client",
-	"version": "1.2.0",
+	"version": "1.4.0",
 	"description": "Framework-agnostic Solana client orchestration layer powering higher-level experiences",
 	"exports": {
 		".": {
 			"types": "./dist/types/index.d.ts",
 			"browser": "./dist/index.browser.mjs",
-			"edge-light": "./dist/index.node.mjs",
-			"workerd": "./dist/index.node.mjs",
+			"edge-light": "./dist/index.browser.mjs",
+			"workerd": "./dist/index.browser.mjs",
 			"node": "./dist/index.node.mjs",
 			"react-native": "./dist/index.native.mjs",
-			"default": "./dist/index.node.mjs"
+			"default": "./dist/index.browser.mjs"
 		},
 		"./connectors": {
 			"types": "./dist/types/wallet/connectors.d.ts",
@@ -21,7 +21,7 @@
 			"default": "./dist/server/index.node.mjs"
 		}
 	},
-	"module": "./dist/index.node.mjs",
+	"module": "./dist/index.browser.mjs",
 	"react-native": "./dist/index.native.mjs",
 	"types": "./dist/types/index.d.ts",
 	"typesVersions": {
@@ -51,9 +51,10 @@
 		"docs:json": "typedoc --json ./docs/api.json",
 		"format": "biome check --write src",
 		"lint": "biome check src",
-		"test:typecheck": "tsc --noEmit",
+		"test:typecheck": "tsc --noEmit -p tsconfig.test.json",
 		"test": "vitest run --config ./vitest.config.ts",
-		"typecheck": "pnpm test:typecheck"
+		"typecheck": "tsc --noEmit",
+		"check:circular-deps": "madge --circular $(find ./src -name '*.ts' -o -name '*.tsx')"
 	},
 	"author": "Solana Maintainers <maintainers@solana.foundation>",
 	"repository": {

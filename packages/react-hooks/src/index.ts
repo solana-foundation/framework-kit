@@ -6,7 +6,7 @@ export type {
 	UseSolanaClientParameters,
 	UseSolanaClientReturnType,
 } from './context';
-export { SolanaClientProvider, useSolanaClient } from './context';
+export { SolanaClientContext, SolanaClientProvider, useSolanaClient } from './context';
 export type {
 	SignatureWaitStatus,
 	UseAccountParameters,
@@ -45,6 +45,8 @@ export type {
 	UseWalletReturnType,
 	UseWalletSessionParameters,
 	UseWalletSessionReturnType,
+	UseWrapSolParameters,
+	UseWrapSolReturnType,
 } from './hooks';
 export {
 	useAccount,
@@ -65,6 +67,7 @@ export {
 	useWallet,
 	useWalletActions,
 	useWalletSession,
+	useWrapSol,
 } from './hooks';
 export { SolanaQueryProvider } from './QueryProvider';
 export type { QueryStatus, SolanaQueryResult, UseSolanaRpcQueryOptions } from './query';

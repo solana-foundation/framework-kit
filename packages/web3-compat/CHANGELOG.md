@@ -1,5 +1,33 @@
 # @solana/web3-compat
 
+## 0.0.17
+
+### Patch Changes
+
+- Updated dependencies [[`7c06663`](https://github.com/solana-foundation/framework-kit/commit/7c066635b1d889e878a99c36dfb894b13d13047f), [`cf3f247`](https://github.com/solana-foundation/framework-kit/commit/cf3f24755fd169c38d053b782c4a1abb3aa467ee)]:
+  - @solana/client@1.4.0
+
+## 0.0.16
+
+### Patch Changes
+
+- Updated dependencies [[`d25f4f3`](https://github.com/solana-foundation/framework-kit/commit/d25f4f36c71fb5edd0e8ed315c52708e7f87f4c3)]:
+  - @solana/client@1.3.0
+
+## 0.0.15
+
+### Patch Changes
+
+- Updated dependencies [[`7aaf0a7`](https://github.com/solana-foundation/framework-kit/commit/7aaf0a706a3c09bedaf153ef8fbf109ca24a9204)]:
+  - @solana/client@1.2.2
+
+## 0.0.14
+
+### Patch Changes
+
+- Updated dependencies [[`06b4ad0`](https://github.com/solana-foundation/framework-kit/commit/06b4ad0657cd20968f0eed4aa87394df6736225a)]:
+  - @solana/client@1.2.1
+
 ## 0.0.13
 
 ### Patch Changes

@@ -8,7 +8,7 @@ import {
 import type { ReactNode } from 'react';
 import { createContext, useContext, useEffect, useMemo } from 'react';
 
-const SolanaClientContext = createContext<SolanaClient | null>(null);
+export const SolanaClientContext = createContext<SolanaClient | null>(null);
 
 type ProviderProps = Readonly<{
 	children: ReactNode;

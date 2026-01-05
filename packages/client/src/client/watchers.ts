@@ -1,6 +1,7 @@
 import type { Lamports, SolanaRpcSubscriptionsApi } from '@solana/kit';
 
 import { createLogger, formatError } from '../logging/logger';
+import type { SolanaClientRuntime } from '../rpc/types';
 import type {
 	AccountCacheEntry,
 	AccountWatcherConfig,
@@ -8,7 +9,6 @@ import type {
 	ClientStore,
 	ClientWatchers,
 	SignatureWatcherConfig,
-	SolanaClientRuntime,
 	SubscriptionStatus,
 } from '../types';
 import { now } from '../utils';
@@ -108,14 +108,18 @@ export function createWatchers({ logger: inputLogger, runtime, store }: WatcherD
 			setSubscriptionStatus('account', key, { status: 'active' });
 			for await (const notification of iterator) {
 				const lamports = notification.value?.lamports ?? null;
+				const executable = notification.value?.executable ?? null;
+				const owner = notification.value?.owner ?? null;
 				const slot = notification.context?.slot ?? null;
 				const entry: AccountCacheEntry = {
 					address: config.address,
 					data: notification.value?.data,
 					error: undefined,
+					executable,
 					fetching: false,
 					lamports,
 					lastFetchedAt: now(),
+					owner,
 					slot,
 				};
 				listener(entry);

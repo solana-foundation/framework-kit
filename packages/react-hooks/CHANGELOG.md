@@ -1,5 +1,116 @@
 # @solana/react-hooks
 
+## 1.2.1
+
+### Patch Changes
+
+- [#135](https://github.com/solana-foundation/framework-kit/pull/135) [`f1cde24`](https://github.com/solana-foundation/framework-kit/commit/f1cde24e7d5b282265b5e0e0c078f54d1ba7fcf5) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Add comprehensive JSDoc documentation for LLM-ready API docs
+
+- [#137](https://github.com/solana-foundation/framework-kit/pull/137) [`385c535`](https://github.com/solana-foundation/framework-kit/commit/385c5352ad9a5099b8b593b618849a0b9572c603) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Expand useSplToken README documentation with error handling example and complete property list
+
+- Updated dependencies [[`24d6e39`](https://github.com/solana-foundation/framework-kit/commit/24d6e390d96f61ff17c2d0dac1d260e41c7af144), [`f1cde24`](https://github.com/solana-foundation/framework-kit/commit/f1cde24e7d5b282265b5e0e0c078f54d1ba7fcf5)]:
+  - @solana/client@1.4.1
+
+## 1.2.0
+
+### Minor Changes
+
+- [#134](https://github.com/solana-foundation/framework-kit/pull/134) [`7c06663`](https://github.com/solana-foundation/framework-kit/commit/7c066635b1d889e878a99c36dfb894b13d13047f) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Add wrapSol/unwrapSol helpers for wSOL operations
+
+  Adds helper functions to easily wrap native SOL into Wrapped SOL (wSOL) and unwrap it back:
+
+  **@solana/client:**
+
+  - `createWsolHelper(runtime)` - Factory function to create wSOL helpers
+  - `WsolHelper.sendWrap({ amount, authority })` - Wrap SOL to wSOL
+  - `WsolHelper.sendUnwrap({ authority })` - Unwrap wSOL back to SOL (closes the account)
+  - `WsolHelper.fetchWsolBalance(owner)` - Get wSOL balance
+  - `WsolHelper.deriveWsolAddress(owner)` - Derive the wSOL ATA address
+  - `WRAPPED_SOL_MINT` - The wSOL mint address constant
+  - `createWsolController()` - Controller for React integration
+
+  **@solana/react-hooks:**
+
+  - `useWrapSol()` - Hook for wrapping/unwrapping SOL with status tracking
+
+  Example usage:
+
+  ```ts
+  // Using the client helper
+  const wsol = client.wsol;
+  await wsol.sendWrap({ amount: 1_000_000_000n, authority: session });
+  await wsol.sendUnwrap({ authority: session });
+
+  // Using the React hook
+  const { wrap, unwrap, balance, isWrapping, isUnwrapping } = useWrapSol();
+  await wrap({ amount: 1_000_000_000n });
+  await unwrap({});
+  ```
+
+### Patch Changes
+
+- [#132](https://github.com/solana-foundation/framework-kit/pull/132) [`cf3f247`](https://github.com/solana-foundation/framework-kit/commit/cf3f24755fd169c38d053b782c4a1abb3aa467ee) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Export React context, return wallet session on wallet connect, and fix circular dependencies
+
+- Updated dependencies [[`7c06663`](https://github.com/solana-foundation/framework-kit/commit/7c066635b1d889e878a99c36dfb894b13d13047f), [`cf3f247`](https://github.com/solana-foundation/framework-kit/commit/cf3f24755fd169c38d053b782c4a1abb3aa467ee)]:
+  - @solana/client@1.4.0
+
+## 1.1.12
+
+### Patch Changes
+
+- [#130](https://github.com/solana-foundation/framework-kit/pull/130) [`23bc3ef`](https://github.com/solana-foundation/framework-kit/commit/23bc3ef20a60abf35c9308b0c98f9fdbdb299475) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Improve transaction hooks documentation:
+  - Fix useTransactionPool: add required `authority` parameter to prevent runtime errors
+  - Add `sendSignature` and `sendError` to useTransactionPool example
+  - Add comprehensive list of available properties for both hooks
+  - Document useSendTransaction auto-detection behavior
+
+## 1.1.11
+
+### Patch Changes
+
+- [#128](https://github.com/solana-foundation/framework-kit/pull/128) [`d2ca1ca`](https://github.com/solana-foundation/framework-kit/commit/d2ca1ca7687006ea7ee36a2533aff7943d1835ec) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Fix README documentation examples:
+  - Fix useSolTransfer: `lamports` → `amount` parameter
+  - Fix useSplToken: add `amountInBaseUnits: true` for bigint amounts
+  - Add `currentConnector` to useWalletConnection example
+  - Document useAccount hook with usage example
+
+## 1.1.10
+
+### Patch Changes
+
+- Updated dependencies [[`d25f4f3`](https://github.com/solana-foundation/framework-kit/commit/d25f4f36c71fb5edd0e8ed315c52708e7f87f4c3)]:
+  - @solana/client@1.3.0
+
+## 1.1.9
+
+### Patch Changes
+
+- [#124](https://github.com/solana-foundation/framework-kit/pull/124) [`25beb60`](https://github.com/solana-foundation/framework-kit/commit/25beb60eeecf9257681e31fe68250c2274a8fbbb) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Fix useAccount hook to default `fetch` and `watch` options to `true`, matching the behavior of useBalance. This ensures account data is fetched and watched automatically without requiring explicit options.
+
+## 1.1.8
+
+### Patch Changes
+
+- [#122](https://github.com/solana-foundation/framework-kit/pull/122) [`78a2a50`](https://github.com/solana-foundation/framework-kit/commit/78a2a50f3d946e6fdda0fbb575dc89e0537e1fa3) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Fix useBalance and useAccount hooks to handle invalid addresses gracefully instead of crashing. Invalid addresses now return an error state and log a warning to the console, improving developer experience when handling untrusted address inputs.
+
+## 1.1.7
+
+### Patch Changes
+
+- [#117](https://github.com/solana-foundation/framework-kit/pull/117) [`7aaf0a7`](https://github.com/solana-foundation/framework-kit/commit/7aaf0a706a3c09bedaf153ef8fbf109ca24a9204) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Fix SSR compatibility by using browser entry as default export
+
+- Updated dependencies [[`7aaf0a7`](https://github.com/solana-foundation/framework-kit/commit/7aaf0a706a3c09bedaf153ef8fbf109ca24a9204)]:
+  - @solana/client@1.2.2
+
+## 1.1.6
+
+### Patch Changes
+
+- [#105](https://github.com/solana-foundation/framework-kit/pull/105) [`06b4ad0`](https://github.com/solana-foundation/framework-kit/commit/06b4ad0657cd20968f0eed4aa87394df6736225a) Thanks [@resourcefulmind](https://github.com/resourcefulmind)! - Improve main README documentation with clearer quickstart guide and better developer experience
+
+- Updated dependencies [[`06b4ad0`](https://github.com/solana-foundation/framework-kit/commit/06b4ad0657cd20968f0eed4aa87394df6736225a)]:
+  - @solana/client@1.2.1
+
 ## 1.1.5
 
 ### Patch Changes

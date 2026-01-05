@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { createAccountEntry, createAddress, createLamports } from '../test/fixtures';
 import { act, renderHookWithClient, waitFor } from '../test/utils';
@@ -42,14 +42,36 @@ describe('account hooks', () => {
 		expect(subscription?.abort).toHaveBeenCalledTimes(1);
 	});
 
-	it('skips fetches when disabled and when no address is provided', async () => {
+	it('defaults to fetch and watch enabled', async () => {
 		const address = createAddress(2);
+		const { client, unmount } = renderHookWithClient(() => useAccount(address));
+
+		// Should fetch by default
+		await waitFor(() => {
+			expect(client.actions.fetchAccount).toHaveBeenCalledWith(address, undefined);
+		});
+
+		// Should watch by default
+		expect(client.watchers.watchAccount).toHaveBeenCalledWith(
+			{ address, commitment: undefined },
+			expect.any(Function),
+		);
+
+		const subscription = client.watchers.watchAccount.mock.results[0]?.value;
+		unmount();
+		expect(subscription?.abort).toHaveBeenCalledTimes(1);
+	});
+
+	it('skips fetches when disabled and when no address is provided', async () => {
+		const address = createAddress(3);
 		const { client, result } = renderHookWithClient(() => useAccount(undefined, { commitment: 'confirmed' }));
 		expect(result.current).toBeUndefined();
 		expect(client.actions.fetchAccount).not.toHaveBeenCalled();
 		expect(client.watchers.watchAccount).not.toHaveBeenCalled();
 
-		const { client: clientWithSkip } = renderHookWithClient(() => useAccount(address, { fetch: false }));
+		const { client: clientWithSkip } = renderHookWithClient(() =>
+			useAccount(address, { fetch: false, watch: false }),
+		);
 		await waitFor(() => {
 			expect(clientWithSkip.actions.fetchAccount).not.toHaveBeenCalled();
 		});
@@ -57,7 +79,7 @@ describe('account hooks', () => {
 	});
 
 	it('tracks lamport balances and watcher state', async () => {
-		const address = createAddress(3);
+		const address = createAddress(4);
 		const entry = createAccountEntry({
 			address,
 			fetching: true,
@@ -102,12 +124,56 @@ describe('account hooks', () => {
 	});
 
 	it('respects skip options when monitoring balances', async () => {
-		const address = createAddress(4);
+		const address = createAddress(5);
 		const { client } = renderHookWithClient(() => useBalance(address, { fetch: false, watch: false }));
 
 		await waitFor(() => {
 			expect(client.actions.fetchBalance).not.toHaveBeenCalled();
 		});
 		expect(client.watchers.watchBalance).not.toHaveBeenCalled();
+	});
+
+	it('handles invalid addresses gracefully in useBalance', async () => {
+		const invalidAddress = 'not-a-valid-address';
+		const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+		const { client, result } = renderHookWithClient(() => useBalance(invalidAddress));
+
+		// Should not crash and should return null lamports with an error
+		expect(result.current.lamports).toBeNull();
+		expect(result.current.error).toBeDefined();
+		expect(result.current.fetching).toBe(false);
+
+		// Should not attempt to fetch with invalid address
+		expect(client.actions.fetchBalance).not.toHaveBeenCalled();
+		expect(client.watchers.watchBalance).not.toHaveBeenCalled();
+
+		// Should log a warning
+		await waitFor(() => {
+			expect(consoleSpy).toHaveBeenCalledWith('[useBalance] Invalid address provided:', expect.any(Error));
+		});
+
+		consoleSpy.mockRestore();
+	});
+
+	it('handles invalid addresses gracefully in useAccount', async () => {
+		const invalidAddress = 'not-a-valid-address';
+		const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+		const { client, result } = renderHookWithClient(() => useAccount(invalidAddress));
+
+		// Should not crash and should return undefined
+		expect(result.current).toBeUndefined();
+
+		// Should not attempt to fetch with invalid address
+		expect(client.actions.fetchAccount).not.toHaveBeenCalled();
+		expect(client.watchers.watchAccount).not.toHaveBeenCalled();
+
+		// Should log a warning
+		await waitFor(() => {
+			expect(consoleSpy).toHaveBeenCalledWith('[useAccount] Invalid address provided:', expect.any(Error));
+		});
+
+		consoleSpy.mockRestore();
 	});
 });

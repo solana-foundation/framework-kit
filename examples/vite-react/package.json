@@ -1,7 +1,7 @@
 {
 	"name": "@solana/example-vite-react",
 	"private": true,
-	"version": "0.0.20",
+	"version": "0.0.29",
 	"type": "module",
 	"scripts": {
 		"dev": "vite",
@@ -16,7 +16,7 @@
 	},
 	"dependencies": {
 		"@radix-ui/react-slot": "^1.1.0",
-		"@solana-program/system": "^0.9.0",
+		"@solana-program/system": "^0.10.0",
 		"@solana/client": "workspace:*",
 		"@solana/kit": "^5.0.0",
 		"@solana/react-hooks": "workspace:*",

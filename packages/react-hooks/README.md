@@ -199,21 +199,47 @@ function NonceInfo({ address }: { address: string }) {
 
 ```tsx
 import type { TransactionInstructionInput } from "@solana/client";
-import { useTransactionPool } from "@solana/react-hooks";
+import { useTransactionPool, useWalletSession } from "@solana/react-hooks";
 
 function TransactionFlow({ ix }: { ix: TransactionInstructionInput }) {
-  const pool = useTransactionPool();
+  const session = useWalletSession();
+  const {
+    addInstruction,
+    prepareAndSend,
+    isSending,
+    sendSignature,
+    sendError,
+    latestBlockhash,
+  } = useTransactionPool();
+
   return (
     <div>
-      <button onClick={() => pool.addInstruction(ix)}>Add instruction</button>
-      <button disabled={pool.isSending} onClick={() => pool.prepareAndSend()}>
-        {pool.isSending ? "Sending…" : "Prepare & Send"}
+      <button onClick={() => addInstruction(ix)}>Add instruction</button>
+      <button
+        disabled={isSending || !session}
+        onClick={() => prepareAndSend({ authority: session })}
+      >
+        {isSending ? "Sending…" : "Prepare & Send"}
       </button>
-      <p>Blockhash: {pool.latestBlockhash.blockhash ?? "loading…"}</p>
+      <p>Blockhash: {latestBlockhash.blockhash ?? "loading…"}</p>
+      {sendSignature ? <p>Signature: {sendSignature}</p> : null}
+      {sendError ? <p role="alert">{String(sendError)}</p> : null}
     </div>
   );
 }
 ```
+
+**Available properties:**
+- `addInstruction(ix)` / `addInstructions(ixs)` — queue instructions
+- `removeInstruction(index)` / `clearInstructions()` / `replaceInstructions(ixs)` — manage queue
+- `instructions` — current instruction queue
+- `prepare(opts)` / `prepareAndSend(opts)` — build and optionally send
+- `send(opts)` / `sign(opts)` — send or sign prepared transaction
+- `isPreparing` / `prepareStatus` / `prepareError` — prepare state
+- `isSending` / `sendStatus` / `sendError` / `sendSignature` — send state
+- `latestBlockhash` — current blockhash for lifetime
+- `prepared` / `toWire()` — access prepared transaction
+- `reset()` — clear all state
 
 ### Simple mutation helper (when you already have instructions)
 
@@ -221,18 +247,27 @@ function TransactionFlow({ ix }: { ix: TransactionInstructionInput }) {
 import { useSendTransaction } from "@solana/react-hooks";
 
 function SendPrepared({ instructions }) {
-  const { send, isSending, signature, error } = useSendTransaction();
+  const { send, isSending, status, signature, error } = useSendTransaction();
   return (
     <div>
       <button disabled={isSending} onClick={() => send({ instructions })}>
         {isSending ? "Submitting…" : "Send transaction"}
       </button>
+      <p>Status: {status}</p>
       {signature ? <p>Signature: {signature}</p> : null}
       {error ? <p role="alert">{String(error)}</p> : null}
     </div>
   );
 }
 ```
+
+> **Note:** This hook automatically uses the connected wallet session — no need to pass `authority` explicitly.
+
+**Available properties:**
+- `send(request, opts?)` — build and send transaction
+- `sendPrepared(prepared, opts?)` — send already-prepared transaction
+- `isSending` / `status` / `signature` / `error` — transaction state
+- `reset()` — clear state for new transaction
 
 ### Track confirmations for a signature
 

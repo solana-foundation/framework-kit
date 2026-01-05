@@ -1,5 +1,45 @@
 # @solana/client
 
+## 1.4.0
+
+### Minor Changes
+
+- [#134](https://github.com/solana-foundation/framework-kit/pull/134) [`7c06663`](https://github.com/solana-foundation/framework-kit/commit/7c066635b1d889e878a99c36dfb894b13d13047f) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Add wrapSol/unwrapSol helpers for wSOL operations
+
+  Adds helper functions to easily wrap native SOL into Wrapped SOL (wSOL) and unwrap it back:
+
+  **@solana/client:**
+
+  - `createWsolHelper(runtime)` - Factory function to create wSOL helpers
+  - `WsolHelper.sendWrap({ amount, authority })` - Wrap SOL to wSOL
+  - `WsolHelper.sendUnwrap({ authority })` - Unwrap wSOL back to SOL (closes the account)
+  - `WsolHelper.fetchWsolBalance(owner)` - Get wSOL balance
+  - `WsolHelper.deriveWsolAddress(owner)` - Derive the wSOL ATA address
+  - `WRAPPED_SOL_MINT` - The wSOL mint address constant
+  - `createWsolController()` - Controller for React integration
+
+  **@solana/react-hooks:**
+
+  - `useWrapSol()` - Hook for wrapping/unwrapping SOL with status tracking
+
+  Example usage:
+
+  ```ts
+  // Using the client helper
+  const wsol = client.wsol;
+  await wsol.sendWrap({ amount: 1_000_000_000n, authority: session });
+  await wsol.sendUnwrap({ authority: session });
+
+  // Using the React hook
+  const { wrap, unwrap, balance, isWrapping, isUnwrapping } = useWrapSol();
+  await wrap({ amount: 1_000_000_000n });
+  await unwrap({});
+  ```
+
+### Patch Changes
+
+- [#132](https://github.com/solana-foundation/framework-kit/pull/132) [`cf3f247`](https://github.com/solana-foundation/framework-kit/commit/cf3f24755fd169c38d053b782c4a1abb3aa467ee) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Export React context, return wallet session on wallet connect, and fix circular dependencies
+
 ## 1.3.0
 
 ### Minor Changes

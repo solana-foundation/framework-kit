@@ -116,9 +116,11 @@ export type AccountCacheEntry = Readonly<{
 	address: Address;
 	data?: unknown;
 	error?: unknown;
+	executable: boolean | null;
 	fetching: boolean;
 	lamports: Lamports | null;
 	lastFetchedAt?: number;
+	owner: Address | null;
 	slot: bigint | null;
 }>;
 

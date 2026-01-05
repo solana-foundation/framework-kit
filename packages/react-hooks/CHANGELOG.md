@@ -1,5 +1,15 @@
 # @solana/react-hooks
 
+## 1.1.11
+
+### Patch Changes
+
+- [#128](https://github.com/solana-foundation/framework-kit/pull/128) [`d2ca1ca`](https://github.com/solana-foundation/framework-kit/commit/d2ca1ca7687006ea7ee36a2533aff7943d1835ec) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Fix README documentation examples:
+  - Fix useSolTransfer: `lamports` → `amount` parameter
+  - Fix useSplToken: add `amountInBaseUnits: true` for bigint amounts
+  - Add `currentConnector` to useWalletConnection example
+  - Document useAccount hook with usage example
+
 ## 1.1.10
 
 ### Patch Changes

@@ -1,5 +1,12 @@
 # @solana/example-nextjs
 
+## 0.0.16
+
+### Patch Changes
+
+- Updated dependencies [[`d2ca1ca`](https://github.com/solana-foundation/framework-kit/commit/d2ca1ca7687006ea7ee36a2533aff7943d1835ec)]:
+  - @solana/react-hooks@1.1.11
+
 ## 0.0.15
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
 	"name": "@solana/react-hooks",
-	"version": "1.1.10",
+	"version": "1.1.11",
 	"description": "React hooks for the @solana/client Solana client",
 	"exports": {
 		"browser": "./dist/index.browser.mjs",

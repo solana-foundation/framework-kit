@@ -1,5 +1,11 @@
 # @solana/react-hooks
 
+## 1.1.8
+
+### Patch Changes
+
+- [#122](https://github.com/solana-foundation/framework-kit/pull/122) [`78a2a50`](https://github.com/solana-foundation/framework-kit/commit/78a2a50f3d946e6fdda0fbb575dc89e0537e1fa3) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Fix useBalance and useAccount hooks to handle invalid addresses gracefully instead of crashing. Invalid addresses now return an error state and log a warning to the console, improving developer experience when handling untrusted address inputs.
+
 ## 1.1.7
 
 ### Patch Changes

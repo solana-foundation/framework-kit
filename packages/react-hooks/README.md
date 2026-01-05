@@ -141,10 +141,25 @@ function TokenPanel({
   mint: string;
   destinationOwner: string;
 }) {
-  const { balance, send, isSending, owner } = useSplToken(mint);
+  const {
+    balance,
+    send,
+    isSending,
+    owner,
+    status,
+    error,
+    sendError,
+    sendSignature,
+    resetSend,
+  } = useSplToken(mint);
+
+  if (status === "disconnected") return <p>Connect wallet to view balance</p>;
+  if (status === "loading") return <p>Loading balance…</p>;
+  if (status === "error") return <p role="alert">Error: {String(error)}</p>;
+
   return (
     <div>
-      <p>Owner: {owner ?? "Connect wallet"}</p>
+      <p>Owner: {owner}</p>
       <p>Balance: {balance?.uiAmount ?? "0"}</p>
       <button
         disabled={isSending || !owner}
@@ -152,12 +167,35 @@ function TokenPanel({
       >
         {isSending ? "Sending…" : "Send 1 token"}
       </button>
+      {sendSignature ? <p>Signature: {sendSignature}</p> : null}
+      {sendError ? (
+        <div>
+          <p role="alert">Send failed: {String(sendError)}</p>
+          <button onClick={resetSend}>Dismiss</button>
+        </div>
+      ) : null}
     </div>
   );
 }
 ```
 
 > **Note:** Use `amountInBaseUnits: true` when passing raw bigint amounts. For human-readable decimal strings like `"1.5"`, omit the flag.
+
+**Available properties:**
+- `balance` / `owner` — token balance and owner address
+- `status` — overall hook status ('disconnected' | 'error' | 'loading' | 'ready')
+- `error` — error from balance fetching
+- `send(config, opts?)` — transfer tokens to destination
+- `isSending` / `sendStatus` / `sendError` / `sendSignature` — transfer state
+- `refresh()` / `refreshing` — manually refresh balance
+- `resetSend()` — clear send error state
+- `helper` — low-level helper for advanced use
+
+**Options (second parameter):**
+- `commitment` — RPC commitment level
+- `owner` — override balance owner (defaults to connected wallet)
+- `revalidateOnFocus` — refresh when window regains focus
+- `swr` — additional SWR options
 
 ### Fetch address lookup tables
 

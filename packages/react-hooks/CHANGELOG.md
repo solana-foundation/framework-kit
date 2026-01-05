@@ -1,5 +1,15 @@
 # @solana/react-hooks
 
+## 1.1.12
+
+### Patch Changes
+
+- [#130](https://github.com/solana-foundation/framework-kit/pull/130) [`23bc3ef`](https://github.com/solana-foundation/framework-kit/commit/23bc3ef20a60abf35c9308b0c98f9fdbdb299475) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Improve transaction hooks documentation:
+  - Fix useTransactionPool: add required `authority` parameter to prevent runtime errors
+  - Add `sendSignature` and `sendError` to useTransactionPool example
+  - Add comprehensive list of available properties for both hooks
+  - Document useSendTransaction auto-detection behavior
+
 ## 1.1.11
 
 ### Patch Changes

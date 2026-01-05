@@ -1,5 +1,30 @@
 # @solana/client
 
+## 1.5.0
+
+### Minor Changes
+
+- [#98](https://github.com/solana-foundation/framework-kit/pull/98) [`178e004`](https://github.com/solana-foundation/framework-kit/commit/178e004a95ee075b7b7b14ac1330f636302ef4ca) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Add `filterByNames` helper for wallet filtering with autoDiscover
+
+  - Added `filterByNames(...names: string[])` function that creates a filter for `autoDiscover()`
+  - Allows filtering wallet connectors by name without using wallet-specific connector functions
+  - Supports Wallet Standard's wallet-agnostic discovery pattern
+
+  Example usage:
+
+  ```ts
+  import { autoDiscover, filterByNames } from "@solana/client";
+
+  // Filter to only specific wallets
+  const connectors = autoDiscover({
+    filter: filterByNames("phantom", "solflare", "backpack"),
+  });
+  ```
+
+### Patch Changes
+
+- [#138](https://github.com/solana-foundation/framework-kit/pull/138) [`0167a20`](https://github.com/solana-foundation/framework-kit/commit/0167a20b9b16535eafd92fa127cb21afbea55f06) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Fix peer dependency warnings by updating @solana-program packages to versions compatible with @solana/kit@^5.0
+
 ## 1.4.1
 
 ### Patch Changes

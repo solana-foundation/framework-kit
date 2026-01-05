@@ -157,6 +157,8 @@ function TokenPanel({
 }
 ```
 
+> **Note:** Use `amountInBaseUnits: true` when passing raw bigint amounts. For human-readable decimal strings like `"1.5"`, omit the flag.
+
 ### Fetch address lookup tables
 
 ```tsx

@@ -36,55 +36,138 @@ import { createWalletTransactionSigner, isWalletSession, resolveSignerMode } fro
 import type { WalletSession } from '../wallet/types';
 import type { SolTransferSendOptions } from './sol';
 
+/**
+ * Blockhash and last valid block height for transaction lifetime.
+ * Used to ensure transactions expire after a certain block height.
+ */
 type BlockhashLifetime = Readonly<{
 	blockhash: Blockhash;
 	lastValidBlockHeight: bigint;
 }>;
 
+/**
+ * Authority that signs SPL token transfer transactions.
+ * Can be either a connected wallet session or a raw transaction signer.
+ */
 type SplTokenAuthority = TransactionSigner<string> | WalletSession;
 
 type SignableSplTransactionMessage = Parameters<typeof signTransactionMessageWithSigners>[0];
 
+/**
+ * Configuration for creating an SPL token helper.
+ * Each helper instance is bound to a specific token mint.
+ *
+ * @example
+ * ```ts
+ * const config: SplTokenHelperConfig = {
+ *   mint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // USDC
+ *   decimals: 6, // Optional: provide to skip on-chain lookup
+ *   commitment: 'confirmed',
+ * };
+ * ```
+ */
 export type SplTokenHelperConfig = Readonly<{
+	/** Associated Token Program address. Defaults to standard ATA program. */
 	associatedTokenProgram?: Address | string;
+	/** Commitment level for RPC calls. */
 	commitment?: Commitment;
+	/** Token decimals. If not provided, will be fetched from the mint account. */
 	decimals?: number;
+	/** The SPL token mint address. */
 	mint: Address | string;
+	/** Token Program address. Defaults to standard Token Program. */
 	tokenProgram?: Address | string;
 }>;
 
+/**
+ * SPL token balance information for an owner's Associated Token Account.
+ *
+ * @example
+ * ```ts
+ * const balance: SplTokenBalance = {
+ *   amount: 1000000n, // Raw token amount in base units
+ *   ataAddress: 'TokenAccountAddress...',
+ *   decimals: 6,
+ *   exists: true,
+ *   uiAmount: '1.0', // Human-readable amount
+ * };
+ * ```
+ */
 export type SplTokenBalance = Readonly<{
+	/** Token amount in base units (smallest denomination). */
 	amount: bigint;
+	/** The Associated Token Account address. */
 	ataAddress: Address;
+	/** Number of decimals for this token. */
 	decimals: number;
+	/** Whether the token account exists on-chain. */
 	exists: boolean;
+	/** Human-readable token amount as a string. */
 	uiAmount: string;
 }>;
 
+/**
+ * Configuration for preparing an SPL token transfer transaction.
+ *
+ * @example
+ * ```ts
+ * const config: SplTransferPrepareConfig = {
+ *   amount: '10.5', // Transfer 10.5 tokens
+ *   authority: walletSession,
+ *   destinationOwner: 'RecipientWalletAddress...',
+ *   ensureDestinationAta: true, // Create ATA if needed
+ * };
+ * ```
+ */
 export type SplTransferPrepareConfig = Readonly<{
+	/** Amount to transfer. Interpreted based on amountInBaseUnits flag. */
 	amount: bigint | number | string;
+	/** If true, amount is in base units (raw). If false (default), amount is in decimal tokens. */
 	amountInBaseUnits?: boolean;
+	/** Authority that signs the transaction. Can be a WalletSession or raw TransactionSigner. */
 	authority: SplTokenAuthority;
+	/** Commitment level for RPC calls. */
 	commitment?: Commitment;
+	/** Wallet address of the recipient (not their token account). */
 	destinationOwner: Address | string;
+	/** Optional: explicit destination token account. If not provided, ATA is derived. */
 	destinationToken?: Address | string;
+	/** If true (default), creates the destination ATA if it doesn't exist. */
 	ensureDestinationAta?: boolean;
+	/** Optional pre-fetched blockhash lifetime. */
 	lifetime?: BlockhashLifetime;
+	/** Source wallet owner. Defaults to authority address. */
 	sourceOwner?: Address | string;
+	/** Optional: explicit source token account. If not provided, ATA is derived. */
 	sourceToken?: Address | string;
+	/** Transaction version. Defaults to 0 (legacy). */
 	transactionVersion?: TransactionVersion;
 }>;
 
+/**
+ * A prepared SPL token transfer transaction ready to be signed and sent.
+ * Contains all the information needed to submit the transaction.
+ */
 type PreparedSplTransfer = Readonly<{
+	/** Token amount in base units. */
 	amount: bigint;
+	/** Commitment level used. */
 	commitment?: Commitment;
+	/** Token decimals. */
 	decimals: number;
+	/** Destination Associated Token Account address. */
 	destinationAta: Address;
+	/** Blockhash lifetime for transaction expiration. */
 	lifetime: BlockhashLifetime;
+	/** The unsigned transaction message. */
 	message: SignableSplTransactionMessage;
+	/** Signing mode: 'send' for wallets that sign+send, 'partial' for separate signing. */
 	mode: 'partial' | 'send';
+	/** The transaction signer. */
 	signer: TransactionSigner;
+	/** Source Associated Token Account address. */
 	sourceAta: Address;
+	/** Transaction plan for execution. */
 	plan?: TransactionPlan;
 }>;
 
@@ -121,21 +204,100 @@ function resolveSigner(
 	return { mode: resolveSignerMode(authority), signer: authority };
 }
 
+/**
+ * Helper interface for SPL token operations including balance queries and transfers.
+ * Each helper instance is bound to a specific token mint.
+ *
+ * @example
+ * ```ts
+ * import { createSplTokenHelper } from '@solana/client';
+ *
+ * // Create helper for USDC
+ * const usdc = createSplTokenHelper(runtime, {
+ *   mint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+ *   decimals: 6,
+ * });
+ *
+ * // Check balance
+ * const balance = await usdc.fetchBalance(walletAddress);
+ * console.log(`Balance: ${balance.uiAmount} USDC`);
+ *
+ * // Transfer tokens
+ * const sig = await usdc.sendTransfer({
+ *   amount: 10, // 10 USDC
+ *   authority: walletSession,
+ *   destinationOwner: recipientAddress,
+ * });
+ * ```
+ */
 export type SplTokenHelper = Readonly<{
+	/**
+	 * Derives the Associated Token Account (ATA) address for an owner.
+	 * The ATA is a deterministic address based on the owner and mint.
+	 */
 	deriveAssociatedTokenAddress(owner: Address | string): Promise<Address>;
+	/**
+	 * Fetches the token balance for an owner's Associated Token Account.
+	 * Returns balance info including whether the account exists.
+	 */
 	fetchBalance(owner: Address | string, commitment?: Commitment): Promise<SplTokenBalance>;
+	/**
+	 * Prepares a token transfer transaction without sending it.
+	 * Use this when you need to inspect or modify the transaction before sending.
+	 */
 	prepareTransfer(config: SplTransferPrepareConfig): Promise<PreparedSplTransfer>;
+	/**
+	 * Sends a previously prepared token transfer transaction.
+	 * Use this after prepareTransfer() to submit the transaction.
+	 */
 	sendPreparedTransfer(
 		prepared: PreparedSplTransfer,
 		options?: SolTransferSendOptions,
 	): Promise<ReturnType<typeof signature>>;
+	/**
+	 * Prepares and sends a token transfer in one call.
+	 * Automatically creates the destination ATA if it doesn't exist (configurable).
+	 */
 	sendTransfer(
 		config: SplTransferPrepareConfig,
 		options?: SolTransferSendOptions,
 	): Promise<ReturnType<typeof signature>>;
 }>;
 
-/** Creates helpers dedicated to SPL token account discovery, balances, and transfers. */
+/**
+ * Creates helpers for SPL token operations bound to a specific token mint.
+ * Supports balance queries, ATA derivation, and token transfers.
+ *
+ * @param runtime - The Solana client runtime with RPC connection.
+ * @param config - Configuration specifying the token mint and optional settings.
+ * @returns An SplTokenHelper with methods for token operations.
+ *
+ * @example
+ * ```ts
+ * import { createClient } from '@solana/client';
+ *
+ * const client = createClient({ cluster: 'mainnet-beta' });
+ *
+ * // Create a helper for USDC
+ * const usdc = client.helpers.spl({
+ *   mint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+ *   decimals: 6, // Skip on-chain lookup
+ * });
+ *
+ * // Get token balance
+ * const balance = await usdc.fetchBalance(myWallet);
+ * if (balance.exists) {
+ *   console.log(`USDC balance: ${balance.uiAmount}`);
+ * }
+ *
+ * // Transfer tokens
+ * const sig = await usdc.sendTransfer({
+ *   amount: '25.50', // Can use string decimals
+ *   authority: session,
+ *   destinationOwner: recipientWallet,
+ * });
+ * ```
+ */
 export function createSplTokenHelper(runtime: SolanaClientRuntime, config: SplTokenHelperConfig): SplTokenHelper {
 	const mintAddress = ensureAddress(config.mint);
 	const tokenProgram = ensureAddress(config.tokenProgram, address(TOKEN_PROGRAM_ADDRESS));

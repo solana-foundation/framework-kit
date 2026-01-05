@@ -333,7 +333,38 @@ type WithdrawSignature = UnwrapPromise<ReturnType<StakeHelper['sendWithdraw']>>;
 
 /**
  * Convenience wrapper around the stake helper that tracks status and signature for native SOL staking.
- * Allows staking SOL to a validator and returns transaction details.
+ * Supports the full staking lifecycle: stake, unstake (deactivate), and withdraw.
+ *
+ * @param validatorId - The validator's vote account address to stake to.
+ *
+ * @example
+ * ```ts
+ * const {
+ *   stake,
+ *   unstake,
+ *   withdraw,
+ *   getStakeAccounts,
+ *   isStaking,
+ *   signature,
+ * } = useStake('ValidatorVoteAccountAddress...');
+ *
+ * // Stake 10 SOL to the validator
+ * await stake({ amount: 10 });
+ * console.log('Stake signature:', signature);
+ *
+ * // Get all stake accounts for this wallet
+ * const accounts = await getStakeAccounts(walletAddress);
+ *
+ * // Unstake (begin cooldown period)
+ * await unstake({ stakeAccount: accounts[0].pubkey });
+ *
+ * // After cooldown (~2-3 days), withdraw SOL
+ * await withdraw({
+ *   amount: 10,
+ *   destination: walletAddress,
+ *   stakeAccount: accounts[0].pubkey,
+ * });
+ * ```
  */
 export function useStake(validatorId: AddressLike): Readonly<{
 	error: unknown;
@@ -470,13 +501,43 @@ type UseSplTokenOptions = Readonly<{
 }>;
 
 /**
- * Simplified SPL token hook that scopes helpers by mint and manages balance state.
+ * SPL token hook that provides balance fetching and transfer functionality for a specific token mint.
+ * Automatically manages balance state with SWR caching and provides transfer helpers.
+ *
+ * @param mint - The SPL token mint address.
+ * @param options - Optional configuration for commitment, owner override, and SWR settings.
  *
  * @example
  * ```ts
- * const { balance, send, owner } = useSplToken(mintAddress);
- * if (owner && balance?.exists) {
- *   await send({ amount: 1n, destinationOwner: toAddress('...') });
+ * import { useSplToken, toAddress } from '@solana/react-hooks';
+ *
+ * // USDC on mainnet
+ * const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+ *
+ * function UsdcBalance() {
+ *   const {
+ *     balance,
+ *     status,
+ *     send,
+ *     sendStatus,
+ *     refresh,
+ *   } = useSplToken(USDC_MINT);
+ *
+ *   if (status === 'disconnected') return <p>Connect wallet</p>;
+ *   if (status === 'loading') return <p>Loading...</p>;
+ *   if (status === 'error') return <p>Error loading balance</p>;
+ *
+ *   return (
+ *     <div>
+ *       <p>USDC Balance: {balance?.uiAmount ?? '0'}</p>
+ *       <button onClick={() => send({
+ *         amount: 10, // 10 USDC
+ *         destinationOwner: toAddress('RecipientWallet...'),
+ *       })}>
+ *         Send 10 USDC
+ *       </button>
+ *     </div>
+ *   );
  * }
  * ```
  */
@@ -1015,15 +1076,55 @@ type UseWrapSolOptions = Readonly<{
 }>;
 
 /**
- * Convenience hook for wrapping and unwrapping SOL to/from wSOL.
+ * Hook for wrapping native SOL to wSOL (Wrapped SOL) and unwrapping back.
+ * wSOL is an SPL token representation of SOL, useful for DeFi protocols.
+ *
+ * @param options - Optional configuration for commitment, owner override, and SWR settings.
  *
  * @example
  * ```ts
- * const { balance, wrap, unwrap, isWrapping, isUnwrapping } = useWrapSol();
- * // Wrap 1 SOL to wSOL
- * await wrap({ amount: 1_000_000_000n });
- * // Unwrap all wSOL back to SOL
- * await unwrap({});
+ * import { useWrapSol } from '@solana/react-hooks';
+ *
+ * function WrapSolPanel() {
+ *   const {
+ *     balance,
+ *     status,
+ *     wrap,
+ *     unwrap,
+ *     isWrapping,
+ *     isUnwrapping,
+ *     wrapSignature,
+ *     refresh,
+ *   } = useWrapSol();
+ *
+ *   if (status === 'disconnected') return <p>Connect wallet</p>;
+ *
+ *   const wsolAmount = balance?.exists
+ *     ? Number(balance.amount) / 1e9
+ *     : 0;
+ *
+ *   return (
+ *     <div>
+ *       <p>wSOL Balance: {wsolAmount.toFixed(4)} SOL</p>
+ *
+ *       <button
+ *         disabled={isWrapping}
+ *         onClick={() => wrap({ amount: 0.1 })} // Wrap 0.1 SOL
+ *       >
+ *         {isWrapping ? 'Wrapping...' : 'Wrap 0.1 SOL'}
+ *       </button>
+ *
+ *       <button
+ *         disabled={isUnwrapping || !balance?.exists}
+ *         onClick={() => unwrap({})} // Unwrap all wSOL
+ *       >
+ *         {isUnwrapping ? 'Unwrapping...' : 'Unwrap All'}
+ *       </button>
+ *
+ *       {wrapSignature && <p>Last wrap: {wrapSignature}</p>}
+ *     </div>
+ *   );
+ * }
  * ```
  */
 export function useWrapSol(options: UseWrapSolOptions = {}): Readonly<{

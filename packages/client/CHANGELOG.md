@@ -1,5 +1,13 @@
 # @solana/client
 
+## 1.4.1
+
+### Patch Changes
+
+- [#89](https://github.com/solana-foundation/framework-kit/pull/89) [`24d6e39`](https://github.com/solana-foundation/framework-kit/commit/24d6e390d96f61ff17c2d0dac1d260e41c7af144) Thanks [@N-45div](https://github.com/N-45div)! - Add TypeDoc API documentation generation with JSON spec output
+
+- [#135](https://github.com/solana-foundation/framework-kit/pull/135) [`f1cde24`](https://github.com/solana-foundation/framework-kit/commit/f1cde24e7d5b282265b5e0e0c078f54d1ba7fcf5) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Add comprehensive JSDoc documentation for LLM-ready API docs
+
 ## 1.4.0
 
 ### Minor Changes

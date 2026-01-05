@@ -1,5 +1,16 @@
 # @solana/react-hooks
 
+## 1.2.1
+
+### Patch Changes
+
+- [#135](https://github.com/solana-foundation/framework-kit/pull/135) [`f1cde24`](https://github.com/solana-foundation/framework-kit/commit/f1cde24e7d5b282265b5e0e0c078f54d1ba7fcf5) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Add comprehensive JSDoc documentation for LLM-ready API docs
+
+- [#137](https://github.com/solana-foundation/framework-kit/pull/137) [`385c535`](https://github.com/solana-foundation/framework-kit/commit/385c5352ad9a5099b8b593b618849a0b9572c603) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Expand useSplToken README documentation with error handling example and complete property list
+
+- Updated dependencies [[`24d6e39`](https://github.com/solana-foundation/framework-kit/commit/24d6e390d96f61ff17c2d0dac1d260e41c7af144), [`f1cde24`](https://github.com/solana-foundation/framework-kit/commit/f1cde24e7d5b282265b5e0e0c078f54d1ba7fcf5)]:
+  - @solana/client@1.4.1
+
 ## 1.2.0
 
 ### Minor Changes

@@ -1,5 +1,11 @@
 # @solana/client
 
+## 1.3.0
+
+### Minor Changes
+
+- [#126](https://github.com/solana-foundation/framework-kit/pull/126) [`d25f4f3`](https://github.com/solana-foundation/framework-kit/commit/d25f4f36c71fb5edd0e8ed315c52708e7f87f4c3) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Add `owner` and `executable` fields to `AccountCacheEntry` type. The `useAccount` hook and account watchers now populate these fields from the RPC response, providing complete account metadata.
+
 ## 1.2.2
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { createAccountEntry, createAddress, createLamports } from '../test/fixtures';
 import { act, renderHookWithClient, waitFor } from '../test/utils';
@@ -109,5 +109,49 @@ describe('account hooks', () => {
 			expect(client.actions.fetchBalance).not.toHaveBeenCalled();
 		});
 		expect(client.watchers.watchBalance).not.toHaveBeenCalled();
+	});
+
+	it('handles invalid addresses gracefully in useBalance', async () => {
+		const invalidAddress = 'not-a-valid-address';
+		const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+		const { client, result } = renderHookWithClient(() => useBalance(invalidAddress));
+
+		// Should not crash and should return null lamports with an error
+		expect(result.current.lamports).toBeNull();
+		expect(result.current.error).toBeDefined();
+		expect(result.current.fetching).toBe(false);
+
+		// Should not attempt to fetch with invalid address
+		expect(client.actions.fetchBalance).not.toHaveBeenCalled();
+		expect(client.watchers.watchBalance).not.toHaveBeenCalled();
+
+		// Should log a warning
+		await waitFor(() => {
+			expect(consoleSpy).toHaveBeenCalledWith('[useBalance] Invalid address provided:', expect.any(Error));
+		});
+
+		consoleSpy.mockRestore();
+	});
+
+	it('handles invalid addresses gracefully in useAccount', async () => {
+		const invalidAddress = 'not-a-valid-address';
+		const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+		const { client, result } = renderHookWithClient(() => useAccount(invalidAddress));
+
+		// Should not crash and should return undefined
+		expect(result.current).toBeUndefined();
+
+		// Should not attempt to fetch with invalid address
+		expect(client.actions.fetchAccount).not.toHaveBeenCalled();
+		expect(client.watchers.watchAccount).not.toHaveBeenCalled();
+
+		// Should log a warning
+		await waitFor(() => {
+			expect(consoleSpy).toHaveBeenCalledWith('[useAccount] Invalid address provided:', expect.any(Error));
+		});
+
+		consoleSpy.mockRestore();
 	});
 });

@@ -618,12 +618,23 @@ export function useSplToken(
 export function useAccount(addressLike?: AddressLike, options: UseAccountOptions = {}): AccountCacheEntry | undefined {
 	const client = useSolanaClient();
 	const shouldSkip = options.skip ?? !addressLike;
-	const address = useMemo(() => {
+	const { address, addressError } = useMemo(() => {
 		if (shouldSkip || !addressLike) {
-			return undefined;
+			return { address: undefined, addressError: undefined };
 		}
-		return toAddress(addressLike);
+		try {
+			return { address: toAddress(addressLike), addressError: undefined };
+		} catch (e) {
+			return { address: undefined, addressError: e };
+		}
 	}, [addressLike, shouldSkip]);
+
+	// Log address validation errors to console for developer visibility
+	useEffect(() => {
+		if (addressError) {
+			console.warn('[useAccount] Invalid address provided:', addressError);
+		}
+	}, [addressError]);
 	const accountKey = useMemo(() => address?.toString(), [address]);
 	const selector = useMemo(() => createAccountSelector(accountKey), [accountKey]);
 	const account = useClientStore(selector);
@@ -689,12 +700,23 @@ export function useBalance(
 	);
 	const client = useSolanaClient();
 	const shouldSkip = mergedOptions.skip ?? !addressLike;
-	const address = useMemo(() => {
+	const { address, addressError } = useMemo(() => {
 		if (shouldSkip || !addressLike) {
-			return undefined;
+			return { address: undefined, addressError: undefined };
 		}
-		return toAddress(addressLike);
+		try {
+			return { address: toAddress(addressLike), addressError: undefined };
+		} catch (e) {
+			return { address: undefined, addressError: e };
+		}
 	}, [addressLike, shouldSkip]);
+
+	// Log address validation errors to console for developer visibility
+	useEffect(() => {
+		if (addressError) {
+			console.warn('[useBalance] Invalid address provided:', addressError);
+		}
+	}, [addressError]);
 	const accountKey = useMemo(() => address?.toString(), [address]);
 	const selector = useMemo(() => createAccountSelector(accountKey), [accountKey]);
 	const account = useClientStore(selector);
@@ -731,7 +753,7 @@ export function useBalance(
 	const lamports = account?.lamports ?? null;
 	const fetching = account?.fetching ?? false;
 	const slot = account?.slot;
-	const error = account?.error;
+	const error = addressError ?? account?.error;
 
 	return useMemo(
 		() => ({

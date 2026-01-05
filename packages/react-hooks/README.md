@@ -46,7 +46,7 @@ These snippets assume a parent already handled wallet connection and can pass an
 
 ```tsx
 function WalletPanel() {
-  const { connectors, connect, disconnect, wallet, status } =
+  const { connectors, connect, disconnect, wallet, status, currentConnector } =
     useWalletConnection();
   const address = wallet?.account.address;
   const balance = useBalance(address);
@@ -54,6 +54,7 @@ function WalletPanel() {
   if (status === "connected") {
     return (
       <div>
+        <p>Connected via {currentConnector?.name}</p>
         <p>{address?.toString()}</p>
         <p>Lamports: {balance.lamports?.toString() ?? "loading…"}</p>
         <button onClick={disconnect}>Disconnect</button>
@@ -85,6 +86,24 @@ function BalanceCard({ address }: { address: string }) {
 }
 ```
 
+### Read account data (auto fetch + watch)
+
+```tsx
+import { useAccount } from "@solana/react-hooks";
+
+function AccountInfo({ address }: { address: string }) {
+  const account = useAccount(address);
+  if (!account || account.fetching) return <p>Loading…</p>;
+  return (
+    <div>
+      <p>Lamports: {account.lamports?.toString() ?? "0"}</p>
+      <p>Owner: {account.owner ?? "—"}</p>
+      <p>Slot: {account.slot?.toString() ?? "—"}</p>
+    </div>
+  );
+}
+```
+
 ### Send SOL
 
 ```tsx
@@ -97,7 +116,7 @@ function SendSol({ destination }: { destination: string }) {
       <button
         disabled={isSending}
         onClick={() =>
-          send({ destination, lamports: 100_000_000n /* 0.1 SOL */ })
+          send({ destination, amount: 100_000_000n /* 0.1 SOL */ })
         }
       >
         {isSending ? "Sending…" : "Send 0.1 SOL"}
@@ -129,7 +148,7 @@ function TokenPanel({
       <p>Balance: {balance?.uiAmount ?? "0"}</p>
       <button
         disabled={isSending || !owner}
-        onClick={() => send({ amount: 1n, destinationOwner })}
+        onClick={() => send({ amount: 1n, destinationOwner, amountInBaseUnits: true })}
       >
         {isSending ? "Sending…" : "Send 1 token"}
       </button>

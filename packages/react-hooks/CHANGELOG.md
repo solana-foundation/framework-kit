@@ -1,5 +1,11 @@
 # @solana/react-hooks
 
+## 1.1.9
+
+### Patch Changes
+
+- [#124](https://github.com/solana-foundation/framework-kit/pull/124) [`25beb60`](https://github.com/solana-foundation/framework-kit/commit/25beb60eeecf9257681e31fe68250c2274a8fbbb) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Fix useAccount hook to default `fetch` and `watch` options to `true`, matching the behavior of useBalance. This ensures account data is fetched and watched automatically without requiring explicit options.
+
 ## 1.1.8
 
 ### Patch Changes

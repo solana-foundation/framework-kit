@@ -617,7 +617,16 @@ export function useSplToken(
  */
 export function useAccount(addressLike?: AddressLike, options: UseAccountOptions = {}): AccountCacheEntry | undefined {
 	const client = useSolanaClient();
-	const shouldSkip = options.skip ?? !addressLike;
+	const mergedOptions = useMemo(
+		() => ({
+			commitment: options.commitment,
+			fetch: options.fetch ?? true,
+			skip: options.skip,
+			watch: options.watch ?? true,
+		}),
+		[options.commitment, options.fetch, options.skip, options.watch],
+	);
+	const shouldSkip = mergedOptions.skip ?? !addressLike;
 	const { address, addressError } = useMemo(() => {
 		if (shouldSkip || !addressLike) {
 			return { address: undefined, addressError: undefined };
@@ -640,12 +649,12 @@ export function useAccount(addressLike?: AddressLike, options: UseAccountOptions
 	const account = useClientStore(selector);
 
 	useSuspenseFetcher({
-		enabled: options.fetch !== false && !shouldSkip && Boolean(address),
+		enabled: mergedOptions.fetch !== false && !shouldSkip && Boolean(address),
 		fetcher: () => {
 			if (!address) {
 				throw new Error('Provide an address before fetching account data.');
 			}
-			return client.actions.fetchAccount(address, options.commitment);
+			return client.actions.fetchAccount(address, mergedOptions.commitment);
 		},
 		key: accountKey ?? null,
 		ready: account !== undefined,
@@ -655,18 +664,18 @@ export function useAccount(addressLike?: AddressLike, options: UseAccountOptions
 		if (!address) {
 			return;
 		}
-		const commitment = options.commitment;
-		if (options.fetch !== false && account === undefined) {
+		const commitment = mergedOptions.commitment;
+		if (mergedOptions.fetch !== false && account === undefined) {
 			void client.actions.fetchAccount(address, commitment).catch(() => undefined);
 		}
-		if (options.watch) {
+		if (mergedOptions.watch) {
 			const subscription = client.watchers.watchAccount({ address, commitment }, () => undefined);
 			return () => {
 				subscription.abort();
 			};
 		}
 		return undefined;
-	}, [account, address, client, options.commitment, options.fetch, options.watch]);
+	}, [account, address, client, mergedOptions.commitment, mergedOptions.fetch, mergedOptions.watch]);
 
 	return account;
 }

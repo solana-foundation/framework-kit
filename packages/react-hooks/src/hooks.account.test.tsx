@@ -42,14 +42,36 @@ describe('account hooks', () => {
 		expect(subscription?.abort).toHaveBeenCalledTimes(1);
 	});
 
-	it('skips fetches when disabled and when no address is provided', async () => {
+	it('defaults to fetch and watch enabled', async () => {
 		const address = createAddress(2);
+		const { client, unmount } = renderHookWithClient(() => useAccount(address));
+
+		// Should fetch by default
+		await waitFor(() => {
+			expect(client.actions.fetchAccount).toHaveBeenCalledWith(address, undefined);
+		});
+
+		// Should watch by default
+		expect(client.watchers.watchAccount).toHaveBeenCalledWith(
+			{ address, commitment: undefined },
+			expect.any(Function),
+		);
+
+		const subscription = client.watchers.watchAccount.mock.results[0]?.value;
+		unmount();
+		expect(subscription?.abort).toHaveBeenCalledTimes(1);
+	});
+
+	it('skips fetches when disabled and when no address is provided', async () => {
+		const address = createAddress(3);
 		const { client, result } = renderHookWithClient(() => useAccount(undefined, { commitment: 'confirmed' }));
 		expect(result.current).toBeUndefined();
 		expect(client.actions.fetchAccount).not.toHaveBeenCalled();
 		expect(client.watchers.watchAccount).not.toHaveBeenCalled();
 
-		const { client: clientWithSkip } = renderHookWithClient(() => useAccount(address, { fetch: false }));
+		const { client: clientWithSkip } = renderHookWithClient(() =>
+			useAccount(address, { fetch: false, watch: false }),
+		);
 		await waitFor(() => {
 			expect(clientWithSkip.actions.fetchAccount).not.toHaveBeenCalled();
 		});
@@ -57,7 +79,7 @@ describe('account hooks', () => {
 	});
 
 	it('tracks lamport balances and watcher state', async () => {
-		const address = createAddress(3);
+		const address = createAddress(4);
 		const entry = createAccountEntry({
 			address,
 			fetching: true,
@@ -102,7 +124,7 @@ describe('account hooks', () => {
 	});
 
 	it('respects skip options when monitoring balances', async () => {
-		const address = createAddress(4);
+		const address = createAddress(5);
 		const { client } = renderHookWithClient(() => useBalance(address, { fetch: false, watch: false }));
 
 		await waitFor(() => {

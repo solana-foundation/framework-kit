@@ -59,7 +59,8 @@ describe('Devnet Integration Tests', { timeout: 120000 }, () => {
 			console.log('Last valid block height:', result.lastValidBlockHeight);
 
 			expect(typeof result.blockhash).toBe('string');
-			expect(result.blockhash).toHaveLength(44); // Base58 encoded
+			expect(result.blockhash.length).toBeGreaterThanOrEqual(32);
+			expect(result.blockhash.length).toBeLessThanOrEqual(44);
 			expect(typeof result.lastValidBlockHeight).toBe('number');
 			expect(result.lastValidBlockHeight).toBeGreaterThan(0);
 		});
@@ -120,7 +121,6 @@ describe('Devnet Integration Tests', { timeout: 120000 }, () => {
 			console.log('Genesis hash:', genesisHash);
 
 			expect(typeof genesisHash).toBe('string');
-			expect(genesisHash).toHaveLength(44); // Base58 encoded
 			// Devnet genesis hash
 			expect(genesisHash).toBe('EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG');
 		});
@@ -263,7 +263,8 @@ describe('Devnet Integration Tests', { timeout: 120000 }, () => {
 			console.log('Airdrop signature:', signature);
 
 			expect(typeof signature).toBe('string');
-			expect(signature).toHaveLength(88); // Base58 encoded signature
+			expect(signature.length).toBeGreaterThanOrEqual(86);
+			expect(signature.length).toBeLessThanOrEqual(88);
 
 			// Wait for confirmation
 			const confirmation = await connection.confirmTransaction(signature, 'confirmed');

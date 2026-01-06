@@ -14,6 +14,7 @@ export default defineConfig({
 			['examples/**', 'jsdom'],
 		],
 		include: ['{packages,examples,tests}/**/*.{test,spec}.{ts,tsx}'],
+		exclude: ['**/devnet-integration.test.ts', '**/e2e/**', '**/node_modules/**'],
 		setupFiles: './vitest.setup.ts',
 		passWithNoTests: true,
 		coverage: {

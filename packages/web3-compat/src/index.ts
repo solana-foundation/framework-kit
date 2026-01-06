@@ -9,4 +9,5 @@ export {
 export { fromWeb3Instruction, toAddress, toKitSigner, toPublicKey, toWeb3Instruction } from './bridges';
 export { Connection } from './connection';
 export { SystemProgram } from './programs/system-program';
+// Internal types are not re-exported to avoid conflicts with @solana/web3.js
 export { compileFromCompat, LAMPORTS_PER_SOL, sendAndConfirmTransaction } from './utils';

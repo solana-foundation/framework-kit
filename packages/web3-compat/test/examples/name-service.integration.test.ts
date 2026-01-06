@@ -2,15 +2,14 @@ import { Keypair } from '@solana/web3.js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@solana/client', () => ({
-	createSolanaRpcClient: vi.fn(),
+	createClient: vi.fn(),
 }));
 
-import { createSolanaRpcClient } from '@solana/client';
+import { createClient } from '@solana/client';
 import { getUserDomainAddressesExample } from '../../examples/explorer/name-service';
 import { Connection } from '../../src';
 
 const MOCK_ENDPOINT = 'http://localhost:8899';
-const MOCK_WS_ENDPOINT = 'ws://localhost:8900';
 
 function createPlan<T>(value: T) {
 	return {
@@ -39,14 +38,11 @@ describe('examples/explorer/name-service', () => {
 			),
 		};
 
-		(createSolanaRpcClient as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-			commitment: 'confirmed',
-			endpoint: MOCK_ENDPOINT,
-			rpc: mockRpc,
-			rpcSubscriptions: {},
-			sendAndConfirmTransaction: vi.fn(),
-			simulateTransaction: vi.fn(),
-			websocketEndpoint: MOCK_WS_ENDPOINT,
+		(createClient as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+			runtime: {
+				rpc: mockRpc,
+				rpcSubscriptions: {},
+			},
 		});
 	});
 
@@ -58,7 +54,7 @@ describe('examples/explorer/name-service', () => {
 		expect(domains).toHaveLength(1);
 		expect(domains[0]?.equals(programAccountPubkey)).toBe(true);
 
-		const rpc = (createSolanaRpcClient as unknown as ReturnType<typeof vi.fn>).mock.results[0].value.rpc;
+		const rpc = (createClient as unknown as ReturnType<typeof vi.fn>).mock.results[0].value.runtime.rpc;
 		expect(rpc.getProgramAccounts).toHaveBeenCalledWith(
 			expect.any(String),
 			expect.objectContaining({

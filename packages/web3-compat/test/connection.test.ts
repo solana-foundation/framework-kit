@@ -9,14 +9,13 @@ import {
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@solana/client', () => ({
-	createSolanaRpcClient: vi.fn(),
+	createClient: vi.fn(),
 }));
 
-import { createSolanaRpcClient } from '@solana/client';
+import { createClient } from '@solana/client';
 import { Connection } from '../src';
 
 const MOCK_ENDPOINT = 'http://localhost:8899';
-const MOCK_WS_ENDPOINT = 'ws://localhost:8900';
 
 function createPlan<T>(value: T) {
 	return {
@@ -256,14 +255,11 @@ beforeEach(() => {
 		),
 	};
 
-	(createSolanaRpcClient as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-		commitment: 'confirmed',
-		endpoint: MOCK_ENDPOINT,
-		rpc: mockRpc,
-		rpcSubscriptions: {},
-		sendAndConfirmTransaction: vi.fn(),
-		simulateTransaction: vi.fn(),
-		websocketEndpoint: MOCK_WS_ENDPOINT,
+	(createClient as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+		runtime: {
+			rpc: mockRpc,
+			rpcSubscriptions: {},
+		},
 	});
 });
 
@@ -332,8 +328,7 @@ describe('Connection', () => {
 		const connection = new Connection(MOCK_ENDPOINT);
 		const response = await connection.getSignatureStatuses(['MockSignature1111111111111111111111111111111111']);
 		expect(mockRpc.getSignatureStatuses).toHaveBeenCalledWith(['MockSignature1111111111111111111111111111111111'], {
-			commitment: 'confirmed',
-			searchTransactionHistory: undefined,
+			searchTransactionHistory: false,
 		});
 		expect(response.context.slot).toBe(444);
 		expect(response.value[0]?.confirmations).toBe(2);
@@ -366,7 +361,6 @@ describe('Connection', () => {
 			'processed',
 		);
 		expect(mockRpc.getSignatureStatuses).toHaveBeenCalledWith(['MockSignature1111111111111111111111111111111111'], {
-			commitment: 'processed',
 			searchTransactionHistory: true,
 		});
 		expect(result.value?.err).toBeNull();
@@ -833,14 +827,11 @@ describe('WebSocket subscription methods', () => {
 			logsNotifications: vi.fn(() => ({ subscribe: mockSubscribe })),
 		};
 
-		vi.mocked(createSolanaRpcClient).mockReturnValue({
-			commitment: 'confirmed',
-			endpoint: MOCK_ENDPOINT as `https://${string}` | `http://${string}`,
-			rpc: mockRpc as never,
-			rpcSubscriptions: mockRpcSubscriptions as never,
-			sendAndConfirmTransaction: vi.fn(),
-			simulateTransaction: vi.fn(),
-			websocketEndpoint: MOCK_WS_ENDPOINT as `wss://${string}` | `ws://${string}`,
+		vi.mocked(createClient).mockReturnValue({
+			runtime: {
+				rpc: mockRpc as never,
+				rpcSubscriptions: mockRpcSubscriptions as never,
+			},
 		});
 	});
 

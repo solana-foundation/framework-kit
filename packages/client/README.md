@@ -3,8 +3,6 @@
 Framework-agnostic building blocks for Solana RPC, subscriptions, wallets, and transactions. Works
 in any runtime (React, Svelte, API routes, workers, etc.).
 
-> **Status:** Experimental – expect rapid iteration.
-
 ## Install
 
 ```bash

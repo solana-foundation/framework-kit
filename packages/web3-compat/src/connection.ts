@@ -1,14 +1,12 @@
 import type { Address } from '@solana/addresses';
-import { createSolanaRpcClient, type SolanaRpcClient } from '@solana/client';
+import { createClient, type SolanaClient } from '@solana/client';
 import type { Commitment as KitCommitment, Signature } from '@solana/kit';
-import type { Base64EncodedWireTransaction } from '@solana/transactions';
 import {
 	type AccountInfo,
 	type BlockProduction,
 	type BlockResponse,
 	type BlockSignatures,
 	type ConfirmedSignatureInfo,
-	type ConnectionConfig,
 	type ContactInfo,
 	type Context,
 	type DataSlice,
@@ -31,9 +29,7 @@ import {
 	type RecentPrioritizationFees,
 	type RpcResponseAndContext,
 	type SendOptions,
-	type SignatureResult,
 	type SignatureStatus,
-	type SignatureStatusConfig,
 	type SignatureSubscriptionOptions,
 	type SignaturesForAddressOptions,
 	type Signer,
@@ -49,358 +45,62 @@ import {
 	type TransactionSignature,
 	type Version,
 	type VersionedBlockResponse,
-	VersionedTransaction,
+	type VersionedTransaction,
 	type VersionedTransactionResponse,
 	type VoteAccountStatus,
 } from '@solana/web3.js';
-
-import { toAddress as toKitAddress } from './bridges';
-
-type NormalizedCommitment = 'processed' | 'confirmed' | 'finalized';
-
-type RpcContext = Readonly<{
-	apiVersion?: string;
-	slot: number;
-}>;
-
-type AccountInfoConfig = Readonly<{
-	commitment?: LegacyCommitment;
-	dataSlice?: DataSlice;
-	encoding?: 'base64';
-	minContextSlot?: number;
-}>;
-
-type ProgramAccountsConfig = Readonly<{
-	commitment?: LegacyCommitment;
-	dataSlice?: DataSlice;
-	encoding?: 'base64' | 'base64+zstd';
-	filters?: ReadonlyArray<unknown>;
-	minContextSlot?: number;
-	withContext?: boolean;
-}>;
-
-type ConnectionCommitmentInput =
-	| LegacyCommitment
-	| (ConnectionConfig & {
-			commitment?: LegacyCommitment;
-	  })
-	| undefined;
-
-type RpcResponseWithContext<T> = Readonly<{
-	context: RpcContext;
-	value: T;
-}>;
-
-type RawTransactionInput = number[] | Uint8Array | Buffer | Transaction | VersionedTransaction;
-
-type RpcAccount = Readonly<{
-	data: readonly [string, string] | string;
-	executable: boolean;
-	lamports: number | bigint;
-	owner: string;
-	rentEpoch: number | bigint;
-}>;
-
-type ProgramAccountWire = Readonly<{
-	account: RpcAccount;
-	pubkey: string;
-}>;
-
-type ProgramAccountsWithContext = Readonly<{
-	context: Readonly<{
-		apiVersion?: string;
-		slot: number | bigint;
-	}>;
-	value: readonly ProgramAccountWire[];
-}>;
-
-type SignatureStatusConfigWithCommitment = SignatureStatusConfig & {
-	commitment?: LegacyCommitment;
-};
-
-type GetMultipleAccountsConfig = Readonly<{
-	commitment?: LegacyCommitment;
-	dataSlice?: DataSlice;
-	minContextSlot?: number;
-}>;
-
-type TokenAccountsFilter = { mint: PublicKey } | { programId: PublicKey };
-
-type GetTokenAccountsByOwnerConfig = Readonly<{
-	commitment?: LegacyCommitment;
-	encoding?: 'base64' | 'jsonParsed';
-	minContextSlot?: number;
-}>;
-
-type GetTransactionConfig = Readonly<{
-	commitment?: Finality;
-	maxSupportedTransactionVersion?: number;
-}>;
-
-type GetParsedAccountInfoConfig = Readonly<{
-	commitment?: LegacyCommitment;
-	minContextSlot?: number;
-}>;
-
-type GetMultipleParsedAccountsConfig = Readonly<{
-	commitment?: LegacyCommitment;
-	minContextSlot?: number;
-}>;
-
-type GetParsedTransactionConfig = Readonly<{
-	commitment?: Finality;
-	maxSupportedTransactionVersion?: number;
-}>;
-
-type GetParsedBlockConfig = Readonly<{
-	commitment?: Finality;
-	maxSupportedTransactionVersion?: number;
-	rewards?: boolean;
-	transactionDetails?: 'full' | 'accounts' | 'signatures' | 'none';
-}>;
-
-// WebSocket subscription callback types
-type AccountChangeCallback = (accountInfo: AccountInfo<Buffer>, context: Context) => void;
-type ProgramAccountChangeCallback = (keyedAccountInfo: KeyedAccountInfo, context: Context) => void;
-type SlotChangeCallback = (slotInfo: SlotInfo) => void;
-type SlotUpdateCallback = (slotUpdate: SlotUpdate) => void;
-type SignatureResultCallback = (signatureResult: SignatureResult, context: Context) => void;
-type SignatureSubscriptionCallback = (notification: SignatureResult | { type: 'received' }, context: Context) => void;
-type RootChangeCallback = (root: number) => void;
-type LogsCallback = (logs: Logs, context: Context) => void;
-
-type LogsFilter = 'all' | 'allWithVotes' | { mentions: string[] };
-
-type SubscriptionEntry = {
-	abort: () => void;
-};
-
-type KitParsedAccountData = {
-	data: {
-		parsed: unknown;
-		program: string;
-		space: number;
-	};
-	executable: boolean;
-	lamports: number | bigint;
-	owner: string;
-	rentEpoch: number | bigint;
-};
-
-type KitTransactionMeta = {
-	err: unknown;
-	fee: number | bigint;
-	innerInstructions: readonly unknown[] | null;
-	loadedAddresses?: {
-		readonly: readonly string[];
-		writable: readonly string[];
-	};
-	logMessages: readonly string[] | null;
-	postBalances: readonly (number | bigint)[];
-	postTokenBalances: readonly unknown[] | null;
-	preBalances: readonly (number | bigint)[];
-	preTokenBalances: readonly unknown[] | null;
-	rewards: readonly unknown[] | null;
-	computeUnitsConsumed?: number | bigint;
-};
-
-type KitTransactionResponse = {
-	blockTime: number | bigint | null;
-	meta: KitTransactionMeta | null;
-	slot: number | bigint;
-	transaction: {
-		message: unknown;
-		signatures: readonly string[];
-	};
-	version?: 'legacy' | 0;
-};
-
-type KitSignatureInfo = {
-	blockTime: number | bigint | null;
-	confirmationStatus: string | null;
-	err: unknown;
-	memo: string | null;
-	signature: string;
-	slot: number | bigint;
-};
-
-type GetBlockConfig = Readonly<{
-	commitment?: Finality;
-	maxSupportedTransactionVersion?: number;
-	rewards?: boolean;
-	transactionDetails?: 'full' | 'accounts' | 'signatures' | 'none';
-}>;
-
-type KitBlockResponse = {
-	blockHeight: number | bigint | null;
-	blockTime: number | bigint | null;
-	blockhash: string;
-	parentSlot: number | bigint;
-	previousBlockhash: string;
-	rewards?: readonly unknown[];
-	transactions?: readonly unknown[];
-	signatures?: readonly string[];
-};
-
-const DEFAULT_COMMITMENT: NormalizedCommitment = 'confirmed';
-
-const DEFAULT_SIMULATION_CONFIG = Object.freeze({
-	encoding: 'base64' as const,
-	replaceRecentBlockhash: true as const,
-	sigVerify: false as const,
-});
-
-function normalizeCommitment(commitment?: LegacyCommitment | null): NormalizedCommitment | undefined {
-	if (commitment === undefined || commitment === null) {
-		return undefined;
-	}
-	if (commitment === 'recent') {
-		return 'processed';
-	}
-	if (commitment === 'singleGossip') {
-		return 'processed';
-	}
-	if (commitment === 'single') {
-		return 'confirmed';
-	}
-	if (commitment === 'max') {
-		return 'finalized';
-	}
-	return commitment as NormalizedCommitment;
-}
-
-function toBigInt(value: number | bigint | undefined): bigint | undefined {
-	if (value === undefined) return undefined;
-	return typeof value === 'bigint' ? value : BigInt(Math.trunc(value));
-}
-
-function toAccountInfo(info: RpcAccount, dataSlice?: DataSlice): AccountInfo<Buffer> {
-	const { data, executable, lamports, owner, rentEpoch } = info;
-	const [content, encoding] = Array.isArray(data) ? data : [data, 'base64'];
-	let buffer = encoding === 'base64' ? Buffer.from(content, 'base64') : Buffer.from(content);
-	if (dataSlice) {
-		const start = dataSlice.offset ?? 0;
-		const end = start + (dataSlice.length ?? buffer.length);
-		buffer = buffer.subarray(start, end);
-	}
-	return {
-		data: buffer,
-		executable,
-		lamports: typeof lamports === 'number' ? lamports : Number(lamports),
-		owner: new PublicKey(owner),
-		rentEpoch: typeof rentEpoch === 'number' ? rentEpoch : Number(rentEpoch),
-	};
-}
-
-function fromKitAccount(value: unknown): RpcAccount {
-	const account = (value ?? {}) as Record<string, unknown>;
-	const data = account.data as string | readonly [string, string] | undefined;
-	const lamports = account.lamports as number | bigint | undefined;
-	const ownerValue = account.owner as unknown;
-	const rentEpoch = account.rentEpoch as number | bigint | undefined;
-	const owner =
-		typeof ownerValue === 'string'
-			? ownerValue
-			: ownerValue instanceof PublicKey
-				? ownerValue.toBase58()
-				: typeof ownerValue === 'object' && ownerValue !== null && 'toString' in ownerValue
-					? String(ownerValue)
-					: '11111111111111111111111111111111';
-	return {
-		data: data ?? ['', 'base64'],
-		executable: Boolean(account.executable),
-		lamports: lamports ?? 0,
-		owner,
-		rentEpoch: rentEpoch ?? 0,
-	};
-}
-
-function toParsedAccountData(kitParsed: KitParsedAccountData): ParsedAccountData {
-	return {
-		parsed: kitParsed.data.parsed,
-		program: kitParsed.data.program,
-		space: kitParsed.data.space,
-	};
-}
-
-function toParsedAccountInfo(kitAccount: unknown): AccountInfo<Buffer | ParsedAccountData> {
-	const account = (kitAccount ?? {}) as Record<string, unknown>;
-	const executable = Boolean(account.executable);
-	const lamports = account.lamports as number | bigint;
-	const ownerValue = account.owner as unknown;
-	const rentEpoch = account.rentEpoch as number | bigint | undefined;
-
-	const owner =
-		typeof ownerValue === 'string'
-			? new PublicKey(ownerValue)
-			: ownerValue instanceof PublicKey
-				? ownerValue
-				: typeof ownerValue === 'object' && ownerValue !== null && 'toString' in ownerValue
-					? new PublicKey(String(ownerValue))
-					: new PublicKey('11111111111111111111111111111111');
-
-	const data = account.data as unknown;
-
-	// Check if it's parsed data (object with parsed, program, space)
-	if (typeof data === 'object' && data !== null && 'parsed' in data && 'program' in data) {
-		return {
-			data: toParsedAccountData({
-				data: data as KitParsedAccountData['data'],
-				executable,
-				lamports,
-				owner: owner.toBase58(),
-				rentEpoch: rentEpoch ?? 0,
-			}),
-			executable,
-			lamports: typeof lamports === 'number' ? lamports : Number(lamports),
-			owner,
-			rentEpoch:
-				rentEpoch !== undefined ? (typeof rentEpoch === 'number' ? rentEpoch : Number(rentEpoch)) : undefined,
-		};
-	}
-
-	// Otherwise treat as raw buffer
-	const rawData = data as string | readonly [string, string] | undefined;
-	const [content, encoding] = Array.isArray(rawData) ? rawData : [rawData ?? '', 'base64'];
-	const buffer = encoding === 'base64' ? Buffer.from(content, 'base64') : Buffer.from(content);
-
-	return {
-		data: buffer,
-		executable,
-		lamports: typeof lamports === 'number' ? lamports : Number(lamports),
-		owner,
-		rentEpoch:
-			rentEpoch !== undefined ? (typeof rentEpoch === 'number' ? rentEpoch : Number(rentEpoch)) : undefined,
-	};
-}
-
-function toKitAddressFromInput(input: PublicKey | string): Address<string> {
-	return toKitAddress(input instanceof PublicKey ? input : input);
-}
-
-function toBase64WireTransaction(raw: RawTransactionInput): Base64EncodedWireTransaction {
-	if (raw instanceof Transaction || raw instanceof VersionedTransaction) {
-		const bytes = raw.serialize({
-			requireAllSignatures: false,
-			verifySignatures: false,
-		});
-		return Buffer.from(bytes).toString('base64') as Base64EncodedWireTransaction;
-	}
-	if (raw instanceof Uint8Array) {
-		return Buffer.from(raw).toString('base64') as Base64EncodedWireTransaction;
-	}
-	if (raw instanceof Buffer) {
-		return raw.toString('base64') as Base64EncodedWireTransaction;
-	}
-	const uint8 = Uint8Array.from(raw);
-	return Buffer.from(uint8).toString('base64') as Base64EncodedWireTransaction;
-}
+import {
+	DEFAULT_COMMITMENT,
+	DEFAULT_SIMULATION_CONFIG,
+	fromKitAccount,
+	normalizeCommitment,
+	toAccountInfo,
+	toBase64WireTransaction,
+	toBigInt,
+	toKitAddressFromInput,
+	toParsedAccountInfo,
+} from './connection/adapters';
+import type {
+	AccountChangeCallback,
+	AccountInfoConfig,
+	ConnectionCommitmentInput,
+	GetBlockConfig,
+	GetMultipleAccountsConfig,
+	GetMultipleParsedAccountsConfig,
+	GetParsedAccountInfoConfig,
+	GetParsedBlockConfig,
+	GetParsedTransactionConfig,
+	GetTokenAccountsByOwnerConfig,
+	GetTransactionConfig,
+	KitBlockResponse,
+	KitSignatureInfo,
+	KitTransactionResponse,
+	LogsCallback,
+	LogsFilter,
+	NormalizedCommitment,
+	ProgramAccountChangeCallback,
+	ProgramAccountsConfig,
+	ProgramAccountsWithContext,
+	ProgramAccountWire,
+	RawTransactionInput,
+	RootChangeCallback,
+	RpcAccount,
+	RpcContext,
+	RpcResponseWithContext,
+	SignatureResultCallback,
+	SignatureStatusConfigWithCommitment,
+	SignatureSubscriptionCallback,
+	SlotChangeCallback,
+	SlotUpdateCallback,
+	SubscriptionEntry,
+	TokenAccountsFilter,
+} from './types';
 
 export class Connection {
 	readonly commitment?: NormalizedCommitment;
 	readonly rpcEndpoint: string;
 
-	#client: SolanaRpcClient;
+	#client: SolanaClient;
 	#subscriptions: Map<number, SubscriptionEntry> = new Map();
 	#nextSubscriptionId = 0;
 
@@ -415,13 +115,42 @@ export class Connection {
 				? commitmentOrConfig.wsEndpoint
 				: undefined;
 
-		this.commitment = commitment;
-		this.rpcEndpoint = endpoint;
-		this.#client = createSolanaRpcClient({
-			endpoint,
-			websocketEndpoint,
-			commitment: (commitment ?? DEFAULT_COMMITMENT) as KitCommitment,
-		});
+		// Check if an existing SolanaClient was provided
+		if (
+			typeof commitmentOrConfig === 'object' &&
+			commitmentOrConfig !== null &&
+			'client' in commitmentOrConfig &&
+			commitmentOrConfig.client
+		) {
+			this.#client = commitmentOrConfig.client as SolanaClient;
+			this.commitment = commitment;
+			this.rpcEndpoint = endpoint || '';
+		} else {
+			this.commitment = commitment;
+			this.rpcEndpoint = endpoint;
+			this.#client = createClient({
+				endpoint,
+				websocket: websocketEndpoint,
+				commitment: (commitment ?? DEFAULT_COMMITMENT) as KitCommitment,
+			});
+		}
+	}
+
+	/**
+	 * Get the underlying SolanaClient for migration to @solana/client.
+	 *
+	 * @example
+	 * ```typescript
+	 * const connection = new Connection('https://api.mainnet.solana.com');
+	 * const client = connection.client;
+	 *
+	 * // Use SolanaClient features
+	 * await client.actions.connectWallet('phantom');
+	 * const balance = await client.actions.fetchBalance(address);
+	 * ```
+	 */
+	get client(): SolanaClient {
+		return this.#client;
 	}
 
 	async getLatestBlockhash(
@@ -453,7 +182,7 @@ export class Connection {
 		) {
 			requestOptions.maxSupportedTransactionVersion = commitmentOrConfig.maxSupportedTransactionVersion;
 		}
-		const response = await this.#client.rpc.getLatestBlockhash(requestOptions as never).send();
+		const response = await this.#client.runtime.rpc.getLatestBlockhash(requestOptions as never).send();
 
 		return {
 			blockhash: response.value.blockhash,
@@ -464,7 +193,7 @@ export class Connection {
 	async getBalance(publicKey: PublicKey | string, commitment?: LegacyCommitment): Promise<number> {
 		const address = toKitAddressFromInput(publicKey);
 		const chosenCommitment = normalizeCommitment(commitment) ?? this.commitment ?? DEFAULT_COMMITMENT;
-		const result = await this.#client.rpc
+		const result = await this.#client.runtime.rpc
 			.getBalance(address, { commitment: chosenCommitment as KitCommitment })
 			.send();
 		return typeof result.value === 'number' ? result.value : Number(result.value);
@@ -506,7 +235,7 @@ export class Connection {
 			};
 		}
 
-		const response = await this.#client.rpc.getAccountInfo(address, requestOptions as never).send();
+		const response = await this.#client.runtime.rpc.getAccountInfo(address, requestOptions as never).send();
 
 		if (!response.value) {
 			return null;
@@ -569,7 +298,7 @@ export class Connection {
 			requestOptions.minContextSlot = minContextSlot;
 		}
 
-		const result = await this.#client.rpc.getProgramAccounts(id, requestOptions as never).send();
+		const result = await this.#client.runtime.rpc.getProgramAccounts(id, requestOptions as never).send();
 
 		const mapProgramAccount = (entry: ProgramAccountWire) => {
 			const pubkey = new PublicKey(entry.pubkey);
@@ -597,13 +326,11 @@ export class Connection {
 		signatures: readonly TransactionSignature[],
 		config?: SignatureStatusConfigWithCommitment,
 	): Promise<RpcResponseWithContext<(SignatureStatus | null)[]>> {
-		const targetCommitment = normalizeCommitment(config?.commitment) ?? this.commitment ?? DEFAULT_COMMITMENT;
 		const kitSignatures = signatures.map((signature) => signature as unknown as Signature);
-		const response = await this.#client.rpc
+		const response = await this.#client.runtime.rpc
 			.getSignatureStatuses(kitSignatures, {
-				commitment: targetCommitment as KitCommitment,
-				searchTransactionHistory: config?.searchTransactionHistory,
-			} as never)
+				searchTransactionHistory: config?.searchTransactionHistory ?? false,
+			})
 			.send();
 
 		const context = response.context as { slot: number | bigint; apiVersion?: string };
@@ -642,7 +369,10 @@ export class Connection {
 			value: normalizedValues as (SignatureStatus | null)[],
 		};
 	}
-	async sendRawTransaction(rawTransaction: RawTransactionInput, options?: SendOptions): Promise<string> {
+	async sendRawTransaction(
+		rawTransaction: RawTransactionInput | Transaction | VersionedTransaction,
+		options?: SendOptions,
+	): Promise<string> {
 		const wire = toBase64WireTransaction(rawTransaction);
 
 		const preflightCommitment =
@@ -654,7 +384,7 @@ export class Connection {
 			DEFAULT_COMMITMENT;
 		const maxRetries = options?.maxRetries === undefined ? undefined : toBigInt(options.maxRetries);
 		const minContextSlot = options?.minContextSlot === undefined ? undefined : toBigInt(options.minContextSlot);
-		const plan = this.#client.rpc.sendTransaction(wire, {
+		const plan = this.#client.runtime.rpc.sendTransaction(wire, {
 			encoding: 'base64',
 			maxRetries,
 			minContextSlot,
@@ -666,18 +396,49 @@ export class Connection {
 	}
 
 	async confirmTransaction(
-		signature: TransactionSignature,
+		strategy: TransactionSignature | { signature: string; blockhash: string; lastValidBlockHeight: number },
 		commitment?: LegacyCommitment,
 	): Promise<RpcResponseWithContext<SignatureStatus | null>> {
-		const normalizedCommitment = normalizeCommitment(commitment);
-		const response = await this.getSignatureStatuses([signature], {
-			commitment: normalizedCommitment ?? this.commitment ?? DEFAULT_COMMITMENT,
+		const signature = typeof strategy === 'string' ? strategy : strategy.signature;
+		const targetCommitment = normalizeCommitment(commitment) ?? this.commitment ?? DEFAULT_COMMITMENT;
+
+		// Poll for signature status until confirmed or timeout
+		const maxAttempts = 30;
+		const delayMs = 1000;
+
+		for (let attempt = 0; attempt < maxAttempts; attempt++) {
+			const response = await this.getSignatureStatuses([signature], {
+				searchTransactionHistory: true,
+			});
+
+			const status = response.value[0];
+			if (status !== null) {
+				// Check if confirmation level meets requirement
+				const confirmationStatus = status.confirmationStatus;
+				const meetsCommitment =
+					targetCommitment === 'processed' ||
+					(targetCommitment === 'confirmed' && confirmationStatus !== 'processed') ||
+					(targetCommitment === 'finalized' && confirmationStatus === 'finalized');
+
+				if (meetsCommitment) {
+					return {
+						context: response.context,
+						value: status,
+					};
+				}
+			}
+
+			// Wait before next poll
+			await new Promise((resolve) => setTimeout(resolve, delayMs));
+		}
+
+		// Return last status (may be null if not found)
+		const finalResponse = await this.getSignatureStatuses([signature], {
 			searchTransactionHistory: true,
 		});
-
 		return {
-			context: response.context,
-			value: response.value[0] ?? null,
+			context: finalResponse.context,
+			value: finalResponse.value[0] ?? null,
 		};
 	}
 
@@ -701,7 +462,7 @@ export class Connection {
 				? { ...mergedConfig, replaceRecentBlockhash: false }
 				: mergedConfig;
 
-		const response = await this.#client.rpc.simulateTransaction(wire, normalizedConfig as never).send();
+		const response = await this.#client.runtime.rpc.simulateTransaction(wire, normalizedConfig as never).send();
 
 		return {
 			context: {
@@ -746,7 +507,7 @@ export class Connection {
 			};
 		}
 
-		const response = await this.#client.rpc.getMultipleAccounts(addresses, requestOptions as never).send();
+		const response = await this.#client.runtime.rpc.getMultipleAccounts(addresses, requestOptions as never).send();
 
 		const values = response.value as readonly (RpcAccount | null)[];
 		return values.map((account) => {
@@ -787,7 +548,7 @@ export class Connection {
 			};
 		}
 
-		const response = await this.#client.rpc.getMultipleAccounts(addresses, requestOptions as never).send();
+		const response = await this.#client.runtime.rpc.getMultipleAccounts(addresses, requestOptions as never).send();
 
 		const context = response.context as { slot: number | bigint; apiVersion?: string };
 		const values = response.value as readonly (RpcAccount | null)[];
@@ -839,7 +600,7 @@ export class Connection {
 			requestOptions.minContextSlot = minContextSlot;
 		}
 
-		const response = await this.#client.rpc
+		const response = await this.#client.runtime.rpc
 			.getTokenAccountsByOwner(owner, filterParam as never, requestOptions as never)
 			.send();
 
@@ -864,7 +625,7 @@ export class Connection {
 		const address = toKitAddressFromInput(tokenAddress);
 		const chosenCommitment = normalizeCommitment(commitment) ?? this.commitment ?? DEFAULT_COMMITMENT;
 
-		const response = await this.#client.rpc
+		const response = await this.#client.runtime.rpc
 			.getTokenAccountBalance(address, { commitment: chosenCommitment as KitCommitment })
 			.send();
 
@@ -928,7 +689,7 @@ export class Connection {
 			requestOptions.maxSupportedTransactionVersion = config.maxSupportedTransactionVersion;
 		}
 
-		const response = await this.#client.rpc
+		const response = await this.#client.runtime.rpc
 			.getTransaction(signature as unknown as Signature, requestOptions as never)
 			.send();
 
@@ -1018,7 +779,7 @@ export class Connection {
 			requestOptions.minContextSlot = toBigInt(options.minContextSlot);
 		}
 
-		const response = await this.#client.rpc.getSignaturesForAddress(addr, requestOptions as never).send();
+		const response = await this.#client.runtime.rpc.getSignaturesForAddress(addr, requestOptions as never).send();
 
 		const signatures = response as readonly KitSignatureInfo[];
 		return signatures.map((sig) => ({
@@ -1056,14 +817,14 @@ export class Connection {
 			requestOptions.minContextSlot = minContextSlot;
 		}
 
-		const response = await this.#client.rpc.getSlot(requestOptions as never).send();
+		const response = await this.#client.runtime.rpc.getSlot(requestOptions as never).send();
 		return typeof response === 'bigint' ? Number(response) : (response as number);
 	}
 
 	async requestAirdrop(to: PublicKey, lamports: number): Promise<TransactionSignature> {
 		const address = toKitAddressFromInput(to);
 		// Cast through unknown since requestAirdrop is only available on devnet/testnet
-		const rpc = this.#client.rpc as unknown as {
+		const rpc = this.#client.runtime.rpc as unknown as {
 			requestAirdrop: (
 				address: Address,
 				lamports: bigint,
@@ -1081,7 +842,7 @@ export class Connection {
 	async getMinimumBalanceForRentExemption(dataLength: number, commitment?: LegacyCommitment): Promise<number> {
 		const chosenCommitment = normalizeCommitment(commitment) ?? this.commitment ?? DEFAULT_COMMITMENT;
 
-		const response = await this.#client.rpc
+		const response = await this.#client.runtime.rpc
 			.getMinimumBalanceForRentExemption(BigInt(dataLength), {
 				commitment: chosenCommitment as KitCommitment,
 			})
@@ -1109,7 +870,7 @@ export class Connection {
 			requestOptions.rewards = config.rewards;
 		}
 
-		const response = await this.#client.rpc.getBlock(BigInt(slot), requestOptions as never).send();
+		const response = await this.#client.runtime.rpc.getBlock(BigInt(slot), requestOptions as never).send();
 
 		if (!response) {
 			return null;
@@ -1138,7 +899,7 @@ export class Connection {
 	}
 
 	async getBlockTime(slot: number): Promise<number | null> {
-		const response = await this.#client.rpc.getBlockTime(BigInt(slot)).send();
+		const response = await this.#client.runtime.rpc.getBlockTime(BigInt(slot)).send();
 		if (response === null) {
 			return null;
 		}
@@ -1147,7 +908,7 @@ export class Connection {
 
 	async getBlockHeight(commitment?: LegacyCommitment): Promise<number> {
 		const chosenCommitment = normalizeCommitment(commitment) ?? this.commitment ?? DEFAULT_COMMITMENT;
-		const response = await this.#client.rpc
+		const response = await this.#client.runtime.rpc
 			.getBlockHeight({ commitment: chosenCommitment as KitCommitment })
 			.send();
 		return typeof response === 'bigint' ? Number(response) : (response as number);
@@ -1157,7 +918,7 @@ export class Connection {
 		const chosenCommitment = normalizeCommitment(commitment as LegacyCommitment) ?? this.commitment;
 		const finalCommitment = chosenCommitment === 'processed' ? 'confirmed' : (chosenCommitment ?? 'confirmed');
 
-		const response = await this.#client.rpc
+		const response = await this.#client.runtime.rpc
 			.getBlocks(BigInt(startSlot), endSlot !== undefined ? BigInt(endSlot) : undefined, {
 				commitment: finalCommitment as KitCommitment,
 			} as never)
@@ -1172,7 +933,7 @@ export class Connection {
 		const chosenCommitment = normalizeCommitment(commitment as LegacyCommitment) ?? this.commitment;
 		const finalCommitment = chosenCommitment === 'processed' ? 'confirmed' : (chosenCommitment ?? 'confirmed');
 
-		const response = await this.#client.rpc
+		const response = await this.#client.runtime.rpc
 			.getBlock(BigInt(slot), {
 				commitment: finalCommitment as KitCommitment,
 				transactionDetails: 'signatures',
@@ -1202,7 +963,7 @@ export class Connection {
 	async isBlockhashValid(blockhash: string, commitment?: LegacyCommitment): Promise<RpcResponseAndContext<boolean>> {
 		const chosenCommitment = normalizeCommitment(commitment) ?? this.commitment ?? DEFAULT_COMMITMENT;
 
-		const response = await this.#client.rpc
+		const response = await this.#client.runtime.rpc
 			.isBlockhashValid(blockhash as never, { commitment: chosenCommitment as KitCommitment })
 			.send();
 
@@ -1221,7 +982,7 @@ export class Connection {
 	): Promise<RpcResponseAndContext<number | null>> {
 		const chosenCommitment = normalizeCommitment(commitment) ?? this.commitment ?? DEFAULT_COMMITMENT;
 
-		const response = await this.#client.rpc
+		const response = await this.#client.runtime.rpc
 			.getFeeForMessage(message as never, { commitment: chosenCommitment as KitCommitment })
 			.send();
 
@@ -1239,7 +1000,7 @@ export class Connection {
 	async getRecentPrioritizationFees(lockedWritableAccounts?: PublicKey[]): Promise<RecentPrioritizationFees[]> {
 		const addresses = lockedWritableAccounts?.map((pk) => toKitAddressFromInput(pk));
 
-		const response = await this.#client.rpc.getRecentPrioritizationFees(addresses as never).send();
+		const response = await this.#client.runtime.rpc.getRecentPrioritizationFees(addresses as never).send();
 
 		return (response as readonly { prioritizationFee: number | bigint; slot: number | bigint }[]).map((fee) => ({
 			prioritizationFee:
@@ -1284,7 +1045,7 @@ export class Connection {
 			};
 		}
 
-		const response = await this.#client.rpc.getAccountInfo(address, requestOptions as never).send();
+		const response = await this.#client.runtime.rpc.getAccountInfo(address, requestOptions as never).send();
 		const context = response.context as { slot: number | bigint; apiVersion?: string };
 
 		return {
@@ -1303,7 +1064,7 @@ export class Connection {
 	): Promise<RpcResponseAndContext<number>> {
 		const address = toKitAddressFromInput(publicKey);
 		const chosenCommitment = normalizeCommitment(commitment) ?? this.commitment ?? DEFAULT_COMMITMENT;
-		const result = await this.#client.rpc
+		const result = await this.#client.runtime.rpc
 			.getBalance(address, { commitment: chosenCommitment as KitCommitment })
 			.send();
 
@@ -1337,7 +1098,7 @@ export class Connection {
 			requestOptions.minContextSlot = minContextSlot;
 		}
 
-		const response = await this.#client.rpc.getLatestBlockhash(requestOptions as never).send();
+		const response = await this.#client.runtime.rpc.getLatestBlockhash(requestOptions as never).send();
 		const context = response.context as { slot: number | bigint; apiVersion?: string };
 
 		return {
@@ -1355,18 +1116,22 @@ export class Connection {
 
 	async getSlotLeader(commitment?: LegacyCommitment): Promise<string> {
 		const chosenCommitment = normalizeCommitment(commitment) ?? this.commitment ?? DEFAULT_COMMITMENT;
-		const response = await this.#client.rpc.getSlotLeader({ commitment: chosenCommitment as KitCommitment }).send();
+		const response = await this.#client.runtime.rpc
+			.getSlotLeader({ commitment: chosenCommitment as KitCommitment })
+			.send();
 		return response as string;
 	}
 
 	async getSlotLeaders(startSlot: number, limit: number): Promise<PublicKey[]> {
-		const response = await this.#client.rpc.getSlotLeaders(BigInt(startSlot), limit).send();
+		const response = await this.#client.runtime.rpc.getSlotLeaders(BigInt(startSlot), limit).send();
 		return (response as readonly string[]).map((addr) => new PublicKey(addr));
 	}
 
 	async getEpochInfo(commitment?: LegacyCommitment): Promise<EpochInfo> {
 		const chosenCommitment = normalizeCommitment(commitment) ?? this.commitment ?? DEFAULT_COMMITMENT;
-		const response = await this.#client.rpc.getEpochInfo({ commitment: chosenCommitment as KitCommitment }).send();
+		const response = await this.#client.runtime.rpc
+			.getEpochInfo({ commitment: chosenCommitment as KitCommitment })
+			.send();
 
 		const info = response as {
 			absoluteSlot: number | bigint;
@@ -1399,7 +1164,7 @@ export class Connection {
 		slotsPerEpoch: number;
 		warmup: boolean;
 	}> {
-		const response = await this.#client.rpc.getEpochSchedule().send();
+		const response = await this.#client.runtime.rpc.getEpochSchedule().send();
 		const schedule = response as {
 			firstNormalEpoch: number | bigint;
 			firstNormalSlot: number | bigint;
@@ -1429,7 +1194,7 @@ export class Connection {
 
 	async getLeaderSchedule(slot?: number, commitment?: LegacyCommitment): Promise<LeaderSchedule | null> {
 		const chosenCommitment = normalizeCommitment(commitment) ?? this.commitment ?? DEFAULT_COMMITMENT;
-		const response = await this.#client.rpc
+		const response = await this.#client.runtime.rpc
 			.getLeaderSchedule(slot !== undefined ? BigInt(slot) : (undefined as never), {
 				commitment: chosenCommitment as KitCommitment,
 			} as never)
@@ -1448,13 +1213,13 @@ export class Connection {
 	}
 
 	async getClusterNodes(): Promise<ContactInfo[]> {
-		const response = await this.#client.rpc.getClusterNodes().send();
+		const response = await this.#client.runtime.rpc.getClusterNodes().send();
 		return response as unknown as ContactInfo[];
 	}
 
 	async getVoteAccounts(commitment?: LegacyCommitment): Promise<VoteAccountStatus> {
 		const chosenCommitment = normalizeCommitment(commitment) ?? this.commitment ?? DEFAULT_COMMITMENT;
-		const response = await this.#client.rpc
+		const response = await this.#client.runtime.rpc
 			.getVoteAccounts({ commitment: chosenCommitment as KitCommitment })
 			.send();
 
@@ -1478,18 +1243,20 @@ export class Connection {
 	}
 
 	async getVersion(): Promise<Version> {
-		const response = await this.#client.rpc.getVersion().send();
+		const response = await this.#client.runtime.rpc.getVersion().send();
 		return response as unknown as Version;
 	}
 
 	async getHealth(): Promise<string> {
-		const response = await this.#client.rpc.getHealth().send();
+		const response = await this.#client.runtime.rpc.getHealth().send();
 		return response as string;
 	}
 
 	async getSupply(commitment?: LegacyCommitment): Promise<RpcResponseAndContext<Supply>> {
 		const chosenCommitment = normalizeCommitment(commitment) ?? this.commitment ?? DEFAULT_COMMITMENT;
-		const response = await this.#client.rpc.getSupply({ commitment: chosenCommitment as KitCommitment }).send();
+		const response = await this.#client.runtime.rpc
+			.getSupply({ commitment: chosenCommitment as KitCommitment })
+			.send();
 
 		const context = response.context as { slot: number | bigint };
 		const value = response.value as {
@@ -1520,7 +1287,7 @@ export class Connection {
 		const address = toKitAddressFromInput(tokenMintAddress);
 		const chosenCommitment = normalizeCommitment(commitment) ?? this.commitment ?? DEFAULT_COMMITMENT;
 
-		const response = await this.#client.rpc
+		const response = await this.#client.runtime.rpc
 			.getTokenSupply(address, { commitment: chosenCommitment as KitCommitment })
 			.send();
 
@@ -1558,7 +1325,7 @@ export class Connection {
 			requestOptions.filter = config.filter;
 		}
 
-		const response = await this.#client.rpc.getLargestAccounts(requestOptions as never).send();
+		const response = await this.#client.runtime.rpc.getLargestAccounts(requestOptions as never).send();
 		const context = response.context as { slot: number | bigint };
 		const values = response.value as readonly { address: string; lamports: number | bigint }[];
 
@@ -1590,7 +1357,7 @@ export class Connection {
 		const address = toKitAddressFromInput(mintAddress);
 		const chosenCommitment = normalizeCommitment(commitment) ?? this.commitment ?? DEFAULT_COMMITMENT;
 
-		const response = await this.#client.rpc
+		const response = await this.#client.runtime.rpc
 			.getTokenLargestAccounts(address, { commitment: chosenCommitment as KitCommitment })
 			.send();
 
@@ -1619,14 +1386,14 @@ export class Connection {
 
 	async getInflationGovernor(commitment?: LegacyCommitment): Promise<InflationGovernor> {
 		const chosenCommitment = normalizeCommitment(commitment) ?? this.commitment ?? DEFAULT_COMMITMENT;
-		const response = await this.#client.rpc
+		const response = await this.#client.runtime.rpc
 			.getInflationGovernor({ commitment: chosenCommitment as KitCommitment })
 			.send();
 		return response as unknown as InflationGovernor;
 	}
 
 	async getInflationRate(): Promise<InflationRate> {
-		const response = await this.#client.rpc.getInflationRate().send();
+		const response = await this.#client.runtime.rpc.getInflationRate().send();
 		const rate = response as {
 			epoch: number | bigint;
 			foundation: number;
@@ -1656,7 +1423,7 @@ export class Connection {
 			requestOptions.epoch = BigInt(epoch);
 		}
 
-		const response = await this.#client.rpc.getInflationReward(addrs, requestOptions as never).send();
+		const response = await this.#client.runtime.rpc.getInflationReward(addrs, requestOptions as never).send();
 
 		return (response as readonly (Record<string, unknown> | null)[]).map((reward) => {
 			if (!reward) return null;
@@ -1678,7 +1445,7 @@ export class Connection {
 
 	async getStakeMinimumDelegation(commitment?: LegacyCommitment): Promise<RpcResponseAndContext<number>> {
 		const chosenCommitment = normalizeCommitment(commitment) ?? this.commitment ?? DEFAULT_COMMITMENT;
-		const response = await this.#client.rpc
+		const response = await this.#client.runtime.rpc
 			.getStakeMinimumDelegation({ commitment: chosenCommitment as KitCommitment })
 			.send();
 
@@ -1694,25 +1461,25 @@ export class Connection {
 	}
 
 	async getFirstAvailableBlock(): Promise<number> {
-		const response = await this.#client.rpc.getFirstAvailableBlock().send();
+		const response = await this.#client.runtime.rpc.getFirstAvailableBlock().send();
 		return typeof response === 'bigint' ? Number(response) : (response as number);
 	}
 
 	async getTransactionCount(commitment?: LegacyCommitment): Promise<number> {
 		const chosenCommitment = normalizeCommitment(commitment) ?? this.commitment ?? DEFAULT_COMMITMENT;
-		const response = await this.#client.rpc
+		const response = await this.#client.runtime.rpc
 			.getTransactionCount({ commitment: chosenCommitment as KitCommitment })
 			.send();
 		return typeof response === 'bigint' ? Number(response) : (response as number);
 	}
 
 	async getGenesisHash(): Promise<string> {
-		const response = await this.#client.rpc.getGenesisHash().send();
+		const response = await this.#client.runtime.rpc.getGenesisHash().send();
 		return response as string;
 	}
 
 	async getRecentPerformanceSamples(limit?: number): Promise<PerfSample[]> {
-		const response = await this.#client.rpc.getRecentPerformanceSamples(limit as never).send();
+		const response = await this.#client.runtime.rpc.getRecentPerformanceSamples(limit as never).send();
 
 		return (response as readonly Record<string, unknown>[]).map((sample) => ({
 			numSlots: typeof sample.numSlots === 'bigint' ? Number(sample.numSlots) : (sample.numSlots as number),
@@ -1732,7 +1499,7 @@ export class Connection {
 	}
 
 	async getMinimumLedgerSlot(): Promise<number> {
-		const response = await this.#client.rpc.minimumLedgerSlot().send();
+		const response = await this.#client.runtime.rpc.minimumLedgerSlot().send();
 		return typeof response === 'bigint' ? Number(response) : (response as number);
 	}
 
@@ -1756,7 +1523,7 @@ export class Connection {
 			requestOptions.identity = config.identity;
 		}
 
-		const response = await this.#client.rpc.getBlockProduction(requestOptions as never).send();
+		const response = await this.#client.runtime.rpc.getBlockProduction(requestOptions as never).send();
 		const context = response.context as { slot: number | bigint };
 		const value = response.value as {
 			byIdentity: Record<string, readonly [number | bigint, number | bigint]>;
@@ -1812,7 +1579,7 @@ export class Connection {
 			requestOptions.minContextSlot = minContextSlot;
 		}
 
-		const response = await this.#client.rpc.getAccountInfo(address, requestOptions as never).send();
+		const response = await this.#client.runtime.rpc.getAccountInfo(address, requestOptions as never).send();
 		const context = response.context as { slot: number | bigint };
 		const value = response.value as unknown;
 
@@ -1845,7 +1612,7 @@ export class Connection {
 			requestOptions.minContextSlot = minContextSlot;
 		}
 
-		const response = await this.#client.rpc.getMultipleAccounts(addresses, requestOptions as never).send();
+		const response = await this.#client.runtime.rpc.getMultipleAccounts(addresses, requestOptions as never).send();
 		const context = response.context as { slot: number | bigint };
 		const values = response.value as readonly (unknown | null)[];
 
@@ -1882,7 +1649,9 @@ export class Connection {
 			requestOptions.minContextSlot = toBigInt(config.minContextSlot);
 		}
 
-		const response = await this.#client.rpc.getProgramAccounts(programAddress, requestOptions as never).send();
+		const response = await this.#client.runtime.rpc
+			.getProgramAccounts(programAddress, requestOptions as never)
+			.send();
 		const accounts = response as unknown as readonly { account: unknown; pubkey: string }[];
 
 		return accounts.map((item) => ({
@@ -1916,7 +1685,7 @@ export class Connection {
 			encoding: 'jsonParsed',
 		};
 
-		const response = await this.#client.rpc
+		const response = await this.#client.runtime.rpc
 			.getTokenAccountsByOwner(owner, filterArg, requestOptions as never)
 			.send();
 		const context = (response as { context: { slot: number | bigint } }).context;
@@ -1946,7 +1715,9 @@ export class Connection {
 			maxSupportedTransactionVersion: config?.maxSupportedTransactionVersion ?? 0,
 		};
 
-		const response = await this.#client.rpc.getTransaction(signature as Signature, requestOptions as never).send();
+		const response = await this.#client.runtime.rpc
+			.getTransaction(signature as Signature, requestOptions as never)
+			.send();
 
 		if (!response) {
 			return null;
@@ -1979,7 +1750,7 @@ export class Connection {
 			requestOptions.rewards = rawConfig.rewards;
 		}
 
-		const response = await this.#client.rpc.getBlock(BigInt(slot), requestOptions as never).send();
+		const response = await this.#client.runtime.rpc.getBlock(BigInt(slot), requestOptions as never).send();
 
 		if (!response) {
 			throw new Error(`Block ${slot} not found`);
@@ -2019,7 +1790,7 @@ export class Connection {
 
 		(async () => {
 			try {
-				const notifications = await this.#client.rpcSubscriptions
+				const notifications = await this.#client.runtime.rpcSubscriptions
 					.accountNotifications(address, { commitment: chosenCommitment as KitCommitment })
 					.subscribe({ abortSignal: abortController.signal });
 
@@ -2073,7 +1844,7 @@ export class Connection {
 					requestOptions.filters = filters;
 				}
 
-				const notifications = await this.#client.rpcSubscriptions
+				const notifications = await this.#client.runtime.rpcSubscriptions
 					.programNotifications(programAddress, requestOptions as never)
 					.subscribe({ abortSignal: abortController.signal });
 
@@ -2120,7 +1891,7 @@ export class Connection {
 
 		(async () => {
 			try {
-				const notifications = await this.#client.rpcSubscriptions
+				const notifications = await this.#client.runtime.rpcSubscriptions
 					.signatureNotifications(signature as Signature, { commitment: chosenCommitment as KitCommitment })
 					.subscribe({ abortSignal: abortController.signal });
 
@@ -2161,7 +1932,7 @@ export class Connection {
 					requestOptions.enableReceivedNotification = true;
 				}
 
-				const notifications = await this.#client.rpcSubscriptions
+				const notifications = await this.#client.runtime.rpcSubscriptions
 					.signatureNotifications(signature as Signature, requestOptions as never)
 					.subscribe({ abortSignal: abortController.signal });
 
@@ -2203,7 +1974,7 @@ export class Connection {
 
 		(async () => {
 			try {
-				const notifications = await this.#client.rpcSubscriptions
+				const notifications = await this.#client.runtime.rpcSubscriptions
 					.slotNotifications()
 					.subscribe({ abortSignal: abortController.signal });
 
@@ -2241,7 +2012,7 @@ export class Connection {
 		(async () => {
 			try {
 				// Note: slotsUpdatesNotifications may not be available on all RPC endpoints
-				const rpcSubscriptions = this.#client.rpcSubscriptions as unknown as {
+				const rpcSubscriptions = this.#client.runtime.rpcSubscriptions as unknown as {
 					slotsUpdatesNotifications: () => {
 						subscribe: (options: { abortSignal: AbortSignal }) => Promise<
 							AsyncIterable<{
@@ -2306,7 +2077,7 @@ export class Connection {
 
 		(async () => {
 			try {
-				const notifications = await this.#client.rpcSubscriptions
+				const notifications = await this.#client.runtime.rpcSubscriptions
 					.rootNotifications()
 					.subscribe({ abortSignal: abortController.signal });
 
@@ -2353,7 +2124,7 @@ export class Connection {
 
 		(async () => {
 			try {
-				const notifications = await this.#client.rpcSubscriptions
+				const notifications = await this.#client.runtime.rpcSubscriptions
 					.logsNotifications(logsFilter as never, { commitment: chosenCommitment as KitCommitment })
 					.subscribe({ abortSignal: abortController.signal });
 

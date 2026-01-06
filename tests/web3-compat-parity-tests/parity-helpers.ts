@@ -75,7 +75,7 @@ export const FIXTURES = {
 };
 
 const clientCoreMocks = vi.hoisted(() => ({
-	createSolanaRpcClient: vi.fn(),
+	createClient: vi.fn(),
 }));
 
 vi.mock('@solana/client', () => clientCoreMocks);
@@ -327,14 +327,11 @@ export function createProviders(): Provider[] {
 			setup: async () => {
 				const requests: RpcCall[] = [];
 				const rpc = createCompatRpcMock(requests);
-				clientCoreMocks.createSolanaRpcClient.mockReturnValue({
-					commitment: 'confirmed',
-					endpoint: DUMMY_HTTP_ENDPOINT,
-					websocketEndpoint: DUMMY_WS_ENDPOINT,
-					rpc,
-					rpcSubscriptions: {},
-					sendAndConfirmTransaction: vi.fn(),
-					simulateTransaction: vi.fn(),
+				clientCoreMocks.createClient.mockReturnValue({
+					runtime: {
+						rpc,
+						rpcSubscriptions: {},
+					},
 				});
 				const compat = await import('@solana/web3-compat');
 				const connection = new compat.Connection(DUMMY_HTTP_ENDPOINT, 'confirmed');
@@ -348,7 +345,7 @@ export function createProviders(): Provider[] {
 					VersionedTransaction: compat.VersionedTransaction,
 					requests,
 					cleanup: () => {
-						clientCoreMocks.createSolanaRpcClient.mockReset();
+						clientCoreMocks.createClient.mockReset();
 						vi.resetAllMocks();
 						vi.resetModules();
 					},

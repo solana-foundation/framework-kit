@@ -4,7 +4,7 @@ import type { WalletConnector } from '@solana/client';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createWalletSession } from '../test/fixtures';
-import { renderHookWithClient } from '../test/utils';
+import { renderHookWithClient, waitFor } from '../test/utils';
 
 import { useWalletConnection } from './ui';
 
@@ -64,5 +64,26 @@ describe('useWalletConnection', () => {
 
 		expect(result.current.connectorId).toBe(connector.id);
 		expect(result.current.currentConnector).toEqual(connector);
+	});
+
+	it('exposes isReady which becomes true after hydration', async () => {
+		const { result } = renderHookWithClient(() => useWalletConnection());
+
+		await waitFor(() => {
+			expect(result.current.isReady).toBe(true);
+		});
+	});
+
+	it('returns empty connectors before hydration is complete', async () => {
+		const clientConnectors = [createConnector('phantom')];
+		const { result } = renderHookWithClient(() => useWalletConnection(), {
+			clientOptions: { connectors: clientConnectors },
+		});
+
+		// After hydration, connectors should be available
+		await waitFor(() => {
+			expect(result.current.isReady).toBe(true);
+			expect(result.current.connectors).toEqual(clientConnectors);
+		});
 	});
 });

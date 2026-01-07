@@ -1,5 +1,11 @@
 # @solana/react-hooks
 
+## 1.3.0
+
+### Minor Changes
+
+- [#141](https://github.com/solana-foundation/framework-kit/pull/141) [`d220686`](https://github.com/solana-foundation/framework-kit/commit/d22068629b23490c083338169c10be7490b667d1) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Add `isReady` flag to `useWalletConnection` hook for SSR hydration support. This flag indicates when client-side hydration is complete and wallet data is available, allowing consumers to show a placeholder until the hook is ready and prevent hydration mismatches.
+
 ## 1.2.2
 
 ### Patch Changes

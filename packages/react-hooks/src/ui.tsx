@@ -6,18 +6,33 @@ import { useSolanaClient } from './context';
 import { useConnectWallet, useDisconnectWallet, useWallet } from './hooks';
 
 type WalletConnectionState = Readonly<{
+	/** Initiates a wallet connection using the specified connector. */
 	connect(
 		connectorId: string,
 		options?: Readonly<{ autoConnect?: boolean; allowInteractiveFallback?: boolean }>,
 	): Promise<WalletSession>;
+	/** Whether a wallet is currently connected. */
 	connected: boolean;
+	/** Whether a wallet connection is in progress. */
 	connecting: boolean;
+	/** List of available wallet connectors. Empty until `isReady` is true during SSR. */
 	connectors: readonly WalletConnector[];
+	/** The currently connected wallet connector, if any. */
 	currentConnector?: WalletConnector;
+	/** The ID of the currently connected connector, if any. */
 	connectorId?: string;
+	/** Disconnects the currently connected wallet. */
 	disconnect(): Promise<void>;
+	/** The error that occurred during connection, if any. */
 	error: unknown;
+	/**
+	 * Whether the hook has completed client-side hydration and is ready to use.
+	 * Use this to prevent SSR hydration mismatches by showing a placeholder until true.
+	 */
+	isReady: boolean;
+	/** The current wallet connection status. */
 	status: WalletStatus['status'];
+	/** The current wallet session, if connected. */
 	wallet: WalletSession | undefined;
 }>;
 
@@ -31,9 +46,16 @@ export type UseWalletConnectionReturnType = WalletConnectionState;
 /**
  * Collect everything needed to build wallet connection UIs into a single hook.
  *
+ * The `isReady` property indicates when client-side hydration is complete and wallet
+ * data is available. Use this to prevent SSR hydration mismatches by showing a
+ * placeholder until the hook is ready.
+ *
  * @example
  * ```tsx
- * const { connectors, connect, disconnect, status } = useWalletConnection();
+ * const { connectors, connect, isReady, status } = useWalletConnection();
+ *
+ * if (!isReady) return <WalletButtonSkeleton />;
+ *
  * return connectors.map((c) => (
  *   <button key={c.id} onClick={() => connect(c.id)} disabled={status === 'connecting'}>
  *     {c.name}
@@ -75,10 +97,11 @@ export function useWalletConnection(options: WalletConnectionOptions = {}): Wall
 			currentConnector,
 			disconnect,
 			error,
+			isReady: isHydrated,
 			status: wallet.status,
 			wallet: session,
 		};
-	}, [connect, connectors, disconnect, wallet]);
+	}, [connect, connectors, disconnect, isHydrated, wallet]);
 
 	return state;
 }

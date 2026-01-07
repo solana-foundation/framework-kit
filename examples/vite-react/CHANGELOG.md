@@ -1,5 +1,12 @@
 # @solana/example-vite-react
 
+## 0.0.31
+
+### Patch Changes
+
+- Updated dependencies [[`d220686`](https://github.com/solana-foundation/framework-kit/commit/d22068629b23490c083338169c10be7490b667d1)]:
+  - @solana/react-hooks@1.3.0
+
 ## 0.0.30
 
 ### Patch Changes

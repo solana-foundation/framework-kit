@@ -38,8 +38,8 @@ catalogs:
 
   # UI / React ecosystem
   react:
-    "react": "^19.0.0"
-    "react-dom": "^19.0.0"
+    "react": "^19.2.3"
+    "react-dom": "^19.2.3"
 
   # Shared utilities (only if used widely)
   utils:

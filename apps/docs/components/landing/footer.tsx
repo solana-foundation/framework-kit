@@ -35,13 +35,19 @@ export function Footer({ className }: { className?: string }) {
 								</Link>
 							</li>
 							<li>
-								<Link href="/blog" className="hover:text-primary transition-colors">
-									Blog
+								<Link
+									href="https://solana.com/developers/guides"
+									className="hover:text-primary transition-colors"
+								>
+									Guides
 								</Link>
 							</li>
 							<li>
-								<Link href="/examples" className="hover:text-primary transition-colors">
-									Examples
+								<Link
+									href="https://solana.com/developers/templates"
+									className="hover:text-primary transition-colors"
+								>
+									Templates
 								</Link>
 							</li>
 						</ul>

@@ -1,168 +1,219 @@
-# `@solana/web3-compat`
+# @solana/web3-compat
 
-Phase 0 of a backwards‑compatible surface that lets existing `@solana/web3.js`
-code run on top of Kit primitives.
+Drop-in replacement for `@solana/web3.js`. Same API, powered by `@solana/kit`.
 
-This package is designed to help migrate from web3.js to Kit.
-
-The goal of this release is **zero breaking changes** for applications that only
-touch the subset of web3.js APIs listed below. There will be future releases that slowly
-implement breaking changes as they move over to Kit primitives and intuitions.
-
-## Migrating from `@solana/web3.js`
-
-The migration process is straightforward and can be done incrementally:
-
-### Install the compatibility package
+## Install
 
 ```bash
-pnpm add @solana/web3-compat
+npm install @solana/web3-compat
 ```
 
-Make sure you also have the required Kit peer dependencies:
+## Quickstart
 
-```bash
-pnpm add @solana/kit @solana/client
+Swap the import:
+
+```ts
+// Before
+import { Connection, PublicKey, Keypair } from "@solana/web3.js";
+
+// After
+import { Connection, PublicKey, Keypair } from "@solana/web3-compat";
 ```
 
-### Update your imports
+That's it. Your existing code works as-is.
 
-Replace your web3.js imports with the compatibility layer. Both import styles are supported:
+## Common Solana flows (copy/paste)
 
-#### Named imports (TypeScript/ES6 style)
+### Get balance
 
-**Before:**
+```ts
+import { Connection, PublicKey } from "@solana/web3-compat";
+
+const connection = new Connection("https://api.devnet.solana.com");
+const balance = await connection.getBalance(
+  new PublicKey("Fg6PaFpoGXkYsidMpWFKfwtz6DhFVyG4dL1x8kj7ZJup")
+);
+console.log(`Balance: ${balance / 1e9} SOL`);
+```
+
+### Get account info
+
+```ts
+const accountInfo = await connection.getAccountInfo(publicKey);
+if (accountInfo) {
+  console.log("Lamports:", accountInfo.lamports);
+  console.log("Owner:", accountInfo.owner.toBase58());
+  console.log("Data length:", accountInfo.data.length);
+}
+```
+
+### Get latest blockhash
+
+```ts
+const { blockhash, lastValidBlockHeight } =
+  await connection.getLatestBlockhash();
+console.log("Blockhash:", blockhash);
+```
+
+### Send transaction
 
 ```ts
 import {
   Connection,
   Keypair,
-  PublicKey,
   SystemProgram,
   Transaction,
-  sendAndConfirmTransaction,
-} from "@solana/web3.js";
-```
-
-**After:**
-
-```ts
-import {
-  Connection,
-  Keypair,
-  PublicKey,
-  SystemProgram,
-  Transaction,
-  sendAndConfirmTransaction,
 } from "@solana/web3-compat";
+
+const connection = new Connection("https://api.devnet.solana.com");
+const sender = Keypair.generate();
+const recipient = Keypair.generate();
+
+const { blockhash } = await connection.getLatestBlockhash();
+
+const transaction = new Transaction().add(
+  SystemProgram.transfer({
+    fromPubkey: sender.publicKey,
+    toPubkey: recipient.publicKey,
+    lamports: 100_000_000, // 0.1 SOL
+  })
+);
+transaction.recentBlockhash = blockhash;
+transaction.feePayer = sender.publicKey;
+transaction.sign(sender);
+
+const signature = await connection.sendRawTransaction(transaction.serialize());
+console.log("Signature:", signature);
 ```
 
-#### Namespace imports
+### Confirm transaction
 
-**Before:**
+```ts
+// Simple confirmation
+const result = await connection.confirmTransaction(signature, "confirmed");
+console.log("Confirmed:", result.value?.err === null);
 
-```js
-const solanaWeb3 = require("@solana/web3.js");
-const connection = new solanaWeb3.Connection(
-  "https://api.mainnet-beta.solana.com"
+// With blockhash strategy
+const result = await connection.confirmTransaction(
+  { signature, blockhash, lastValidBlockHeight },
+  "confirmed"
 );
 ```
 
-**After:**
+### Get program accounts
 
-```js
-const solanaWeb3 = require("@solana/web3-compat");
-const connection = new solanaWeb3.Connection(
-  "https://api.mainnet-beta.solana.com"
+```ts
+const TOKEN_PROGRAM = new PublicKey(
+  "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
 );
+
+const accounts = await connection.getProgramAccounts(TOKEN_PROGRAM, {
+  filters: [{ dataSize: 165 }], // Token account size
+});
+
+accounts.forEach(({ pubkey, account }) => {
+  console.log("Address:", pubkey.toBase58());
+  console.log("Lamports:", account.lamports);
+});
 ```
 
-Or with ES6 modules:
+### Request airdrop
 
 ```ts
-import * as solanaWeb3 from "@solana/web3-compat";
+const signature = await connection.requestAirdrop(
+  publicKey,
+  1_000_000_000 // 1 SOL
+);
+await connection.confirmTransaction(signature);
+console.log("Airdrop confirmed");
 ```
 
-### (Optional): Leverage Kit features
-
-You can gradually adopt Kit primitives alongside the compatibility layer using bridge helpers:
+### Simulate transaction
 
 ```ts
-import { toAddress, toPublicKey, toKitSigner } from "@solana/web3-compat";
-
-// Convert between web3.js and Kit types
-const web3PublicKey = new PublicKey("11111111111111111111111111111111");
-const kitAddress = toAddress(web3PublicKey);
-
-// Convert back if needed
-const backToWeb3 = toPublicKey(kitAddress);
+const simulation = await connection.simulateTransaction(transaction);
+console.log("Logs:", simulation.value.logs);
+console.log("Error:", simulation.value.err);
 ```
 
-### Migration checklist
+### Get token accounts
 
-- [ ] Install `@solana/web3-compat` and Kit dependencies
-- [ ] Update import statements from `@solana/web3.js` to `@solana/web3-compat`
-- [ ] Test your application
-- [ ] Keep legacy `@solana/web3.js` for any unimplemented methods (see limitations below)
+```ts
+const tokenAccounts = await connection.getTokenAccountsByOwner(ownerPublicKey, {
+  programId: TOKEN_PROGRAM,
+});
 
-## Implemented in Phase 0
-
-- `Connection` backed by Kit with support for:
-  - `getLatestBlockhash`
-  - `getBalance`
-  - `getAccountInfo`
-  - `getProgramAccounts`
-  - `getSignatureStatuses`
-  - `sendRawTransaction`
-  - `confirmTransaction`
-  - `simulateTransaction`
-- Bridge helpers re-exported from `@solana/compat`:
-  - `toAddress`, `toPublicKey`, `toWeb3Instruction`, `toKitSigner`
-- Programs:
-  - `SystemProgram.transfer` (manual u8/u64 little‑endian encoding)
-- Utilities:
-  - `LAMPORTS_PER_SOL`
-  - `compileFromCompat`
-  - `sendAndConfirmTransaction`
-- Re‑exports of all Web3 primitives (`PublicKey`, `Keypair`, `Transaction`,
-  `VersionedTransaction`, `TransactionInstruction`, etc)
-
-## Running package locally
-
-### Building the package
-
-```bash
-# Build TypeScript definitions
-pnpm --filter @solana/web3-compat build
-
-# Or build components separately
-pnpm --filter @solana/web3-compat compile:js
-pnpm --filter @solana/web3-compat compile:typedefs
+tokenAccounts.value.forEach(({ pubkey, account }) => {
+  console.log("Token account:", pubkey.toBase58());
+});
 ```
 
-### Running tests
+### WebSocket subscriptions
 
-```bash
-# Run all tests
-pnpm --filter @solana/web3-compat test
+```ts
+// Watch account changes
+const subscriptionId = connection.onAccountChange(publicKey, (accountInfo) => {
+  console.log("Account updated:", accountInfo.lamports);
+});
+
+// Later: unsubscribe
+await connection.removeAccountChangeListener(subscriptionId);
+
+// Watch slot changes
+const slotSubscription = connection.onSlotChange((slotInfo) => {
+  console.log("New slot:", slotInfo.slot);
+});
 ```
 
-## Known limitations & edge cases
+## Migration to @solana/client
 
-Phase 0 does not fully replace web3.js. Notable gaps:
+Access the underlying `SolanaClient` for gradual migration:
 
-- Only the Connection methods listed above are implemented. Any other Web3 call
-  (e.g. `getTransaction`, subscriptions, `requestAirdrop`) still needs the
-  legacy connection for now
-- `getProgramAccounts` currently returns just the value array even when
-  `withContext: true` is supplied
-- Account data is decoded from `base64` only. Other encodings such as
-  `jsonParsed` or `base64+zstd` are passed through to Kit but not post‑processed
-- Numeric fields are coerced to JavaScript `number`s to match Web3 behaviour,
-  which means values above `Number.MAX_SAFE_INTEGER` will lose precision (which is how it
-  currently works)
-- The compatibility layer does not yet try to normalise websocket connection
-  options or retry policies that web3.js exposes
+```ts
+import { Connection } from "@solana/web3-compat";
 
-Future phases will expand coverage and introduce intentional
-breaking changes once users have an easy migration path.
+const connection = new Connection("https://api.devnet.solana.com");
+
+// Get the SolanaClient instance
+const client = connection.client;
+
+// Use @solana/client features
+await client.actions.connectWallet("phantom");
+const wallet = client.store.getState().wallet;
+if (wallet.status === "connected") {
+  console.log("Connected:", wallet.session.account.address);
+}
+```
+
+## Bridge helpers
+
+Convert between web3.js and Kit types:
+
+```ts
+import {
+  toAddress,
+  toPublicKey,
+  toKitSigner,
+  toWeb3Instruction,
+} from "@solana/web3-compat";
+
+// web3.js PublicKey → Kit Address
+const address = toAddress(publicKey);
+
+// Kit Address → web3.js PublicKey
+const pubkey = toPublicKey(address);
+
+// web3.js Keypair → Kit Signer
+const signer = toKitSigner(keypair);
+
+// Kit Instruction → web3.js TransactionInstruction
+const instruction = toWeb3Instruction(kitInstruction);
+```
+
+## Notes
+
+- Re-exports all `@solana/web3.js` types (`PublicKey`, `Keypair`, `Transaction`, etc.)
+- Numeric fields coerced to `number` to match web3.js behavior
+- `LAMPORTS_PER_SOL` and `sendAndConfirmTransaction` available as utilities
+
+> **Future direction:** This package provides a migration path from `@solana/web3.js` to `@solana/kit`. Over time, more APIs will be deprecated in favor of Kit-native implementations. Use `connection.client` to gradually adopt `@solana/client` features.

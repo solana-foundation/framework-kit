@@ -229,6 +229,13 @@ jobs:
             echo "Skipping changeset check due to skip-changeset label"
             exit 0
           fi
+          
+          # Skip changeset check for docs-only changes (apps/docs)
+          NON_DOCS_CHANGES=$(git diff --name-only origin/main...HEAD -- . ':(exclude)apps/docs/**' ':(exclude).changeset/**' || true)
+          if [ -z "$NON_DOCS_CHANGES" ]; then
+            echo "Skipping changeset check due to docs-only changes in apps/docs"
+            exit 0
+          fi
 
           # Check if there are any new changeset files
           CHANGESETS=$(git diff --name-only origin/main...HEAD -- '.changeset/*.md' | grep -v 'README.md' || true)

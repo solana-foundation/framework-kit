@@ -1,0 +1,334 @@
+---
+title: Getting Started
+description: Install and configure Framework Kit in under 5 minutes
+---
+
+Pick the packages you need and start building.
+
+| Use Case | Install |
+| --- | --- |
+| Any JS runtime (Node, Bun, Deno, browser, workers) | [`@solana/client`](/docs/client) |
+| React applications | [`@solana/client`](/docs/client) [`@solana/react-hooks`](/docs/react-hooks) |
+| Migrating from @solana/web3.js | [`@solana/web3-compat`](/docs/web3-compat) |
+
+## Installation
+
+### Client Only (Any Runtime)
+
+<Tabs groupId="pkg" items={['npm', 'pnpm', 'yarn', 'bun']} persist>
+  <Tab value="npm">
+```bash
+npm install @solana/client
+```
+  </Tab>
+  <Tab value="pnpm">
+```bash
+pnpm add @solana/client
+```
+  </Tab>
+  <Tab value="yarn">
+```bash
+yarn add @solana/client
+```
+  </Tab>
+  <Tab value="bun">
+```bash
+bun add @solana/client
+```
+  </Tab>
+</Tabs>
+
+### With React Hooks
+
+<Tabs groupId="pkg" items={['npm', 'pnpm', 'yarn', 'bun']} persist>
+  <Tab value="npm">
+```bash
+npm install @solana/client @solana/react-hooks
+```
+  </Tab>
+  <Tab value="pnpm">
+```bash
+pnpm add @solana/client @solana/react-hooks
+```
+  </Tab>
+  <Tab value="yarn">
+```bash
+yarn add @solana/client @solana/react-hooks
+```
+  </Tab>
+  <Tab value="bun">
+```bash
+bun add @solana/client @solana/react-hooks
+```
+  </Tab>
+</Tabs>
+
+### Migration Package
+
+<Tabs groupId="pkg" items={['npm', 'pnpm', 'yarn', 'bun']} persist>
+  <Tab value="npm">
+```bash
+npm install @solana/web3-compat
+```
+  </Tab>
+  <Tab value="pnpm">
+```bash
+pnpm add @solana/web3-compat
+```
+  </Tab>
+  <Tab value="yarn">
+```bash
+yarn add @solana/web3-compat
+```
+  </Tab>
+  <Tab value="bun">
+```bash
+bun add @solana/web3-compat
+```
+  </Tab>
+</Tabs>
+
+## Requirements
+
+- Node.js 20.18.0+, Bun 1.0+, or Deno 1.40+
+- TypeScript 5.3.3+ (recommended)
+- React 18+ (only if using `@solana/react-hooks`)
+
+## Basic Setup
+
+### Using the Client (Any Framework)
+
+The client works standalone in any JavaScript environment:
+
+```ts
+import { autoDiscover, createClient } from "@solana/client";
+
+const client = createClient({
+  cluster: "devnet",
+  walletConnectors: autoDiscover(), // Finds installed wallet extensions
+});
+
+// Connect to a wallet
+const connectors = client.connectors.all;
+await client.actions.connectWallet(connectors[0].id);
+
+// Access wallet state
+const wallet = client.store.getState().wallet;
+if (wallet.status === "connected") {
+  console.log("Connected:", wallet.session.account.address.toString());
+}
+
+// Fetch balance
+const balance = await client.actions.fetchBalance(wallet.session.account.address);
+console.log(`Balance: ${balance.toString()} lamports`);
+```
+
+### Using React Hooks
+
+For React apps, wrap your app with the provider and use hooks:
+
+#### 1. Create a Solana Client
+
+```tsx
+// lib/solana.ts
+import { autoDiscover, createClient } from "@solana/client";
+
+export const client = createClient({
+  cluster: "devnet",
+  walletConnectors: autoDiscover(),
+});
+```
+
+#### 2. Wrap Your App with SolanaProvider
+
+```tsx
+// app/providers.tsx (or your root component)
+import { SolanaProvider } from "@solana/react-hooks";
+import { client } from "@/lib/solana";
+
+export function Providers({ children }: { children: React.ReactNode }) {
+  return (
+    <SolanaProvider client={client}>
+      {children}
+    </SolanaProvider>
+  );
+}
+```
+
+#### 3. Use Hooks in Components
+
+```tsx
+import { useWalletConnection, useBalance } from "@solana/react-hooks";
+
+function WalletPanel() {
+  const { connectors, connect, disconnect, wallet, status } = useWalletConnection();
+  const address = wallet?.account.address;
+  const balance = useBalance(address);
+
+  if (status === "connected") {
+    return (
+      <div>
+        <p>{address?.toString()}</p>
+        <p>Balance: {balance.lamports?.toString() ?? "loading..."}</p>
+        <button onClick={disconnect}>Disconnect</button>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {connectors.map((c) => (
+        <button key={c.id} onClick={() => connect(c.id)}>
+          Connect {c.name}
+        </button>
+      ))}
+    </div>
+  );
+}
+```
+
+## Next.js Setup
+
+When using Next.js with the App Router, components that use hooks must be client components.
+
+```tsx
+'use client';
+
+import { useWalletConnection } from "@solana/react-hooks";
+
+export function WalletButton() {
+  const { connect, connectors } = useWalletConnection();
+  // ...
+}
+```
+
+Create the client in a separate file and import it where needed:
+
+```tsx
+// lib/solana.ts
+import { autoDiscover, createClient } from "@solana/client";
+
+export const client = createClient({
+  cluster: "devnet",
+  walletConnectors: autoDiscover(),
+});
+```
+
+```tsx
+// app/providers.tsx
+'use client';
+
+import { SolanaProvider } from "@solana/react-hooks";
+import { client } from "@/lib/solana";
+
+export function Providers({ children }: { children: React.ReactNode }) {
+  return (
+    <SolanaProvider client={client}>
+      {children}
+    </SolanaProvider>
+  );
+}
+```
+
+## Node.js / Bun Scripts
+
+The client works great for scripts, CLIs, and backend services:
+
+```ts
+// scripts/check-balance.ts
+import { createClient, toAddress } from "@solana/client";
+
+const client = createClient({
+  cluster: "mainnet",
+});
+
+const address = toAddress("Fg6PaFpoGXkYsidMpWFKfwtz6DhFVyG4dL1x8kj7ZJup");
+const balance = await client.actions.fetchBalance(address);
+
+console.log(`Balance: ${balance.toString()} lamports`);
+```
+
+Run with your preferred runtime:
+
+<Tabs groupId="pkg" items={['npm', 'pnpm', 'yarn', 'bun']} persist>
+  <Tab value="npm">
+```bash
+npx tsx scripts/check-balance.ts
+```
+  </Tab>
+  <Tab value="pnpm">
+```bash
+pnpm dlx tsx scripts/check-balance.ts
+```
+  </Tab>
+  <Tab value="yarn">
+```bash
+yarn dlx tsx scripts/check-balance.ts
+```
+  </Tab>
+  <Tab value="bun">
+```bash
+bun scripts/check-balance.ts
+```
+  </Tab>
+</Tabs>
+
+## Cluster Configuration
+
+Framework Kit supports multiple Solana networks:
+
+| Moniker | Endpoint |
+| --- | --- |
+| `mainnet` / `mainnet-beta` | `https://api.mainnet-beta.solana.com` |
+| `testnet` | `https://api.testnet.solana.com` |
+| `devnet` (default) | `https://api.devnet.solana.com` |
+| `localnet` / `localhost` | `http://127.0.0.1:8899` |
+
+```ts
+const client = createClient({
+  cluster: "mainnet", // or 'devnet' | 'testnet' | 'localnet'
+  walletConnectors: autoDiscover(),
+});
+```
+
+Or use a custom endpoint:
+
+```ts
+const client = createClient({
+  endpoint: "https://my-rpc-provider.com",
+  websocketEndpoint: "wss://my-rpc-provider.com", // optional
+  walletConnectors: autoDiscover(),
+});
+```
+
+## Wallet Filtering
+
+Show only specific wallets in your app:
+
+```ts
+import { autoDiscover, createClient, filterByNames } from "@solana/client";
+
+const client = createClient({
+  cluster: "devnet",
+  walletConnectors: autoDiscover({
+    filter: filterByNames("phantom", "solflare"),
+  }),
+});
+```
+
+Or use a custom filter function:
+
+```ts
+const client = createClient({
+  cluster: "devnet",
+  walletConnectors: autoDiscover({
+    filter: (wallet) => wallet.name.toLowerCase().includes("phantom"),
+  }),
+});
+```
+
+## What's Next?
+
+- [Client API](/docs/client) - Full documentation for the framework-agnostic client
+- [React Hooks](/docs/react-hooks) - All available hooks for React apps
+- [Web3 Compatibility](/docs/web3-compat) - Migrate from @solana/web3.js

@@ -1,0 +1,120 @@
+---
+title: Framework Kit
+description: Developer tools for Solana built on Solana Kit
+---
+
+A family of libraries for building production-ready Solana apps. Use the universal client in any JavaScript runtime, add React hooks for reactive UIs, or migrate existing web3.js code incrementally.
+
+## Packages
+
+| Package | Description |
+| --- | --- |
+| [@solana/client](/docs/client) | Framework-agnostic client for wallets, RPC, and transactions. Works in React, Svelte, Vue, Node.js, Bun, workers, or any JavaScript runtime. |
+| [@solana/react-hooks](/docs/react-hooks) | React hooks and provider built on the client. Reactive state for balances, wallets, and transactions. |
+| [@solana/web3-compat](/docs/web3-compat) | Compatibility layer for migrating from `@solana/web3.js`. Keep using familiar APIs while adopting Solana Kit under the hood. |
+
+## Why Framework Kit?
+
+Building Solana apps usually means wiring together RPC connections, wallet adapters, and state management yourself. Framework Kit handles this for you:
+
+- **Universal client** - One client that works everywhere: browsers, servers, edge functions, workers
+- **Wallet Standard support** - Auto-discover installed wallets with a unified connection API
+- **Real-time subscriptions** - Watch balances, accounts, and signatures with WebSocket subscriptions
+- **Token operations** - Built-in helpers for SOL transfers and SPL token operations
+- **TypeScript-first** - Full type inference and autocomplete out of the box
+- **Incremental adoption** - Start with web3-compat, migrate to client, add React hooks when ready
+
+## Quick Start
+
+### Using the Client (Any Framework)
+
+The client works in any JavaScript environment:
+
+```ts
+import { autoDiscover, createClient } from "@solana/client";
+
+const client = createClient({
+  cluster: "devnet",
+  walletConnectors: autoDiscover(),
+});
+
+// Connect a wallet
+const connectors = client.connectors.all;
+await client.actions.connectWallet(connectors[0].id);
+
+// Fetch balance
+const wallet = client.store.getState().wallet;
+if (wallet.status === "connected") {
+  const balance = await client.actions.fetchBalance(wallet.session.account.address);
+  console.log(`Balance: ${balance.toString()} lamports`);
+}
+
+// Send SOL
+const signature = await client.solTransfer.sendTransfer({
+  amount: 100_000_000n, // 0.1 SOL
+  authority: wallet.session,
+  destination: "Fg6PaFpoGXkYsidMpWFKfwtz6DhFVyG4dL1x8kj7ZJup",
+});
+```
+
+### Using React Hooks
+
+For React apps, wrap once with the provider and use hooks anywhere:
+
+```tsx
+import { autoDiscover, createClient } from "@solana/client";
+import { SolanaProvider, useWalletConnection, useBalance } from "@solana/react-hooks";
+
+const client = createClient({
+  cluster: "devnet",
+  walletConnectors: autoDiscover(),
+});
+
+function WalletPanel() {
+  const { connectors, connect, disconnect, wallet, status } = useWalletConnection();
+  const { lamports } = useBalance(wallet?.account.address);
+
+  if (status === "connected") {
+    return (
+      <div>
+        <p>{wallet.account.address.toString()}</p>
+        <p>Balance: {lamports?.toString() ?? "..."} lamports</p>
+        <button onClick={disconnect}>Disconnect</button>
+      </div>
+    );
+  }
+
+  return connectors.map((c) => (
+    <button key={c.id} onClick={() => connect(c.id)}>
+      Connect {c.name}
+    </button>
+  ));
+}
+
+export function App() {
+  return (
+    <SolanaProvider client={client}>
+      <WalletPanel />
+    </SolanaProvider>
+  );
+}
+```
+
+### Migrating from web3.js
+
+If you have existing code using `@solana/web3.js`, swap imports to start migrating:
+
+```diff
+- import { Connection, PublicKey } from "@solana/web3.js";
++ import { Connection, PublicKey } from "@solana/web3-compat";
+
+const connection = new Connection("https://api.devnet.solana.com");
+const balance = await connection.getBalance(publicKey);
+```
+
+## Next Steps
+
+- [Getting Started](/docs/getting-started) - Install and configure your first project
+- [Client API](/docs/client) - Core library for any JavaScript runtime
+- [React Hooks](/docs/react-hooks) - Reactive hooks for React apps
+- [Migration Guide](/docs/web3-compat) - Migrate from @solana/web3.js

@@ -1,0 +1,279 @@
+---
+title: "@solana/web3-compat"
+description: Compatibility layer for migrating from @solana/web3.js
+---
+
+Drop-in replacement for `@solana/web3.js` that uses Solana Kit under the hood. Migrate your existing code incrementally without rewriting everything at once.
+
+## Installation
+
+<Tabs groupId="pkg" items={['npm', 'pnpm', 'yarn', 'bun']} persist>
+  <Tab value="npm">
+```bash
+npm install @solana/web3-compat
+```
+  </Tab>
+  <Tab value="pnpm">
+```bash
+pnpm add @solana/web3-compat
+```
+  </Tab>
+  <Tab value="yarn">
+```bash
+yarn add @solana/web3-compat
+```
+  </Tab>
+  <Tab value="bun">
+```bash
+bun add @solana/web3-compat
+```
+  </Tab>
+</Tabs>
+
+## Purpose
+
+If you have existing code using `@solana/web3.js`, this package lets you:
+
+1. Keep using familiar APIs like `Connection`, `PublicKey`, and `Transaction`
+2. Gradually migrate to the new Solana Kit primitives
+3. Interoperate between old and new code in the same project
+
+## Re-exports
+
+The package re-exports core types from `@solana/web3.js`:
+
+```ts
+import {
+  Keypair,
+  PublicKey,
+  Transaction,
+  TransactionInstruction,
+  VersionedTransaction,
+} from "@solana/web3-compat";
+```
+
+## Connection
+
+The `Connection` class provides a web3.js-compatible interface backed by Solana Kit:
+
+```ts
+import { Connection } from "@solana/web3-compat";
+
+const connection = new Connection("https://api.devnet.solana.com");
+
+// Use familiar web3.js methods
+const balance = await connection.getBalance(publicKey);
+const slot = await connection.getSlot();
+const blockhash = await connection.getLatestBlockhash();
+```
+
+## Bridge Functions
+
+Convert between web3.js and Kit types:
+
+### Address Conversion
+
+```ts
+import { toAddress, toPublicKey } from "@solana/web3-compat";
+import { PublicKey } from "@solana/web3.js";
+
+// web3.js PublicKey to Kit Address
+const publicKey = new PublicKey("Fg6PaFpoGXkYsidMpWFKfwtz6DhFVyG4dL1x8kj7ZJup");
+const address = toAddress(publicKey);
+
+// Kit Address to web3.js PublicKey
+const backToPublicKey = toPublicKey(address);
+```
+
+### Instruction Conversion
+
+```ts
+import { fromWeb3Instruction, toWeb3Instruction } from "@solana/web3-compat";
+
+// web3.js TransactionInstruction to Kit instruction
+const kitInstruction = fromWeb3Instruction(web3Instruction);
+
+// Kit instruction to web3.js TransactionInstruction
+const web3Instruction = toWeb3Instruction(kitInstruction);
+```
+
+### Signer Conversion
+
+```ts
+import { toKitSigner } from "@solana/web3-compat";
+import { Keypair } from "@solana/web3.js";
+
+// web3.js Keypair to Kit signer
+const keypair = Keypair.generate();
+const kitSigner = toKitSigner(keypair);
+```
+
+## System Program
+
+The `SystemProgram` provides web3.js-compatible static methods:
+
+```ts
+import { SystemProgram, PublicKey } from "@solana/web3-compat";
+
+const instruction = SystemProgram.transfer({
+  fromPubkey: senderPublicKey,
+  toPubkey: recipientPublicKey,
+  lamports: 1000000,
+});
+```
+
+## Utilities
+
+### Send and Confirm Transaction
+
+```ts
+import { sendAndConfirmTransaction, Connection, Transaction } from "@solana/web3-compat";
+
+const signature = await sendAndConfirmTransaction(
+  connection,
+  transaction,
+  [signer],
+);
+```
+
+### Compile from Compat
+
+Convert web3.js transactions to Kit format:
+
+```ts
+import { compileFromCompat } from "@solana/web3-compat";
+
+const kitTransaction = compileFromCompat(web3Transaction);
+```
+
+### Constants
+
+```ts
+import { LAMPORTS_PER_SOL } from "@solana/web3-compat";
+
+const solAmount = lamports / LAMPORTS_PER_SOL;
+```
+
+## Migration Guide
+
+### Step 1: Install the Compatibility Package
+
+<Tabs groupId="pkg" items={['npm', 'pnpm', 'yarn', 'bun']} persist>
+  <Tab value="npm">
+```bash
+npm install @solana/web3-compat @solana/client
+```
+  </Tab>
+  <Tab value="pnpm">
+```bash
+pnpm add @solana/web3-compat @solana/client
+```
+  </Tab>
+  <Tab value="yarn">
+```bash
+yarn add @solana/web3-compat @solana/client
+```
+  </Tab>
+  <Tab value="bun">
+```bash
+bun add @solana/web3-compat @solana/client
+```
+  </Tab>
+</Tabs>
+
+### Step 2: Update Imports
+
+Replace `@solana/web3.js` imports with `@solana/web3-compat`:
+
+```diff
+- import { Connection, PublicKey, Transaction } from "@solana/web3.js";
++ import { Connection, PublicKey, Transaction } from "@solana/web3-compat";
+```
+
+### Step 3: Gradually Migrate to Kit
+
+As you update components, start using `@solana/client` directly:
+
+```tsx
+// Old code using web3-compat
+import { Connection } from "@solana/web3-compat";
+const connection = new Connection(endpoint);
+const balance = await connection.getBalance(publicKey);
+
+// New code using @solana/client
+import { createClient } from "@solana/client";
+const client = createClient({ endpoint });
+const balance = await client.actions.fetchBalance(address);
+```
+
+### Step 4: Use React Hooks
+
+For React apps, migrate to hooks for cleaner code:
+
+```tsx
+// Old approach
+const [balance, setBalance] = useState<number | null>(null);
+useEffect(() => {
+  connection.getBalance(publicKey).then(setBalance);
+}, [publicKey]);
+
+// New approach with hooks
+const { lamports } = useBalance(address);
+```
+
+## Interoperability Example
+
+Mix old and new code in the same project:
+
+```tsx
+import { PublicKey } from "@solana/web3-compat";
+import { toAddress } from "@solana/web3-compat";
+import { useBalance } from "@solana/react-hooks";
+
+function BalanceDisplay({ publicKey }: { publicKey: PublicKey }) {
+  // Convert web3.js PublicKey to Kit address
+  const address = toAddress(publicKey);
+
+  // Use modern hooks
+  const { lamports } = useBalance(address);
+
+  return <p>Balance: {lamports?.toString()}</p>;
+}
+```
+
+## API Reference
+
+### Re-exports from @solana/web3.js
+
+| Export | Description |
+| --- | --- |
+| `Keypair` | Key pair for signing |
+| `PublicKey` | Public key representation |
+| `Transaction` | Legacy transaction |
+| `TransactionInstruction` | Transaction instruction |
+| `VersionedTransaction` | Versioned transaction |
+
+### Bridge Functions
+
+| Function | Description |
+| --- | --- |
+| `toAddress(publicKey)` | Convert PublicKey to Kit Address |
+| `toPublicKey(address)` | Convert Kit Address to PublicKey |
+| `fromWeb3Instruction(ix)` | Convert web3.js instruction to Kit |
+| `toWeb3Instruction(ix)` | Convert Kit instruction to web3.js |
+| `toKitSigner(keypair)` | Convert Keypair to Kit signer |
+
+### Classes
+
+| Class | Description |
+| --- | --- |
+| `Connection` | web3.js-compatible RPC connection |
+| `SystemProgram` | System program instructions |
+
+### Utilities
+
+| Function | Description |
+| --- | --- |
+| `sendAndConfirmTransaction` | Send and confirm a transaction |
+| `compileFromCompat` | Compile web3.js tx to Kit format |
+| `LAMPORTS_PER_SOL` | Lamports per SOL constant |

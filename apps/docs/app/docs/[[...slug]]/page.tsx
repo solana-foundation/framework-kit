@@ -1,3 +1,4 @@
+import type { TOCItemType } from 'fumadocs-core/toc';
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
 import defaultMdxComponents from 'fumadocs-ui/mdx';
 import { DocsBody, DocsDescription, DocsPage, DocsTitle } from 'fumadocs-ui/page';
@@ -8,8 +9,8 @@ import { source } from '@/lib/source';
 type PageData = {
 	title: string;
 	description?: string;
-	toc?: unknown;
-	full?: unknown;
+	toc?: TOCItemType[];
+	full?: boolean;
 	body?: ComponentType<{ components?: Record<string, unknown> }>;
 	default?: ComponentType<{ components?: Record<string, unknown> }>;
 };

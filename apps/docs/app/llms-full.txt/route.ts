@@ -40,8 +40,8 @@ export async function GET() {
 		// Read the raw MDX file content
 		try {
 			// Construct file path from URL
-			// URL format: /docs/client -> client.mdx
-			const slug = url.replace('/docs/', '');
+			// URL format: /docs/client -> client.mdx, /docs -> index.mdx
+			const slug = url.replace(/^\/docs\/?/, '');
 			const fileName = slug === '' ? 'index.mdx' : `${slug}.mdx`;
 			const fullPath = join(process.cwd(), 'content', 'docs', fileName);
 			const rawContent = await readFile(fullPath, 'utf-8');

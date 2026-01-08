@@ -1,0 +1,4 @@
+{
+	"title": "Documentation",
+	"pages": ["index", "getting-started", "client", "react-hooks", "web3-compat", "api-reference"]
+}

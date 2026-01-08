@@ -1,0 +1,12 @@
+# robots.txt for Framework Kit Documentation
+
+# Allow all crawlers
+User-agent: *
+Allow: /
+
+# Explicitly allow LLM.txt files for AI systems
+Allow: /llms.txt
+Allow: /llms-full.txt
+
+# Allow sitemap
+Sitemap: https://framework-kit.dev/sitemap.xml

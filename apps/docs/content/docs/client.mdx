@@ -1,0 +1,368 @@
+---
+title: "@solana/client"
+description: Framework-agnostic client for RPC, wallets, and transactions
+---
+
+Framework-agnostic building blocks for Solana. Works in any runtime: React, Svelte, Vue, Node.js, Bun, Deno, Cloudflare Workers, or plain browser scripts.
+
+## Installation
+
+<Tabs groupId="pkg" items={['npm', 'pnpm', 'yarn', 'bun']} persist>
+  <Tab value="npm">
+```bash
+npm install @solana/client
+```
+  </Tab>
+  <Tab value="pnpm">
+```bash
+pnpm add @solana/client
+```
+  </Tab>
+  <Tab value="yarn">
+```bash
+yarn add @solana/client
+```
+  </Tab>
+  <Tab value="bun">
+```bash
+bun add @solana/client
+```
+  </Tab>
+</Tabs>
+
+## Creating a Client
+
+```ts
+import { autoDiscover, createClient } from "@solana/client";
+
+const client = createClient({
+  endpoint: "https://api.devnet.solana.com",
+  websocketEndpoint: "wss://api.devnet.solana.com",
+  walletConnectors: autoDiscover(),
+});
+```
+
+## Wallet Connection
+
+### Connect and Disconnect
+
+```ts
+// Get available connectors
+const connectors = client.connectors.all;
+
+// Connect to a wallet
+await client.actions.connectWallet(connectors[0].id);
+
+// Check wallet state
+const wallet = client.store.getState().wallet;
+if (wallet.status === "connected") {
+  console.log(wallet.session.account.address.toString());
+}
+
+// Disconnect
+await client.actions.disconnectWallet();
+```
+
+### Wallet Connectors
+
+Framework Kit uses the Wallet Standard for wallet discovery:
+
+```ts
+import { autoDiscover, filterByNames } from "@solana/client";
+
+// Auto-discover all installed wallets
+const connectors = autoDiscover();
+
+// Filter to specific wallets
+const filteredConnectors = autoDiscover({
+  filter: filterByNames("phantom", "solflare"),
+});
+
+// Custom filter function
+const customConnectors = autoDiscover({
+  filter: (wallet) => wallet.name.toLowerCase().includes("phantom"),
+});
+```
+
+Built-in wallet connectors for explicit control:
+
+```ts
+import { phantom, solflare, backpack, metamask, injected } from "@solana/client";
+
+const client = createClient({
+  cluster: "devnet",
+  walletConnectors: [phantom(), solflare(), backpack()],
+});
+```
+
+## Fetching Data
+
+### Account Data
+
+```ts
+import { toAddress } from "@solana/client";
+
+const address = toAddress("Fg6PaFpoGXkYsidMpWFKfwtz6DhFVyG4dL1x8kj7ZJup");
+
+// Fetch account
+const account = await client.actions.fetchAccount(address);
+console.log(account.lamports?.toString());
+```
+
+### Balance
+
+```ts
+const lamports = await client.actions.fetchBalance(address);
+console.log(`Lamports: ${lamports.toString()}`);
+```
+
+### Address Lookup Tables
+
+```ts
+// Single lookup table
+const lut = await client.actions.fetchLookupTable(lutAddress);
+console.log(`Addresses in LUT: ${lut.addresses.length}`);
+
+// Multiple lookup tables
+const luts = await client.actions.fetchLookupTables([lutAddress1, lutAddress2]);
+```
+
+### Nonce Accounts
+
+```ts
+const nonce = await client.actions.fetchNonceAccount(nonceAddress);
+console.log(`Nonce: ${nonce.blockhash}`);
+console.log(`Authority: ${nonce.authority}`);
+```
+
+## Watchers
+
+Subscribe to real-time updates:
+
+### Watch Balance
+
+```ts
+const watcher = client.watchers.watchBalance({ address }, (nextLamports) => {
+  console.log("Updated balance:", nextLamports.toString());
+});
+
+// Clean up when done
+watcher.abort();
+```
+
+### Watch Account
+
+```ts
+const watcher = client.watchers.watchAccount({ address }, (account) => {
+  console.log("Account updated:", account);
+});
+
+watcher.abort();
+```
+
+### Watch Signature
+
+```ts
+const watcher = client.watchers.watchSignature(
+  { signature, commitment: "confirmed" },
+  (notification) => console.log("Signature update:", notification),
+);
+
+watcher.abort();
+```
+
+## Transfers
+
+### SOL Transfer
+
+```ts
+const wallet = client.store.getState().wallet;
+if (wallet.status !== "connected") throw new Error("Connect wallet first");
+
+const signature = await client.solTransfer.sendTransfer({
+  amount: 100_000_000n, // 0.1 SOL
+  authority: wallet.session,
+  destination: "Ff34MXWdgNsEJ1kJFj9cXmrEe7y2P93b95mGu5CJjBQJ",
+});
+
+console.log(signature.toString());
+```
+
+### SPL Token Transfer
+
+```ts
+const usdc = client.splToken({ mint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" });
+
+// Fetch balance
+const balance = await usdc.fetchBalance(wallet.session.account.address);
+console.log(`Balance: ${balance.uiAmount}`);
+
+// Transfer
+const signature = await usdc.sendTransfer({
+  amount: 1n,
+  authority: wallet.session,
+  destinationOwner: "Ff34MXWdgNsEJ1kJFj9cXmrEe7y2P93b95mGu5CJjBQJ",
+});
+```
+
+## Custom Transactions
+
+Build and send arbitrary transactions:
+
+```ts
+import { getTransferSolInstruction } from "@solana-program/system";
+
+const wallet = client.store.getState().wallet;
+if (wallet.status !== "connected") throw new Error("Connect wallet first");
+
+// Prepare transaction
+const prepared = await client.transaction.prepare({
+  authority: wallet.session,
+  instructions: [
+    getTransferSolInstruction({
+      destination: "Ff34MXWdgNsEJ1kJFj9cXmrEe7y2P93b95mGu5CJjBQJ",
+      lamports: 10_000n,
+      source: wallet.session.account.address,
+    }),
+  ],
+  version: "auto", // 'legacy' | 0 | 'auto'
+});
+
+// Serialize for inspection
+const wire = await client.transaction.toWire(prepared);
+
+// Send
+const signature = await client.transaction.send(prepared);
+console.log(signature.toString());
+```
+
+## Airdrop (Devnet/Testnet)
+
+```ts
+const signature = await client.actions.requestAirdrop(address, 1_000_000_000n); // 1 SOL
+console.log(signature.toString());
+```
+
+## Cluster Configuration
+
+### Using Monikers
+
+```ts
+const client = createClient({
+  cluster: "mainnet", // 'devnet' | 'testnet' | 'localnet' | 'localhost'
+  walletConnectors: autoDiscover(),
+});
+```
+
+### Custom Endpoints
+
+```ts
+const client = createClient({
+  endpoint: "http://127.0.0.1:8899",
+  // WebSocket inferred as ws://127.0.0.1:8900
+});
+```
+
+### Resolve Cluster Manually
+
+```ts
+import { resolveCluster } from "@solana/client";
+
+const resolved = resolveCluster({ moniker: "testnet" });
+console.log(resolved.endpoint, resolved.websocketEndpoint);
+```
+
+## Numeric Utilities
+
+### Lamports
+
+```ts
+import {
+  LAMPORTS_PER_SOL,
+  lamports,
+  lamportsFromSol,
+  lamportsToSolString,
+} from "@solana/client";
+
+const amount = lamportsFromSol(1.5); // 1_500_000_000n
+const sol = lamportsToSolString(amount); // "1.5"
+```
+
+### Token Amounts
+
+```ts
+import { createTokenAmount } from "@solana/client";
+
+const tokenMath = createTokenAmount(6); // USDC has 6 decimals
+const parsed = tokenMath.parse("10.5"); // 10_500_000n
+const formatted = tokenMath.format(10_500_000n); // "10.5"
+```
+
+## Serialization
+
+Save and restore client state:
+
+```ts
+import {
+  serializeSolanaState,
+  deserializeSolanaState,
+  applySerializableState,
+} from "@solana/client";
+
+// Serialize current state
+const state = client.store.getState();
+const serialized = serializeSolanaState(state);
+localStorage.setItem("solana-state", JSON.stringify(serialized));
+
+// Restore state
+const stored = JSON.parse(localStorage.getItem("solana-state"));
+const deserialized = deserializeSolanaState(stored);
+applySerializableState(client.store, deserialized);
+```
+
+## Store Access
+
+The client uses Zustand for state management:
+
+```ts
+// Get current state
+const state = client.store.getState();
+
+// Subscribe to changes
+const unsubscribe = client.store.subscribe((state) => {
+  console.log("State changed:", state);
+});
+```
+
+## API Reference
+
+### Client Actions
+
+| Action | Description |
+| --- | --- |
+| `connectWallet(id)` | Connect to a wallet by connector ID |
+| `disconnectWallet()` | Disconnect the current wallet |
+| `fetchAccount(address)` | Fetch account data |
+| `fetchBalance(address)` | Fetch lamport balance |
+| `fetchLookupTable(address)` | Fetch address lookup table |
+| `fetchLookupTables(addresses)` | Fetch multiple lookup tables |
+| `fetchNonceAccount(address)` | Fetch nonce account data |
+| `requestAirdrop(address, lamports)` | Request devnet/testnet airdrop |
+| `sendTransaction(tx)` | Send a signed transaction |
+| `setCluster(config)` | Change cluster/endpoint |
+
+### Client Helpers
+
+| Helper | Description |
+| --- | --- |
+| `client.solTransfer` | SOL transfer operations |
+| `client.splToken({ mint })` | SPL token operations |
+| `client.transaction` | Transaction building and sending |
+
+### Client Watchers
+
+| Watcher | Description |
+| --- | --- |
+| `watchAccount({ address }, callback)` | Subscribe to account changes |
+| `watchBalance({ address }, callback)` | Subscribe to balance changes |
+| `watchSignature({ signature }, callback)` | Subscribe to signature status |

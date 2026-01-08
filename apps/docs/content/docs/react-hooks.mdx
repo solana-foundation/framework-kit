@@ -1,0 +1,655 @@
+---
+title: "@solana/react-hooks"
+description: React hooks for wallet connection, balances, and transactions
+---
+
+React bindings for `@solana/client`. Wrap your app once with `SolanaProvider`, then use hooks anywhere for wallets, balances, and transactions.
+
+## Installation
+
+<Tabs groupId="pkg" items={['npm', 'pnpm', 'yarn', 'bun']} persist>
+  <Tab value="npm">
+```bash
+npm install @solana/client @solana/react-hooks
+```
+  </Tab>
+  <Tab value="pnpm">
+```bash
+pnpm add @solana/client @solana/react-hooks
+```
+  </Tab>
+  <Tab value="yarn">
+```bash
+yarn add @solana/client @solana/react-hooks
+```
+  </Tab>
+  <Tab value="bun">
+```bash
+bun add @solana/client @solana/react-hooks
+```
+  </Tab>
+</Tabs>
+
+## Setup
+
+### 1. Create a Client
+
+```tsx
+import { autoDiscover, createClient } from "@solana/client";
+
+const client = createClient({
+  endpoint: "https://api.devnet.solana.com",
+  walletConnectors: autoDiscover(),
+});
+```
+
+### 2. Wrap with SolanaProvider
+
+```tsx
+import { SolanaProvider } from "@solana/react-hooks";
+
+export function App() {
+  return (
+    <SolanaProvider client={client}>
+      {/* Your components */}
+    </SolanaProvider>
+  );
+}
+```
+
+## Wallet Hooks
+
+### useWalletConnection
+
+Complete wallet connection management:
+
+```tsx
+function WalletPanel() {
+  const {
+    connectors,      // Available wallet connectors
+    connect,         // Connect to a wallet
+    disconnect,      // Disconnect current wallet
+    wallet,          // Current wallet session
+    status,          // 'disconnected' | 'connecting' | 'connected'
+    currentConnector // Current connected wallet info
+  } = useWalletConnection();
+
+  if (status === "connected") {
+    return (
+      <div>
+        <p>Connected via {currentConnector?.name}</p>
+        <p>{wallet?.account.address?.toString()}</p>
+        <button onClick={disconnect}>Disconnect</button>
+      </div>
+    );
+  }
+
+  return connectors.map((c) => (
+    <button key={c.id} onClick={() => connect(c.id)}>
+      Connect {c.name}
+    </button>
+  ));
+}
+```
+
+### useWallet
+
+Access wallet state:
+
+```tsx
+function WalletInfo() {
+  const { wallet, status, connectors } = useWallet();
+
+  if (status !== "connected") return <p>Not connected</p>;
+  return <p>Address: {wallet.account.address.toString()}</p>;
+}
+```
+
+### useWalletSession
+
+Get the current wallet session for signing:
+
+```tsx
+function SignButton() {
+  const session = useWalletSession();
+
+  if (!session) return <p>Connect wallet first</p>;
+  return <p>Ready to sign with {session.account.address.toString()}</p>;
+}
+```
+
+### useWalletModalState
+
+Manage wallet modal visibility:
+
+```tsx
+function WalletModal() {
+  const { isOpen, open, close } = useWalletModalState();
+
+  return (
+    <>
+      <button onClick={open}>Connect Wallet</button>
+      {isOpen && (
+        <Modal onClose={close}>
+          <WalletList />
+        </Modal>
+      )}
+    </>
+  );
+}
+```
+
+## Data Hooks
+
+### useBalance
+
+Auto-fetch and watch lamport balance:
+
+```tsx
+function BalanceCard({ address }: { address: string }) {
+  const { lamports, fetching, slot, error } = useBalance(address);
+
+  if (fetching) return <p>Loading...</p>;
+  if (error) return <p>Error loading balance</p>;
+
+  return (
+    <p>
+      Balance: {lamports?.toString() ?? "0"} lamports
+      (slot {slot?.toString()})
+    </p>
+  );
+}
+```
+
+### useAccount
+
+Auto-fetch and watch account data:
+
+```tsx
+function AccountInfo({ address }: { address: string }) {
+  const account = useAccount(address);
+
+  if (!account || account.fetching) return <p>Loading...</p>;
+
+  return (
+    <div>
+      <p>Lamports: {account.lamports?.toString() ?? "0"}</p>
+      <p>Owner: {account.owner ?? "Unknown"}</p>
+      <p>Slot: {account.slot?.toString()}</p>
+    </div>
+  );
+}
+```
+
+### useLookupTable
+
+Fetch address lookup table data:
+
+```tsx
+function LookupTableInfo({ address }: { address: string }) {
+  const { data, isLoading, error } = useLookupTable(address);
+
+  if (isLoading) return <p>Loading...</p>;
+  if (error) return <p>Error loading LUT</p>;
+
+  return (
+    <div>
+      <p>Addresses: {data?.addresses.length ?? 0}</p>
+      <p>Authority: {data?.authority ?? "None"}</p>
+    </div>
+  );
+}
+```
+
+### useNonceAccount
+
+Fetch nonce account data:
+
+```tsx
+function NonceInfo({ address }: { address: string }) {
+  const { data, isLoading, error } = useNonceAccount(address);
+
+  if (isLoading) return <p>Loading...</p>;
+  if (error) return <p>Error loading nonce</p>;
+
+  return (
+    <div>
+      <p>Nonce: {data?.blockhash}</p>
+      <p>Authority: {data?.authority}</p>
+    </div>
+  );
+}
+```
+
+## Transfer Hooks
+
+### useSolTransfer
+
+Send SOL to an address:
+
+```tsx
+function SendSol({ destination }: { destination: string }) {
+  const { send, isSending, status, signature, error } = useSolTransfer();
+
+  return (
+    <div>
+      <button
+        disabled={isSending}
+        onClick={() => send({ destination, amount: 100_000_000n })}
+      >
+        {isSending ? "Sending..." : "Send 0.1 SOL"}
+      </button>
+      <p>Status: {status}</p>
+      {signature && <p>Signature: {signature}</p>}
+      {error && <p>Error: {String(error)}</p>}
+    </div>
+  );
+}
+```
+
+### useSplToken
+
+SPL token balance and transfers:
+
+```tsx
+function TokenPanel({ mint, destinationOwner }: { mint: string; destinationOwner: string }) {
+  const {
+    balance,
+    send,
+    isSending,
+    owner,
+    status,
+    error,
+    sendError,
+    sendSignature,
+    resetSend,
+    refresh,
+  } = useSplToken(mint);
+
+  if (status === "disconnected") return <p>Connect wallet</p>;
+  if (status === "loading") return <p>Loading...</p>;
+  if (status === "error") return <p>Error: {String(error)}</p>;
+
+  return (
+    <div>
+      <p>Owner: {owner}</p>
+      <p>Balance: {balance?.uiAmount ?? "0"}</p>
+      <button onClick={refresh}>Refresh</button>
+      <button
+        disabled={isSending || !owner}
+        onClick={() => send({
+          amount: 1n,
+          destinationOwner,
+          amountInBaseUnits: true
+        })}
+      >
+        {isSending ? "Sending..." : "Send 1 token"}
+      </button>
+      {sendSignature && <p>Signature: {sendSignature}</p>}
+      {sendError && (
+        <div>
+          <p>Error: {String(sendError)}</p>
+          <button onClick={resetSend}>Dismiss</button>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+**Options:**
+
+| Option | Description |
+| --- | --- |
+| `commitment` | RPC commitment level |
+| `owner` | Override balance owner (defaults to connected wallet) |
+| `revalidateOnFocus` | Refresh when window regains focus |
+| `swr` | Additional SWR options |
+
+### useWrapSol
+
+Wrap and unwrap SOL to wSOL:
+
+```tsx
+function WrapSolPanel() {
+  const { wrap, unwrap, isWrapping, isUnwrapping } = useWrapSol();
+
+  return (
+    <div>
+      <button
+        disabled={isWrapping}
+        onClick={() => wrap({ amount: 100_000_000n })}
+      >
+        Wrap 0.1 SOL
+      </button>
+      <button
+        disabled={isUnwrapping}
+        onClick={() => unwrap({ amount: 100_000_000n })}
+      >
+        Unwrap 0.1 wSOL
+      </button>
+    </div>
+  );
+}
+```
+
+## Transaction Hooks
+
+### useSendTransaction
+
+Simple transaction sending:
+
+```tsx
+function SendPrepared({ instructions }) {
+  const { send, isSending, status, signature, error, reset } = useSendTransaction();
+
+  return (
+    <div>
+      <button
+        disabled={isSending}
+        onClick={() => send({ instructions })}
+      >
+        {isSending ? "Submitting..." : "Send Transaction"}
+      </button>
+      <p>Status: {status}</p>
+      {signature && <p>Signature: {signature}</p>}
+      {error && <p>Error: {String(error)}</p>}
+    </div>
+  );
+}
+```
+
+### useTransactionPool
+
+Build and manage complex transactions:
+
+```tsx
+import type { TransactionInstructionInput } from "@solana/client";
+
+function TransactionBuilder({ ix }: { ix: TransactionInstructionInput }) {
+  const session = useWalletSession();
+  const {
+    addInstruction,
+    instructions,
+    clearInstructions,
+    prepareAndSend,
+    isSending,
+    sendSignature,
+    sendError,
+    latestBlockhash,
+    reset,
+  } = useTransactionPool();
+
+  return (
+    <div>
+      <button onClick={() => addInstruction(ix)}>
+        Add Instruction ({instructions.length})
+      </button>
+      <button onClick={clearInstructions}>Clear</button>
+      <button
+        disabled={isSending || !session}
+        onClick={() => prepareAndSend({ authority: session })}
+      >
+        {isSending ? "Sending..." : "Send Transaction"}
+      </button>
+      <p>Blockhash: {latestBlockhash.blockhash ?? "loading..."}</p>
+      {sendSignature && <p>Signature: {sendSignature}</p>}
+      {sendError && <p>Error: {String(sendError)}</p>}
+    </div>
+  );
+}
+```
+
+**Available methods:**
+
+| Method | Description |
+| --- | --- |
+| `addInstruction(ix)` | Add instruction to queue |
+| `addInstructions(ixs)` | Add multiple instructions |
+| `removeInstruction(index)` | Remove instruction at index |
+| `clearInstructions()` | Clear all instructions |
+| `replaceInstructions(ixs)` | Replace instruction queue |
+| `prepare(opts)` | Prepare transaction without sending |
+| `prepareAndSend(opts)` | Prepare and send in one call |
+| `send(opts)` | Send prepared transaction |
+| `sign(opts)` | Sign without sending |
+| `reset()` | Reset all state |
+
+## Signature Hooks
+
+### useSignatureStatus
+
+Watch signature confirmation:
+
+```tsx
+function SignatureInfo({ signature }: { signature: string }) {
+  const { status, confirmations, error } = useSignatureStatus(signature);
+
+  return (
+    <div>
+      <p>Status: {status}</p>
+      <p>Confirmations: {confirmations}</p>
+      {error && <p>Error: {String(error)}</p>}
+    </div>
+  );
+}
+```
+
+### useWaitForSignature
+
+Wait for specific confirmation level:
+
+```tsx
+function SignatureWatcher({ signature }: { signature: string }) {
+  const wait = useWaitForSignature(signature, { commitment: "finalized" });
+
+  if (wait.waitStatus === "error") return <p>Failed</p>;
+  if (wait.waitStatus === "success") return <p>Finalized</p>;
+  if (wait.waitStatus === "waiting") return <p>Waiting...</p>;
+  return <p>Provide a signature</p>;
+}
+```
+
+## Query Hooks
+
+### useProgramAccounts
+
+Query accounts owned by a program:
+
+```tsx
+import { SolanaQueryProvider, useProgramAccounts } from "@solana/react-hooks";
+
+function ProgramAccounts({ program }: { program: string }) {
+  const { accounts, isLoading, isError, refresh } = useProgramAccounts(program);
+
+  if (isLoading) return <p>Loading...</p>;
+  if (isError) return <p>Error</p>;
+
+  return (
+    <div>
+      <button onClick={refresh}>Refresh</button>
+      <ul>
+        {accounts.map(({ pubkey }) => (
+          <li key={pubkey.toString()}>{pubkey.toString()}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// Wrap with SolanaQueryProvider
+function ProgramAccountsSection({ program }: { program: string }) {
+  return (
+    <SolanaQueryProvider>
+      <ProgramAccounts program={program} />
+    </SolanaQueryProvider>
+  );
+}
+```
+
+### useSimulateTransaction
+
+Simulate a transaction:
+
+```tsx
+function Simulation({ wire }: { wire: string }) {
+  const { logs, isLoading, isError, refresh } = useSimulateTransaction(wire);
+
+  if (isLoading) return <p>Simulating...</p>;
+  if (isError) return <p>Simulation failed</p>;
+
+  return (
+    <div>
+      <button onClick={refresh}>Re-run</button>
+      <pre>{JSON.stringify(logs, null, 2)}</pre>
+    </div>
+  );
+}
+```
+
+### useLatestBlockhash
+
+Get the latest blockhash:
+
+```tsx
+function BlockhashInfo() {
+  const { blockhash, lastValidBlockHeight, isLoading } = useLatestBlockhash();
+
+  if (isLoading) return <p>Loading...</p>;
+
+  return (
+    <div>
+      <p>Blockhash: {blockhash}</p>
+      <p>Valid until: {lastValidBlockHeight}</p>
+    </div>
+  );
+}
+```
+
+## Store Hook
+
+### useClientStore
+
+Access the underlying Zustand store:
+
+```tsx
+function ClusterBadge() {
+  const cluster = useClientStore((s) => s.cluster);
+  return <p>Endpoint: {cluster.endpoint}</p>;
+}
+
+function WalletStatus() {
+  const walletStatus = useClientStore((s) => s.wallet.status);
+  return <p>Status: {walletStatus}</p>;
+}
+```
+
+## Suspense Support
+
+Enable Suspense per subtree:
+
+```tsx
+import { SolanaQueryProvider, useBalance } from "@solana/react-hooks";
+import { Suspense } from "react";
+
+function BalanceDetails({ address }: { address: string }) {
+  const balance = useBalance(address);
+  return <p>Lamports: {balance.lamports?.toString() ?? "0"}</p>;
+}
+
+export function WalletPanel({ address }: { address: string }) {
+  return (
+    <SolanaQueryProvider suspense>
+      <Suspense fallback={<p>Loading balance...</p>}>
+        <BalanceDetails address={address} />
+      </Suspense>
+    </SolanaQueryProvider>
+  );
+}
+```
+
+## SWR Configuration
+
+Configure caching and revalidation:
+
+```tsx
+export function App() {
+  return (
+    <SolanaProvider
+      client={client}
+      query={{
+        config: {
+          revalidateOnFocus: false,
+          revalidateOnReconnect: false,
+          refreshInterval: 30_000,
+          dedupingInterval: 2000,
+        },
+      }}
+    >
+      <YourApp />
+    </SolanaProvider>
+  );
+}
+```
+
+**Default SWR settings:**
+
+| Option | Default |
+| --- | --- |
+| `revalidateOnFocus` | `true` |
+| `revalidateOnReconnect` | `true` |
+| `revalidateIfStale` | `true` |
+| `dedupingInterval` | `2000ms` |
+| `focusThrottleInterval` | `5000ms` |
+
+## Hooks Reference
+
+### Wallet Hooks
+
+| Hook | Description |
+| --- | --- |
+| `useWalletConnection` | Complete wallet connection management |
+| `useWallet` | Access wallet state |
+| `useWalletSession` | Get current session for signing |
+| `useWalletActions` | Connect/disconnect actions |
+| `useWalletModalState` | Modal visibility management |
+| `useConnectWallet` | Connect action only |
+| `useDisconnectWallet` | Disconnect action only |
+
+### Data Hooks
+
+| Hook | Description |
+| --- | --- |
+| `useBalance` | Fetch and watch balance |
+| `useAccount` | Fetch and watch account |
+| `useLookupTable` | Fetch lookup table |
+| `useNonceAccount` | Fetch nonce account |
+| `useProgramAccounts` | Query program accounts |
+
+### Transaction Hooks
+
+| Hook | Description |
+| --- | --- |
+| `useSolTransfer` | Send SOL |
+| `useSplToken` | SPL token operations |
+| `useWrapSol` | Wrap/unwrap SOL |
+| `useSendTransaction` | Simple transaction send |
+| `useTransactionPool` | Complex transaction building |
+| `useSimulateTransaction` | Simulate transactions |
+
+### Status Hooks
+
+| Hook | Description |
+| --- | --- |
+| `useSignatureStatus` | Watch signature status |
+| `useWaitForSignature` | Wait for confirmation |
+| `useClusterState` | Current cluster info |
+| `useClusterStatus` | Cluster connection status |
+| `useLatestBlockhash` | Get latest blockhash |
+
+### Utility Hooks
+
+| Hook | Description |
+| --- | --- |
+| `useClientStore` | Access Zustand store |
+| `useSolanaClient` | Access client instance |

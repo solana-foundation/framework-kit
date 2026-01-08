@@ -1,0 +1,210 @@
+---
+title: API Reference
+description: Complete API reference for Framework Kit packages
+---
+
+Quick reference for all exports. Full API docs are auto-generated from TypeScript source via [TypeDoc](https://typedoc.org/).
+
+## @solana/client
+
+The core client library exports the following:
+
+### Client Creation
+
+| Export | Description |
+| --- | --- |
+| `createClient(config)` | Create a new Solana client instance |
+| `resolveCluster(config)` | Resolve cluster endpoints from moniker or custom URLs |
+
+### Wallet Connectors
+
+| Export | Description |
+| --- | --- |
+| `autoDiscover(options?)` | Auto-discover installed wallet extensions |
+| `filterByNames(...names)` | Filter wallets by name |
+| `phantom()` | Phantom wallet connector |
+| `solflare()` | Solflare wallet connector |
+| `backpack()` | Backpack wallet connector |
+| `metamask()` | MetaMask Snaps connector |
+| `injected(wallet)` | Generic injected wallet connector |
+
+### Address Utilities
+
+| Export | Description |
+| --- | --- |
+| `toAddress(input)` | Convert string or PublicKey to Address |
+| `isAddress(value)` | Check if value is a valid Address |
+
+### Numeric Utilities
+
+| Export | Description |
+| --- | --- |
+| `LAMPORTS_PER_SOL` | Lamports per SOL constant (1_000_000_000n) |
+| `lamports(value)` | Create a Lamports value |
+| `lamportsFromSol(sol)` | Convert SOL to lamports |
+| `lamportsToSolString(lamports)` | Convert lamports to SOL string |
+| `createTokenAmount(decimals)` | Create token amount math utilities |
+
+### State Serialization
+
+| Export | Description |
+| --- | --- |
+| `serializeSolanaState(state)` | Serialize client state for storage |
+| `deserializeSolanaState(data)` | Deserialize stored state |
+| `applySerializableState(store, state)` | Apply serialized state to store |
+
+### Types
+
+Key TypeScript types exported from the package:
+
+```ts
+// Client configuration
+type SolanaClientConfig = {
+  cluster?: ClusterMoniker;
+  endpoint?: string;
+  websocketEndpoint?: string;
+  walletConnectors?: WalletConnectorFn[];
+};
+
+// Wallet state
+type WalletState =
+  | { status: "disconnected" }
+  | { status: "connecting"; connectorId: string }
+  | { status: "connected"; session: WalletSession; connectorId: string };
+
+// Wallet session (for signing)
+type WalletSession = {
+  account: WalletAccount;
+  signTransaction: (tx: Transaction) => Promise<Transaction>;
+  signMessage: (message: Uint8Array) => Promise<Uint8Array>;
+};
+
+// Cluster configuration
+type ClusterMoniker = "mainnet" | "mainnet-beta" | "testnet" | "devnet" | "localnet" | "localhost";
+
+// Transaction input
+type TransactionInstructionInput = {
+  programAddress: Address;
+  accounts: AccountMeta[];
+  data: Uint8Array;
+};
+```
+
+## @solana/react-hooks
+
+### Provider
+
+| Export | Description |
+| --- | --- |
+| `SolanaProvider` | Root provider component |
+| `SolanaQueryProvider` | Provider for query hooks with Suspense support |
+
+### Wallet Hooks
+
+| Hook | Description |
+| --- | --- |
+| `useWalletConnection()` | Complete wallet connection management |
+| `useWallet()` | Access wallet state |
+| `useWalletSession()` | Get current session for signing |
+| `useWalletActions()` | Connect/disconnect actions |
+| `useWalletModalState()` | Modal visibility management |
+| `useConnectWallet()` | Connect action only |
+| `useDisconnectWallet()` | Disconnect action only |
+
+### Data Hooks
+
+| Hook | Description |
+| --- | --- |
+| `useBalance(address)` | Fetch and watch balance |
+| `useAccount(address)` | Fetch and watch account |
+| `useLookupTable(address)` | Fetch lookup table |
+| `useNonceAccount(address)` | Fetch nonce account |
+| `useProgramAccounts(program)` | Query program accounts |
+
+### Transaction Hooks
+
+| Hook | Description |
+| --- | --- |
+| `useSolTransfer()` | Send SOL |
+| `useSplToken(mint)` | SPL token operations |
+| `useWrapSol()` | Wrap/unwrap SOL |
+| `useSendTransaction()` | Simple transaction send |
+| `useTransactionPool()` | Complex transaction building |
+| `useSimulateTransaction(wire)` | Simulate transactions |
+
+### Status Hooks
+
+| Hook | Description |
+| --- | --- |
+| `useSignatureStatus(signature)` | Watch signature status |
+| `useWaitForSignature(signature)` | Wait for confirmation |
+| `useClusterState()` | Current cluster info |
+| `useClusterStatus()` | Cluster connection status |
+| `useLatestBlockhash()` | Get latest blockhash |
+
+### Utility Hooks
+
+| Hook | Description |
+| --- | --- |
+| `useClientStore(selector)` | Access Zustand store |
+| `useSolanaClient()` | Access client instance |
+
+## @solana/web3-compat
+
+### Re-exports
+
+| Export | Description |
+| --- | --- |
+| `Keypair` | Key pair for signing |
+| `PublicKey` | Public key representation |
+| `Transaction` | Legacy transaction |
+| `TransactionInstruction` | Transaction instruction |
+| `VersionedTransaction` | Versioned transaction |
+| `LAMPORTS_PER_SOL` | Lamports per SOL constant |
+
+### Bridge Functions
+
+| Function | Description |
+| --- | --- |
+| `toAddress(publicKey)` | Convert PublicKey to Kit Address |
+| `toPublicKey(address)` | Convert Kit Address to PublicKey |
+| `fromWeb3Instruction(ix)` | Convert web3.js instruction to Kit |
+| `toWeb3Instruction(ix)` | Convert Kit instruction to web3.js |
+| `toKitSigner(keypair)` | Convert Keypair to Kit signer |
+
+### Classes
+
+| Class | Description |
+| --- | --- |
+| `Connection` | web3.js-compatible RPC connection |
+| `SystemProgram` | System program instructions |
+
+### Utilities
+
+| Function | Description |
+| --- | --- |
+| `sendAndConfirmTransaction` | Send and confirm a transaction |
+| `compileFromCompat` | Compile web3.js tx to Kit format |
+
+## Generated Documentation
+
+Full API documentation is generated from source code and available as build artifacts:
+
+- **@solana/client**: Generated via `pnpm --filter @solana/client docs`
+- **JSON format**: Generated via `pnpm --filter @solana/client docs:json`
+
+The CI automatically generates and uploads API documentation on every push to main that changes the client source code.
+
+### Building Locally
+
+To generate API docs locally:
+
+```bash
+# Generate markdown docs
+pnpm --filter @solana/client docs
+
+# Generate JSON API spec
+pnpm --filter @solana/client docs:json
+```
+
+Output is written to `packages/client/docs/`.

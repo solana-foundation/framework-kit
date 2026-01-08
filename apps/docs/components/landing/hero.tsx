@@ -1,19 +1,10 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { ArrowRight, Check, Copy } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
 
 export function Hero() {
-	const [copied, setCopied] = useState(false);
-
-	const onCopy = () => {
-		navigator.clipboard.writeText('npm install @solana/client');
-		setCopied(true);
-		setTimeout(() => setCopied(false), 2000);
-	};
-
 	return (
 		<section className="relative overflow-hidden pt-32 pb-20 lg:pt-40 lg:pb-28">
 			<div className="container relative z-10 mx-auto px-4 text-center">
@@ -91,19 +82,7 @@ export function Hero() {
 								<div className="w-3 h-3 rounded-full bg-[#27c93f]" />
 							</div>
 							<div className="text-xs text-white/40 font-sans select-none">examples/starter.ts</div>
-							<div className="flex items-center gap-2">
-								<button
-									type="button"
-									onClick={onCopy}
-									className="text-white/40 hover:text-white transition-colors"
-								>
-									{copied ? (
-										<Check className="w-4 h-4 text-green-400" />
-									) : (
-										<Copy className="w-4 h-4" />
-									)}
-								</button>
-							</div>
+							<div className="w-4 h-4" />
 						</div>
 
 						{/* Code Content */}

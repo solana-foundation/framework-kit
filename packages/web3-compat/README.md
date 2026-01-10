@@ -166,3 +166,7 @@ Phase 0 does not fully replace web3.js. Notable gaps:
 
 Future phases will expand coverage and introduce intentional
 breaking changes once users have an easy migration path.
+
+## More resources
+
+- [Documentation](https://www.framework-kit.com/) — full guides and API reference

@@ -98,5 +98,6 @@ Run your app and you should see buttons for each detected wallet. Click one to c
 
 ## Learn more
 
+- [Documentation](https://www.framework-kit.com/) — full guides and API reference
 - [Full hooks documentation](packages/react-hooks/README.md) — all available hooks and options
 - [Client API](packages/client/README.md) — use the client without React

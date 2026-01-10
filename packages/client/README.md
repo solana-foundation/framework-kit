@@ -263,6 +263,7 @@ const connectors = autoDiscover({
 
 ## More resources
 
+- [Documentation](https://www.framework-kit.com/) — full guides and API reference
 - Playground: `examples/vite-react` (run with `pnpm install && pnpm dev`).
 - Next.js reference app: `examples/nextjs`.
 - Client APIs live in `src/actions.ts`, `src/watchers`, and `src/features/*` for helper internals.

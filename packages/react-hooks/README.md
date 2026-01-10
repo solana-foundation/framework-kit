@@ -459,6 +459,7 @@ This approach follows Wallet Standard's wallet-agnostic discovery pattern while 
 
 ## More resources
 
+- [Documentation](https://www.framework-kit.com/) — full guides and API reference
 - Playground: `examples/vite-react` (run with `pnpm install && pnpm dev`).
 - Next.js reference app: `examples/nextjs`.
 - Hook JSDoc lives in `src/hooks.ts`, `src/queryHooks.ts`, `src/ui.tsx`.

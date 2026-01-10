@@ -10,6 +10,7 @@
 	},
 	"dependencies": {
 		"@fumadocs/ui": "^16.4.4",
+		"@vercel/analytics": "^1.6.1",
 		"@types/mdx": "^2.0.13",
 		"@vercel/og": "^0.8.6",
 		"clsx": "^2.1.1",

@@ -205,6 +205,48 @@ const signature = await usdc.sendTransfer({
 });
 ```
 
+### Token 2022 Support
+
+The SPL token helper supports Token 2022 (Token Extensions) mints. Use the `tokenProgram` option to specify the program:
+
+```ts
+// Auto-detect program (recommended for existing mints)
+const token2022 = client.splToken({
+  mint: "2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo", // PYUSD
+  tokenProgram: "auto",
+});
+
+// Fetch balance works the same way
+const balance = await token2022.fetchBalance(wallet.session.account.address);
+
+// Transfer works the same way
+const signature = await token2022.sendTransfer({
+  amount: 10,
+  authority: wallet.session,
+  destinationOwner: recipientAddress,
+});
+```
+
+You can also explicitly specify the Token 2022 program address:
+
+```ts
+import { TOKEN_2022_PROGRAM_ADDRESS } from "@solana/client";
+
+const token = client.splToken({
+  mint: mintAddress,
+  tokenProgram: TOKEN_2022_PROGRAM_ADDRESS,
+});
+```
+
+The `detectTokenProgram` utility is also available for manual program detection:
+
+```ts
+import { detectTokenProgram } from "@solana/client";
+
+const result = await detectTokenProgram(client.runtime, mintAddress);
+console.log(result.programId); // 'token' or 'token-2022'
+```
+
 ## Custom Transactions
 
 Build and send arbitrary transactions:

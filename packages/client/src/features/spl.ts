@@ -23,18 +23,23 @@ import {
 	type TransactionVersion,
 } from '@solana/kit';
 import {
-	fetchMint,
+	fetchMint as fetchMintStandard,
 	findAssociatedTokenPda,
 	getCreateAssociatedTokenInstruction,
-	getTransferCheckedInstruction,
+	getTransferCheckedInstruction as getTransferCheckedStandard,
 	TOKEN_PROGRAM_ADDRESS,
 } from '@solana-program/token';
-
+import {
+	fetchMint as fetchMintToken2022,
+	getTransferCheckedInstruction as getTransferCheckedToken2022,
+	TOKEN_2022_PROGRAM_ADDRESS,
+} from '@solana-program/token-2022';
 import { createTokenAmount, type TokenAmountMath } from '../numeric/amounts';
 import type { SolanaClientRuntime } from '../rpc/types';
 import { createWalletTransactionSigner, isWalletSession, resolveSignerMode } from '../signers/walletTransactionSigner';
 import type { WalletSession } from '../wallet/types';
 import type { SolTransferSendOptions } from './sol';
+import { detectTokenProgram } from './tokenPrograms';
 
 /**
  * Blockhash and last valid block height for transaction lifetime.
@@ -75,8 +80,12 @@ export type SplTokenHelperConfig = Readonly<{
 	decimals?: number;
 	/** The SPL token mint address. */
 	mint: Address | string;
-	/** Token Program address. Defaults to standard Token Program. */
-	tokenProgram?: Address | string;
+	/**
+	 * Token Program address. Defaults to standard Token Program.
+	 * Set to 'auto' to automatically detect based on mint account owner.
+	 * Note: Auto-detection requires the mint to already exist on-chain.
+	 */
+	tokenProgram?: Address | string | 'auto';
 }>;
 
 /**
@@ -233,9 +242,10 @@ function resolveSigner(
 export type SplTokenHelper = Readonly<{
 	/**
 	 * Derives the Associated Token Account (ATA) address for an owner.
-	 * The ATA is a deterministic address based on the owner and mint.
+	 * The ATA is a deterministic address based on the owner, mint, and token program.
+	 * When using tokenProgram: 'auto', the commitment is used for program detection.
 	 */
-	deriveAssociatedTokenAddress(owner: Address | string): Promise<Address>;
+	deriveAssociatedTokenAddress(owner: Address | string, commitment?: Commitment): Promise<Address>;
 	/**
 	 * Fetches the token balance for an owner's Associated Token Account.
 	 * Returns balance info including whether the account exists.
@@ -300,15 +310,43 @@ export type SplTokenHelper = Readonly<{
  */
 export function createSplTokenHelper(runtime: SolanaClientRuntime, config: SplTokenHelperConfig): SplTokenHelper {
 	const mintAddress = ensureAddress(config.mint);
-	const tokenProgram = ensureAddress(config.tokenProgram, address(TOKEN_PROGRAM_ADDRESS));
 
 	let cachedDecimals: number | undefined = config.decimals;
 	let cachedMath: TokenAmountMath | undefined;
+	let resolvedTokenProgram: Address | undefined =
+		config.tokenProgram && config.tokenProgram !== 'auto' ? ensureAddress(config.tokenProgram) : undefined;
+	let isToken2022: boolean | undefined =
+		config.tokenProgram === 'auto'
+			? undefined
+			: config.tokenProgram
+				? config.tokenProgram === TOKEN_2022_PROGRAM_ADDRESS ||
+					(typeof config.tokenProgram === 'string' && config.tokenProgram === TOKEN_2022_PROGRAM_ADDRESS)
+				: false;
+
+	async function resolveTokenProgram(commitment?: Commitment): Promise<Address> {
+		if (resolvedTokenProgram) {
+			return resolvedTokenProgram;
+		}
+
+		if (config.tokenProgram === 'auto') {
+			const result = await detectTokenProgram(runtime, mintAddress, commitment);
+			resolvedTokenProgram = result.programAddress;
+			isToken2022 = result.programId === 'token-2022';
+		} else {
+			resolvedTokenProgram = address(TOKEN_PROGRAM_ADDRESS);
+			isToken2022 = false;
+		}
+
+		return resolvedTokenProgram;
+	}
 
 	async function resolveDecimals(commitment?: Commitment): Promise<number> {
 		if (cachedDecimals !== undefined) {
 			return cachedDecimals;
 		}
+
+		const tokenProgram = await resolveTokenProgram(commitment);
+		const fetchMint = tokenProgram === TOKEN_2022_PROGRAM_ADDRESS ? fetchMintToken2022 : fetchMintStandard;
 		const account = await fetchMint(runtime.rpc, mintAddress, { commitment });
 		cachedDecimals = account.data.decimals;
 		return cachedDecimals;
@@ -323,7 +361,8 @@ export function createSplTokenHelper(runtime: SolanaClientRuntime, config: SplTo
 		return cachedMath;
 	}
 
-	async function deriveAssociatedTokenAddress(owner: Address | string): Promise<Address> {
+	async function deriveAssociatedTokenAddress(owner: Address | string, commitment?: Commitment): Promise<Address> {
+		const tokenProgram = await resolveTokenProgram(commitment);
 		const [ata] = await findAssociatedTokenPda({
 			mint: mintAddress,
 			owner: ensureAddress(owner),
@@ -333,7 +372,7 @@ export function createSplTokenHelper(runtime: SolanaClientRuntime, config: SplTo
 	}
 
 	async function fetchBalance(owner: Address | string, commitment?: Commitment): Promise<SplTokenBalance> {
-		const ataAddress = await deriveAssociatedTokenAddress(owner);
+		const ataAddress = await deriveAssociatedTokenAddress(owner, commitment);
 		const decimals = await resolveDecimals(commitment);
 		try {
 			const { value } = await runtime.rpc.getTokenAccountBalance(ataAddress, { commitment }).send();
@@ -360,15 +399,19 @@ export function createSplTokenHelper(runtime: SolanaClientRuntime, config: SplTo
 
 	async function prepareTransfer(config: SplTransferPrepareConfig): Promise<PreparedSplTransfer> {
 		const commitment = config.commitment;
+		const tokenProgram = await resolveTokenProgram(commitment);
 		const lifetime = await resolveLifetime(runtime, commitment, config.lifetime);
 		const { signer, mode } = resolveSigner(config.authority, commitment);
 		const sourceOwner = ensureAddress(config.sourceOwner, signer.address);
 		const destinationOwner = ensureAddress(config.destinationOwner);
 
-		const sourceAta = ensureAddress(config.sourceToken, await deriveAssociatedTokenAddress(sourceOwner));
+		const sourceAta = ensureAddress(
+			config.sourceToken,
+			await deriveAssociatedTokenAddress(sourceOwner, commitment),
+		);
 		const destinationAta = ensureAddress(
 			config.destinationToken,
-			await deriveAssociatedTokenAddress(destinationOwner),
+			await deriveAssociatedTokenAddress(destinationOwner, commitment),
 		);
 
 		const math = await getTokenMath(commitment);
@@ -398,6 +441,9 @@ export function createSplTokenHelper(runtime: SolanaClientRuntime, config: SplTo
 				);
 			}
 		}
+
+		// Use the correct transfer instruction based on token program
+		const getTransferCheckedInstruction = isToken2022 ? getTransferCheckedToken2022 : getTransferCheckedStandard;
 
 		instructionList.push(
 			getTransferCheckedInstruction({

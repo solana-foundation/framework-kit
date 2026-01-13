@@ -196,6 +196,21 @@ function TokenPanel({
 - `owner` — override balance owner (defaults to connected wallet)
 - `revalidateOnFocus` — refresh when window regains focus
 - `swr` — additional SWR options
+- `config.tokenProgram` — token program: `'auto'` for detection, or explicit address
+
+### Token 2022 support
+
+Token 2022 mints are supported via the `tokenProgram` config option:
+
+```tsx
+// Auto-detect Token or Token 2022
+const { balance, send } = useSplToken(mint, {
+  config: { tokenProgram: "auto" },
+});
+
+// Balance and transfers work the same way
+<p>Balance: {balance?.uiAmount ?? "0"}</p>
+```
 
 ### Fetch address lookup tables
 

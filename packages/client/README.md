@@ -112,6 +112,34 @@ const signature = await usdc.sendTransfer({
 console.log(signature.toString());
 ```
 
+### Token 2022 support
+
+Token 2022 mints are supported via the `tokenProgram` option:
+
+```ts
+// Auto-detect Token or Token 2022 (recommended)
+const token = client.splToken({
+  mint: "2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo", // PYUSD
+  tokenProgram: "auto",
+});
+
+// Or explicitly specify Token 2022 program
+import { TOKEN_2022_PROGRAM_ADDRESS } from "@solana/client";
+
+const token2022 = client.splToken({
+  mint: mintAddress,
+  tokenProgram: TOKEN_2022_PROGRAM_ADDRESS,
+});
+
+// Balance and transfers work the same way
+const balance = await token.fetchBalance(wallet.session.account.address);
+const signature = await token.sendTransfer({
+  amount: 10,
+  authority: wallet.session,
+  destinationOwner: recipientAddress,
+});
+```
+
 ### Fetch address lookup tables
 
 ```ts

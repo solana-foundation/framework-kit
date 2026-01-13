@@ -305,6 +305,28 @@ function TokenPanel({ mint, destinationOwner }: { mint: string; destinationOwner
 | `owner` | Override balance owner (defaults to connected wallet) |
 | `revalidateOnFocus` | Refresh when window regains focus |
 | `swr` | Additional SWR options |
+| `config.tokenProgram` | Token program: `'auto'` for detection, or explicit address |
+
+**Token 2022 Support:**
+
+The `useSplToken` hook supports Token 2022 mints via the `tokenProgram` config option:
+
+```tsx
+function Token2022Panel({ mint }: { mint: string }) {
+  const { balance, send } = useSplToken(mint, {
+    config: { tokenProgram: "auto" }, // Auto-detect Token or Token 2022
+  });
+
+  return (
+    <div>
+      <p>Balance: {balance?.uiAmount ?? "0"}</p>
+      <button onClick={() => send({ amount: 1, destinationOwner: recipient })}>
+        Send
+      </button>
+    </div>
+  );
+}
+```
 
 ### useWrapSol
 

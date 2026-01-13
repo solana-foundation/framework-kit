@@ -70,6 +70,15 @@ export {
 	type WithdrawSendOptions,
 } from './features/stake';
 export {
+	detectTokenProgram,
+	isKnownTokenProgram,
+	TOKEN_2022_PROGRAM_ADDRESS,
+	TOKEN_PROGRAM_ADDRESS,
+	TOKEN_PROGRAMS,
+	type TokenProgramDetectionResult,
+	type TokenProgramId,
+} from './features/tokenPrograms';
+export {
 	createTransactionHelper,
 	createTransactionRecipe,
 	type TransactionHelper,

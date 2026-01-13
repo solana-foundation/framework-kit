@@ -71,6 +71,7 @@
 		"@solana-program/system": "catalog:solana",
 		"@solana-program/compute-budget": "catalog:solana",
 		"@solana-program/token": "catalog:solana",
+		"@solana-program/token-2022": "catalog:solana",
 		"@solana-program/address-lookup-table": "catalog:solana",
 		"@wallet-standard/app": "catalog:solana",
 		"@wallet-standard/base": "catalog:solana",

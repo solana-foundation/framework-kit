@@ -1,5 +1,16 @@
 # @solana/client
 
+## 1.6.0
+
+### Minor Changes
+
+- [#149](https://github.com/solana-foundation/framework-kit/pull/149) [`be54217`](https://github.com/solana-foundation/framework-kit/commit/be5421762f7f8dd97c2f09ccdea510ea9a384089) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Add Token 2022 (Token Extensions) program support to SPL token helper.
+
+  - New `tokenProgram: 'auto'` option to auto-detect mint program ownership
+  - Explicit Token 2022 program address support via `tokenProgram` config
+  - Export `TOKEN_2022_PROGRAM_ADDRESS` and `detectTokenProgram` utility
+  - Backwards compatible - existing code continues to work unchanged
+
 ## 1.5.0
 
 ### Minor Changes

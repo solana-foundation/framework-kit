@@ -43,6 +43,13 @@ export function createClient(config: SolanaClientConfig): SolanaClient {
 		rpcSubscriptions: rpcClient.rpcSubscriptions,
 	};
 	const connectors = createWalletRegistry(hydratedConfig.walletConnectors ?? []);
+	const connectorsWithCleanup = hydratedConfig.walletConnectors as { destroy?: () => void } | undefined;
+	const connectorCleanup = (() => {
+		if (!connectorsWithCleanup) return undefined;
+		const destroy = connectorsWithCleanup.destroy;
+		if (typeof destroy !== 'function') return undefined;
+		return () => destroy();
+	})();
 	const logger = createLogger(hydratedConfig.logger);
 	const actions = createActions({ connectors, logger, runtime, store });
 	const watchers = createWatchers({ logger, runtime, store });
@@ -73,6 +80,7 @@ export function createClient(config: SolanaClientConfig): SolanaClient {
 	 * @returns Nothing; resets store contents.
 	 */
 	function destroy(): void {
+		connectorCleanup?.();
 		store.setState(() => initialState);
 	}
 	return {

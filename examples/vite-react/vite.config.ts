@@ -27,6 +27,7 @@ export default defineConfig({
 				replacement: path.resolve(__dirname, '../../packages/react-hooks/src'),
 			},
 		],
+		dedupe: ['react', 'react-dom'],
 	},
 	optimizeDeps: {
 		include: ['@solana/client', '@solana/react-hooks'],

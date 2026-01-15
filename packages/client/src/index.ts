@@ -143,6 +143,13 @@ export {
 	type SignatureLike,
 	type SignatureStatusLike,
 } from './signatures/status';
+export {
+	createWalletTransactionSigner,
+	isWalletSession,
+	resolveSignerMode,
+	type WalletTransactionSigner,
+	type WalletTransactionSignerConfig,
+} from './signers/walletTransactionSigner';
 export { type AsyncState, type AsyncStatus, createAsyncState, createInitialAsyncState } from './state/asyncState';
 export {
 	transactionToBase64,

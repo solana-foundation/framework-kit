@@ -4,9 +4,6 @@ import { StandardConnect } from '@wallet-standard/features';
 import { createWalletStandardConnector } from './standard';
 import type { WalletConnector } from './types';
 
-export type { ConnectorKitConnectors, ConnectorKitConnectorsOptions } from './connectorkit';
-export { connectorKit } from './connectorkit';
-
 type DiscoveryOptions = Readonly<{
 	overrides?: (wallet: Wallet) => Parameters<typeof createWalletStandardConnector>[1];
 	filter?: (wallet: Wallet) => boolean;

@@ -10,7 +10,9 @@ if (packageDirName === 'react-hooks') {
 }
 
 const baseEntry = ['src/index.ts'];
-const nodeEntry = packageDirName === 'client' ? [...baseEntry, 'src/server/index.ts'] : baseEntry;
+const connectorkitEntry = packageDirName === 'client' ? ['src/connectorkit/index.ts'] : [];
+const nodeEntry = packageDirName === 'client' ? [...baseEntry, 'src/server/index.ts', ...connectorkitEntry] : baseEntry;
+const browserEntry = packageDirName === 'client' ? [...baseEntry, ...connectorkitEntry] : baseEntry;
 
 // Base config
 const common = {
@@ -56,7 +58,7 @@ export default defineConfig([
 	// Browser - ESM ONLY, minified
 	{
 		...productionConfig,
-		entry: baseEntry,
+		entry: browserEntry,
 		format: ['esm'],
 		outDir: 'dist',
 		outExtension() {
@@ -67,7 +69,7 @@ export default defineConfig([
 	// React Native - ESM ONLY, minified
 	{
 		...productionConfig,
-		entry: baseEntry,
+		entry: browserEntry,
 		format: ['esm'],
 		outDir: 'dist',
 		outExtension() {

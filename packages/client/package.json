@@ -12,9 +12,12 @@
 			"react-native": "./dist/index.native.mjs",
 			"default": "./dist/index.browser.mjs"
 		},
-		"./connectors": {
-			"types": "./dist/types/wallet/connectors.d.ts",
-			"default": "./dist/wallet/connectors.node.mjs"
+		"./connectorkit": {
+			"types": "./dist/types/connectorkit/index.d.ts",
+			"browser": "./dist/connectorkit/index.browser.mjs",
+			"node": "./dist/connectorkit/index.node.mjs",
+			"react-native": "./dist/connectorkit/index.native.mjs",
+			"default": "./dist/connectorkit/index.browser.mjs"
 		},
 		"./server": {
 			"types": "./dist/types/server/index.d.ts",

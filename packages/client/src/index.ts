@@ -207,11 +207,9 @@ export type {
 export { type AddressLike, toAddress, toAddressString } from './utils/addressLike';
 export { type ClusterMoniker, resolveCluster } from './utils/cluster';
 export { stableStringify } from './utils/stableStringify';
-export type { ConnectorKitConnectors, ConnectorKitConnectorsOptions } from './wallet/connectors';
 export {
 	autoDiscover,
 	backpack,
-	connectorKit,
 	filterByNames,
 	injected,
 	metamask,

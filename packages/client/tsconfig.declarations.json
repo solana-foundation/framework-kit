@@ -7,5 +7,10 @@
 		"moduleResolution": "bundler"
 	},
 	"extends": "./tsconfig.json",
-	"include": ["../build-scripts/build-time-constants.d.ts", "src/index.ts", "src/server/index.ts"]
+	"include": [
+		"../build-scripts/build-time-constants.d.ts",
+		"src/index.ts",
+		"src/server/index.ts",
+		"src/connectorkit/index.ts"
+	]
 }

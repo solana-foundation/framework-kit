@@ -58,6 +58,7 @@
 		"zustand": "catalog:utils"
 	},
 	"devDependencies": {
+		"@solana/connector": "catalog:solana",
 		"@types/react": "catalog:typescript",
 		"react": "catalog:react"
 	},

@@ -223,7 +223,7 @@ export function useWalletSession(): WalletSession | undefined {
  * @example
  * ```ts
  * const actions = useWalletActions();
- * await actions.connectWallet('phantom');
+ * await actions.connectWallet('wallet-standard:phantom');
  * ```
  */
 export function useWalletActions() {
@@ -237,7 +237,7 @@ export function useWalletActions() {
  * @example
  * ```ts
  * const connect = useConnectWallet();
- * await connect('phantom', { autoConnect: true });
+ * await connect('wallet-standard:phantom', { autoConnect: true });
  * ```
  */
 export function useConnectWallet(): (

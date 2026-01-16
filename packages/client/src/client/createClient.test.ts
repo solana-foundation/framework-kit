@@ -125,6 +125,21 @@ describe('createClient', () => {
 		expect(client.store.getState().cluster.status).toEqual({ status: 'idle' });
 	});
 
+	it('calls walletConnectors.destroy() when destroying the client', () => {
+		const destroyWalletConnectors = vi.fn();
+		const walletConnectors = Object.assign([...config.walletConnectors], {
+			destroy: destroyWalletConnectors,
+		});
+
+		const client = createClient({
+			...config,
+			walletConnectors: walletConnectors as never,
+		});
+
+		client.destroy();
+		expect(destroyWalletConnectors).toHaveBeenCalledTimes(1);
+	});
+
 	it('respects a provided rpcClient instance', () => {
 		const rpcClient = {
 			commitment: 'processed',

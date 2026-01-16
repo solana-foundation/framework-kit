@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { SolanaClientRuntime } from '../rpc/types';
 import type { ClientActions } from '../types';
+import { createWalletRegistry } from '../wallet/registry';
 import type { WalletConnector, WalletRegistry } from '../wallet/types';
 import { createActions } from './actions';
 import { createDefaultClientStore } from './createClientStore';
@@ -187,6 +188,35 @@ describe('client actions', () => {
 		};
 		actions = createActions({ connectors: registry, logger: createLoggerMock(), runtime, store });
 		await expect(actions.connectWallet('unsupported')).rejects.toThrow(/not supported/);
+	});
+
+	it('stores canonical connector ids after alias resolution', async () => {
+		const canonicalConnector: WalletConnector = {
+			id: 'wallet-standard:phantom',
+			name: 'Phantom',
+			connect: vi.fn(async () => ({
+				account: {
+					address: ACCOUNT_ADDRESS,
+					publicKey: new Uint8Array(32),
+				},
+				connector: { id: 'wallet-standard:phantom', name: 'Phantom' },
+				disconnect: vi.fn(async () => undefined),
+				signTransaction: vi.fn(),
+			})),
+			disconnect: vi.fn(async () => undefined),
+			isSupported: () => true,
+		};
+
+		const registry = createWalletRegistry([canonicalConnector]);
+		const aliasActions = createActions({ connectors: registry, logger: createLoggerMock(), runtime, store });
+
+		await aliasActions.connectWallet('phantom');
+
+		const state = store.getState();
+		expect(state.wallet.status).toBe('connected');
+		if (state.wallet.status === 'connected') {
+			expect(state.wallet.connectorId).toBe('wallet-standard:phantom');
+		}
 	});
 
 	it('fetches balances and accounts, capturing failures', async () => {

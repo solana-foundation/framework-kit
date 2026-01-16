@@ -11,6 +11,22 @@ in any runtime (React, Svelte, API routes, workers, etc.).
 npm install @solana/client
 ```
 
+## ConnectorKit (optional)
+
+ConnectorKit integration is available as a **stable, opt-in entrypoint**: `@solana/client/connectorkit`.
+
+This requires installing `@solana/connector` (an **optional peer dependency** of `@solana/client`):
+
+```bash
+npm install @solana/connector
+```
+
+```ts
+import { connectorKit } from "@solana/client/connectorkit";
+
+const walletConnectors = connectorKit({ defaultConfig: { /* ... */ } });
+```
+
 ## Quickstart
 
 1. Choose Wallet Standard connectors (auto-discovery is the fastest way to start).
@@ -27,7 +43,8 @@ const client = createClient({
 });
 
 // Connect Wallet Standard apps via their connector ids.
-await client.actions.connectWallet("phantom");
+// Recommended: use canonical ids like "wallet-standard:phantom" (aliases like "phantom" also work).
+await client.actions.connectWallet("wallet-standard:phantom");
 
 // Fetch an account once.
 const wallet = client.store.getState().wallet;

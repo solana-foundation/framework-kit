@@ -164,19 +164,21 @@ export function createActions({ connectors, logger: inputLogger, runtime, store 
 	): Promise<WalletSession> {
 		walletEventsCleanup?.();
 		walletEventsCleanup = undefined;
-		const connector = connectors.get(connectorId);
+		const requestedConnectorId = connectorId;
+		const connector = connectors.get(requestedConnectorId);
 		if (!connector) {
-			throw new Error(`No wallet connector registered for id "${connectorId}".`);
+			throw new Error(`No wallet connector registered for id "${requestedConnectorId}".`);
 		}
+		const resolvedConnectorId = connector.id;
 		if (!connector.isSupported()) {
-			throw new Error(`Wallet connector "${connectorId}" is not supported in this environment.`);
+			throw new Error(`Wallet connector "${resolvedConnectorId}" is not supported in this environment.`);
 		}
 		const autoConnectPreference = options.autoConnect ?? false;
 
 		store.setState((state) => ({
 			...state,
 			lastUpdatedAt: now(),
-			wallet: { autoConnect: autoConnectPreference, connectorId, status: 'connecting' },
+			wallet: { autoConnect: autoConnectPreference, connectorId: resolvedConnectorId, status: 'connecting' },
 		}));
 
 		try {
@@ -184,7 +186,12 @@ export function createActions({ connectors, logger: inputLogger, runtime, store 
 			store.setState((state) => ({
 				...state,
 				lastUpdatedAt: now(),
-				wallet: { autoConnect: autoConnectPreference, connectorId, session, status: 'connected' },
+				wallet: {
+					autoConnect: autoConnectPreference,
+					connectorId: resolvedConnectorId,
+					session,
+					status: 'connected',
+				},
 			}));
 			if (session.onAccountsChanged) {
 				walletEventsCleanup = session.onAccountsChanged((accounts) => {
@@ -196,7 +203,7 @@ export function createActions({ connectors, logger: inputLogger, runtime, store 
 				});
 			}
 			logger({
-				data: { address: session.account.address.toString(), connectorId },
+				data: { address: session.account.address.toString(), connectorId: resolvedConnectorId },
 				level: 'info',
 				message: 'wallet connected',
 			});
@@ -205,10 +212,15 @@ export function createActions({ connectors, logger: inputLogger, runtime, store 
 			store.setState((state) => ({
 				...state,
 				lastUpdatedAt: now(),
-				wallet: { autoConnect: autoConnectPreference, connectorId, error, status: 'error' },
+				wallet: {
+					autoConnect: autoConnectPreference,
+					connectorId: resolvedConnectorId,
+					error,
+					status: 'error',
+				},
 			}));
 			logger({
-				data: { connectorId, ...formatError(error) },
+				data: { connectorId: resolvedConnectorId, ...formatError(error) },
 				level: 'error',
 				message: 'wallet connection failed',
 			});

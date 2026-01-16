@@ -19,7 +19,7 @@ export type ConnectorKitConnectorsOptions =
 
 export type ConnectorKitConnectors = readonly WalletConnector[] &
 	Readonly<{
-		client: ConnectorClient;
+		client?: ConnectorClient;
 		destroy(): void;
 	}>;
 
@@ -98,12 +98,19 @@ function createConnectorKitConnector(
 			await client.disconnectWallet();
 		},
 		isSupported() {
-			return typeof window !== 'undefined';
+			return typeof window !== 'undefined' && Boolean(metadata.ready);
 		},
 	};
 }
 
 export function connectorKit(options: ConnectorKitConnectorsOptions): ConnectorKitConnectors {
+	if (typeof window === 'undefined' && !('client' in options)) {
+		const connectors: WalletConnector[] = [];
+		return Object.assign(connectors, {
+			client: undefined,
+			destroy: () => undefined,
+		});
+	}
 	const client = resolveConnectorClient(options);
 	const connectors = client
 		.getSnapshot()

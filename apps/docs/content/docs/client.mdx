@@ -63,6 +63,16 @@ if (wallet.status === "connected") {
 await client.actions.disconnectWallet();
 ```
 
+### Connector IDs
+
+Connectors use **canonical IDs**:
+
+- Wallet Standard: `wallet-standard:<wallet-name>` (example: `wallet-standard:phantom`)
+- Mobile Wallet Adapter: `mwa:<wallet-name>`
+- WalletConnect: `walletconnect`
+
+For convenience, calls like `connectWallet("phantom")` also work (fallback-only: prefers `wallet-standard:phantom`, then `mwa:phantom`). The client persists the **canonical** ID in state for more reliable restore/auto-connect.
+
 ### Wallet Connectors
 
 Framework Kit uses the Wallet Standard for wallet discovery:
@@ -94,6 +104,27 @@ const client = createClient({
   walletConnectors: [phantom(), solflare(), backpack()],
 });
 ```
+
+## ConnectorKit (optional)
+
+ConnectorKit integration is exposed as a **stable, opt-in entrypoint**:
+
+```ts
+import { connectorKit } from "@solana/client/connectorkit";
+import { createClient } from "@solana/client";
+
+const walletConnectors = connectorKit({
+  // Pass a ConnectorKit client/config/defaultConfig (see ConnectorKit docs).
+  defaultConfig: { /* ... */ },
+});
+
+const client = createClient({
+  cluster: "devnet",
+  walletConnectors,
+});
+```
+
+`@solana/connector` is an **optional peer dependency** of `@solana/client`. Install it to use `@solana/client/connectorkit`.
 
 ## Fetching Data
 

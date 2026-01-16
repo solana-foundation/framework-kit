@@ -1,5 +1,12 @@
 import type { WalletConnector, WalletRegistry } from './types';
 
+function toConnectorSlug(input: string): string {
+	return input
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-+|-+$/g, '');
+}
+
 /**
  * Creates an in-memory wallet registry from the provided connectors.
  *
@@ -22,7 +29,17 @@ export function createWalletRegistry(connectors: readonly WalletConnector[]): Wa
 		 * @returns The registered connector, if present.
 		 */
 		get(id: string) {
-			return byId.get(id);
+			const exact = byId.get(id);
+			if (exact) return exact;
+
+			// Alias resolution is fallback-only so explicitly registered connectors win.
+			// Only apply aliases for "bare" ids like "phantom" (not namespaced ids nor walletconnect).
+			if (id === 'walletconnect' || id.includes(':')) return undefined;
+
+			const slug = toConnectorSlug(id);
+			if (!slug) return undefined;
+
+			return byId.get(`wallet-standard:${slug}`) ?? byId.get(`mwa:${slug}`);
 		},
 	};
 }

@@ -16,6 +16,7 @@
 		"@solana/client": "workspace:*",
 		"@solana/kit": "^5.0.0",
 		"@solana/react-hooks": "workspace:*",
+		"@solana/connector": "^0.2.3",
 		"next": "^16.0.9",
 		"react": "^19.0.0",
 		"react-dom": "^19.0.0"

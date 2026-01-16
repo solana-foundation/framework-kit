@@ -102,6 +102,114 @@ function getChain(account: WalletStandardAccount): IdentifierString | undefined 
 	return preferred;
 }
 
+export type WalletStandardSessionOptions = Readonly<{
+	account: WalletStandardAccount;
+	defaultChain?: IdentifierString;
+	disconnect: () => Promise<void>;
+	metadata: WalletConnectorMetadata;
+	onAccountsChanged?: (listener: (accounts: readonly WalletStandardAccount[]) => void) => () => void;
+	wallet: Wallet;
+}>;
+
+export function createWalletStandardSession(options: WalletStandardSessionOptions): WalletSession {
+	const { account, defaultChain, disconnect, metadata, onAccountsChanged, wallet } = options;
+	let currentAccount = account;
+	let sessionAccount = toSessionAccount(currentAccount);
+
+	const signMessageFeature = wallet.features[SolanaSignMessage] as
+		| SolanaSignMessageFeature[typeof SolanaSignMessage]
+		| undefined;
+	const signTransactionFeature = wallet.features[SolanaSignTransaction] as
+		| SolanaSignTransactionFeature[typeof SolanaSignTransaction]
+		| undefined;
+	const signAndSendFeature = wallet.features[SolanaSignAndSendTransaction] as
+		| SolanaSignAndSendTransactionFeature[typeof SolanaSignAndSendTransaction]
+		| undefined;
+
+	const resolvedChain = defaultChain ?? getChain(currentAccount);
+
+	const signMessage = signMessageFeature
+		? async (message: Uint8Array) => {
+				const [output] = await signMessageFeature.signMessage({
+					account: currentAccount,
+					message,
+				});
+				return output.signature;
+			}
+		: undefined;
+
+	const signTransaction = signTransactionFeature
+		? async (transaction: SendableTransaction & Transaction) => {
+				const wireBytes = new Uint8Array(transactionEncoder.encode(transaction));
+				const request = resolvedChain
+					? {
+							account: currentAccount,
+							chain: resolvedChain,
+							transaction: wireBytes,
+						}
+					: {
+							account: currentAccount,
+							transaction: wireBytes,
+						};
+				const [output] = await signTransactionFeature.signTransaction(request);
+				return transactionDecoder.decode(output.signedTransaction) as SendableTransaction & Transaction;
+			}
+		: undefined;
+
+	const sendTransaction = signAndSendFeature
+		? async (transaction: SendableTransaction & Transaction, config?: Readonly<{ commitment?: Commitment }>) => {
+				const wireBytes = new Uint8Array(transactionEncoder.encode(transaction));
+				const chain: IdentifierString = defaultChain ?? getChain(currentAccount) ?? 'solana:mainnet-beta';
+				const [output] = await signAndSendFeature.signAndSendTransaction({
+					account: currentAccount,
+					chain,
+					options: {
+						commitment: mapCommitment(config?.commitment),
+					},
+					transaction: wireBytes,
+				});
+				return base58Decoder.decode(output.signature) as Signature;
+			}
+		: undefined;
+
+	let changeUnsubscribe: (() => void) | undefined;
+
+	async function disconnectSession(): Promise<void> {
+		changeUnsubscribe?.();
+		changeUnsubscribe = undefined;
+		await disconnect();
+	}
+
+	const handleAccountsChanged = onAccountsChanged
+		? (listener: (accounts: WalletAccount[]) => void) => {
+				const off = onAccountsChanged((accounts) => {
+					if (accounts.length === 0) {
+						listener([]);
+						return;
+					}
+					currentAccount = accounts[0];
+					sessionAccount = toSessionAccount(currentAccount);
+					listener(accounts.map(toSessionAccount));
+				});
+				changeUnsubscribe = off;
+				return () => {
+					changeUnsubscribe?.();
+					changeUnsubscribe = undefined;
+				};
+			}
+		: undefined;
+
+	return {
+		account: sessionAccount,
+		connector: metadata,
+		disconnect: disconnectSession,
+		onAccountsChanged: handleAccountsChanged,
+		sendTransaction,
+		signMessage,
+		signTransaction,
+	};
+}
+
 /**
  * Disconnects the provided wallet when supported by the feature set.
  *
@@ -175,132 +283,26 @@ export function createWalletStandardConnector(
 			}
 		}
 
-		let currentAccount = getPrimaryAccount(walletAccounts);
-		let sessionAccount = toSessionAccount(currentAccount);
+		const currentAccount = getPrimaryAccount(walletAccounts);
 
-		const signMessageFeature = wallet.features[SolanaSignMessage] as
-			| SolanaSignMessageFeature[typeof SolanaSignMessage]
-			| undefined;
-		const signTransactionFeature = wallet.features[SolanaSignTransaction] as
-			| SolanaSignTransactionFeature[typeof SolanaSignTransaction]
-			| undefined;
-		const signAndSendFeature = wallet.features[SolanaSignAndSendTransaction] as
-			| SolanaSignAndSendTransactionFeature[typeof SolanaSignAndSendTransaction]
-			| undefined;
-
-		const resolvedChain = options.defaultChain ?? getChain(currentAccount);
-
-		/**
-		 * Signs messages using the wallet standard feature when available.
-		 *
-		 * @param message - Message payload to sign.
-		 * @returns Promise resolving with the signature.
-		 */
-		const signMessage = signMessageFeature
-			? async (message: Uint8Array) => {
-					const [output] = await signMessageFeature.signMessage({
-						account: currentAccount,
-						message,
-					});
-					return output.signature;
-				}
-			: undefined;
-
-		/**
-		 * Signs transactions using the wallet standard feature when available.
-		 *
-		 * @param transaction - Transaction to sign.
-		 * @returns Promise resolving with the signed transaction.
-		 */
-		const signTransaction = signTransactionFeature
-			? async (transaction: SendableTransaction & Transaction) => {
-					const wireBytes = new Uint8Array(transactionEncoder.encode(transaction));
-					const request = resolvedChain
-						? {
-								account: currentAccount,
-								chain: resolvedChain,
-								transaction: wireBytes,
-							}
-						: {
-								account: currentAccount,
-								transaction: wireBytes,
-							};
-					const [output] = await signTransactionFeature.signTransaction(request);
-					return transactionDecoder.decode(output.signedTransaction) as SendableTransaction & Transaction;
-				}
-			: undefined;
-
-		/**
-		 * Signs and sends transactions using the wallet standard feature when available.
-		 *
-		 * @param transaction - Transaction to sign and submit.
-		 * @param config - Optional commitment override for the submission.
-		 * @returns Promise resolving with the submitted signature.
-		 */
-		const sendTransaction = signAndSendFeature
-			? async (
-					transaction: SendableTransaction & Transaction,
-					config?: Readonly<{ commitment?: Commitment }>,
-				) => {
-					const wireBytes = new Uint8Array(transactionEncoder.encode(transaction));
-					const chain: IdentifierString =
-						options.defaultChain ?? getChain(currentAccount) ?? 'solana:mainnet-beta';
-					const [output] = await signAndSendFeature.signAndSendTransaction({
-						account: currentAccount,
-						chain,
-						options: {
-							commitment: mapCommitment(config?.commitment),
-						},
-						transaction: wireBytes,
-					});
-					return base58Decoder.decode(output.signature) as Signature;
-				}
-			: undefined;
-
-		/**
-		 * Disconnects the session scoped to this connect invocation.
-		 *
-		 * @returns Promise that resolves once the wallet has been disconnected.
-		 */
-		async function disconnectSession(): Promise<void> {
-			changeUnsubscribe?.();
-			await disconnectWallet(wallet);
-		}
-
-		let changeUnsubscribe: (() => void) | undefined;
 		const onAccountsChanged = eventsFeature
-			? (listener: (accounts: WalletAccount[]) => void) => {
+			? (listener: (accounts: readonly WalletStandardAccount[]) => void) => {
 					const off = eventsFeature.on('change', ({ accounts }) => {
 						if (!accounts) return;
-						if (!accounts.length) {
-							listener([]);
-							return;
-						}
-						currentAccount = accounts[0];
-						sessionAccount = toSessionAccount(currentAccount);
-						listener(accounts.map(toSessionAccount));
+						listener(accounts);
 					});
 					return off;
 				}
 			: undefined;
 
-		return {
-			account: sessionAccount,
-			connector: metadata,
-			disconnect: disconnectSession,
-			onAccountsChanged: onAccountsChanged
-				? (listener) => {
-						changeUnsubscribe = onAccountsChanged(listener);
-						return () => {
-							changeUnsubscribe?.();
-							changeUnsubscribe = undefined;
-						};
-					}
-				: undefined,
-			sendTransaction,
-			signMessage,
-			signTransaction,
-		};
+		return createWalletStandardSession({
+			account: currentAccount,
+			defaultChain: options.defaultChain,
+			disconnect: () => disconnectWallet(wallet),
+			metadata,
+			onAccountsChanged,
+			wallet,
+		});
 	}
 
 	/**

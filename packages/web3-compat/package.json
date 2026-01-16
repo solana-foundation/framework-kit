@@ -66,6 +66,7 @@
 		"bs58": "catalog:utils"
 	},
 	"devDependencies": {
+		"@solana/connector": "catalog:solana",
 		"@types/node": "catalog:typescript"
 	},
 	"peerDependencies": {

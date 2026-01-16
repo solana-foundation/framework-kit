@@ -143,6 +143,13 @@ export {
 	type SignatureLike,
 	type SignatureStatusLike,
 } from './signatures/status';
+export {
+	createWalletTransactionSigner,
+	isWalletSession,
+	resolveSignerMode,
+	type WalletTransactionSigner,
+	type WalletTransactionSignerConfig,
+} from './signers/walletTransactionSigner';
 export { type AsyncState, type AsyncStatus, createAsyncState, createInitialAsyncState } from './state/asyncState';
 export {
 	transactionToBase64,
@@ -207,7 +214,15 @@ export type {
 export { type AddressLike, toAddress, toAddressString } from './utils/addressLike';
 export { type ClusterMoniker, resolveCluster } from './utils/cluster';
 export { stableStringify } from './utils/stableStringify';
-export { autoDiscover, backpack, filterByNames, injected, metamask, phantom, solflare } from './wallet/connectors';
+export {
+	autoDiscover,
+	backpack,
+	filterByNames,
+	injected,
+	metamask,
+	phantom,
+	solflare,
+} from './wallet/connectors';
 export { createWalletRegistry } from './wallet/registry';
 export {
 	createWalletStandardConnector,

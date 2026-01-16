@@ -9,7 +9,7 @@ if (packageDirName === 'react-hooks') {
 	external.push('@solana/client');
 }
 
-const baseEntry = ['src/index.ts'];
+const baseEntry = packageDirName === 'client' ? ['src/index.ts', 'src/connectorkit/index.ts'] : ['src/index.ts'];
 const nodeEntry = packageDirName === 'client' ? [...baseEntry, 'src/server/index.ts'] : baseEntry;
 
 // Base config

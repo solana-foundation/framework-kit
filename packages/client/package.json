@@ -12,9 +12,14 @@
 			"react-native": "./dist/index.native.mjs",
 			"default": "./dist/index.browser.mjs"
 		},
-		"./connectors": {
-			"types": "./dist/types/wallet/connectors.d.ts",
-			"default": "./dist/wallet/connectors.node.mjs"
+		"./connectorkit": {
+			"types": "./dist/types/connectorkit/index.d.ts",
+			"browser": "./dist/connectorkit/index.browser.mjs",
+			"edge-light": "./dist/connectorkit/index.browser.mjs",
+			"workerd": "./dist/connectorkit/index.browser.mjs",
+			"node": "./dist/connectorkit/index.node.mjs",
+			"react-native": "./dist/connectorkit/index.native.mjs",
+			"default": "./dist/connectorkit/index.browser.mjs"
 		},
 		"./server": {
 			"types": "./dist/types/server/index.d.ts",
@@ -26,6 +31,9 @@
 	"types": "./dist/types/index.d.ts",
 	"typesVersions": {
 		"*": {
+			"connectorkit": [
+				"./dist/types/connectorkit/index.d.ts"
+			],
 			"server": [
 				"./dist/types/server/index.d.ts"
 			]
@@ -82,12 +90,19 @@
 		"zustand": "catalog:utils"
 	},
 	"devDependencies": {
+		"@solana/connector": "catalog:solana",
 		"@types/node": "catalog:typescript",
 		"typedoc": "^0.28.0",
 		"typedoc-plugin-markdown": "^4.4.0"
 	},
 	"peerDependencies": {
+		"@solana/connector": "catalog:solana",
 		"typescript": ">=5.3.3"
+	},
+	"peerDependenciesMeta": {
+		"@solana/connector": {
+			"optional": true
+		}
 	},
 	"engines": {
 		"node": ">=20.18.0"

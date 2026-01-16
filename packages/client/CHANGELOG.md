@@ -1,5 +1,11 @@
 # @solana/client
 
+## 1.7.0
+
+### Minor Changes
+
+- [#152](https://github.com/solana-foundation/framework-kit/pull/152) [`f3cdf94`](https://github.com/solana-foundation/framework-kit/commit/f3cdf94037089d6d100a7f5988be6b422287317b) Thanks [@GuiBibeau](https://github.com/GuiBibeau)! - Add ConnectorKit wallet connectors and shared wallet-standard session handling.
+
 ## 1.6.0
 
 ### Minor Changes

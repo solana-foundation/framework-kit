@@ -4,6 +4,7 @@
 	"compilerOptions": {
 		"paths": {
 			"@solana/client": ["../../packages/client/src/index.ts"],
+			"@solana/client/connectorkit": ["../../packages/client/src/connectorkit/index.ts"],
 			"@solana/react-hooks": ["../../packages/react-hooks/src/index.ts"]
 		}
 	}

@@ -91,6 +91,7 @@
 	--color-fd-primary: #ff8c66;
 	--color-fd-background: #fdfdfc;
 	--color-fd-foreground: #171717;
+	--fd-layout-width: 1400px;
 }
 
 .dark {

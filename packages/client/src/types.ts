@@ -302,4 +302,33 @@ export type SolanaClient = Readonly<{
 	transaction: TransactionHelper;
 	wsol: WsolHelper;
 	prepareTransaction: ClientHelpers['prepareTransaction'];
+	registerPlugins: RegisterPluginsFn;
 }>;
+
+/**
+ * A plugin function that transforms or extends a client with additional functionality.
+ * This type matches Kit's `ClientPlugin` signature for forward compatibility.
+ *
+ * @typeParam TInput - The input client type (must extend object)
+ * @typeParam TOutput - The output type: either a new client object or Promise resolving to one
+ */
+export type Plugin<TInput extends object, TOutput extends object | Promise<object>> = (input: TInput) => TOutput;
+
+/**
+ * Helper type to infer the final client type after applying a chain of plugins.
+ */
+export type ApplyPlugins<TClient extends object, TPlugins extends readonly unknown[]> = TPlugins extends readonly [
+	infer TFirst,
+	...infer TRest,
+]
+	? TFirst extends Plugin<TClient, infer TOut>
+		? ApplyPlugins<Awaited<TOut> extends object ? Awaited<TOut> : never, TRest>
+		: never
+	: TClient;
+
+/**
+ * The registerPlugins method signature. Returns a new frozen client with plugin extensions.
+ */
+export type RegisterPluginsFn = <const TPlugins extends readonly Plugin<SolanaClient, object | Promise<object>>[]>(
+	plugins: TPlugins,
+) => Promise<ApplyPlugins<SolanaClient, TPlugins>>;

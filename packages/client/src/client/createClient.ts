@@ -2,11 +2,12 @@ import { createLogger, formatError } from '../logging/logger';
 import { createSolanaRpcClient } from '../rpc/createSolanaRpcClient';
 import type { SolanaClientRuntime } from '../rpc/types';
 import { applySerializableState } from '../serialization/state';
-import type { ClientStore, SolanaClient, SolanaClientConfig } from '../types';
+import type { ClientStore, Plugin, SolanaClient, SolanaClientConfig } from '../types';
 import { now } from '../utils';
 import { resolveCluster } from '../utils/cluster';
 import { createWalletRegistry } from '../wallet/registry';
 import { createActions } from './actions';
+import { applyPlugins } from './applyPlugins';
 import { createClientHelpers } from './createClientHelpers';
 import { createClientStore, createInitialClientState } from './createClientStore';
 import { createWatchers } from './watchers';
@@ -83,7 +84,7 @@ export function createClient(config: SolanaClientConfig): SolanaClient {
 		connectorCleanup?.();
 		store.setState(() => initialState);
 	}
-	return {
+	const client: SolanaClient = {
 		actions,
 		config,
 		connectors,
@@ -113,5 +114,9 @@ export function createClient(config: SolanaClientConfig): SolanaClient {
 		},
 		prepareTransaction: helpers.prepareTransaction,
 		watchers,
+		registerPlugins: <const TPlugins extends readonly Plugin<SolanaClient, object | Promise<object>>[]>(
+			plugins: TPlugins,
+		) => applyPlugins(client, plugins),
 	};
+	return client;
 }

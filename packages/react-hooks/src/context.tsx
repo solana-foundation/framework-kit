@@ -6,7 +6,7 @@ import {
 	type SolanaClientConfig,
 } from '@solana/client';
 import type { ReactNode } from 'react';
-import { createContext, useContext, useEffect, useMemo } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
 export const SolanaClientContext = createContext<SolanaClient | null>(null);
 
@@ -28,21 +28,33 @@ function normalizeConfig(config?: SolanaClientConfig | CreateDefaultClientOption
  */
 export function SolanaClientProvider({ children, client: providedClient, config }: ProviderProps) {
 	const normalizedConfig = useMemo(() => normalizeConfig(config), [config]);
-	const client = useMemo(() => {
-		if (providedClient) {
-			return providedClient;
-		}
-		return createClient(normalizedConfig);
-	}, [normalizedConfig, providedClient]);
+	const [asyncClient, setAsyncClient] = useState<SolanaClient | null>(null);
 
 	useEffect(() => {
+		// If a client is provided, no need to create one
 		if (providedClient) {
 			return;
 		}
+
+		let cancelled = false;
+		const asyncClientPromise = createClient(normalizedConfig);
+
+		asyncClientPromise.then((client) => {
+			if (!cancelled) {
+				setAsyncClient(client);
+			}
+		});
+
 		return () => {
-			client.destroy();
+			cancelled = true;
+			asyncClientPromise.then((client) => {
+				client.destroy();
+			});
 		};
-	}, [client, providedClient]);
+	}, [normalizedConfig, providedClient]);
+
+	// Use provided client if available, otherwise use async client
+	const client = providedClient ?? asyncClient;
 
 	return <SolanaClientContext.Provider value={client}>{children}</SolanaClientContext.Provider>;
 }

@@ -8,6 +8,7 @@ import type {
 	Transaction,
 	TransactionMessageWithBlockhashLifetime,
 } from '@solana/kit';
+import type { AsyncClient, Client, ClientPlugin } from '@solana/plugin-core';
 import type { TransactionWithLastValidBlockHeight } from '@solana/transaction-confirmation';
 import type { StoreApi } from 'zustand/vanilla';
 import type { SolTransferHelper } from './features/sol';
@@ -20,6 +21,8 @@ import type { SolanaClientRuntime } from './rpc/types';
 import type { PrepareTransactionMessage, PrepareTransactionOptions } from './transactions/prepareTransaction';
 import type { ClusterMoniker } from './utils/cluster';
 import type { WalletConnector, WalletRegistry, WalletSession, WalletStatus } from './wallet/types';
+
+export type { AsyncClient, Client, ClientPlugin };
 
 export type LogLevel = 'debug' | 'error' | 'info' | 'warn';
 
@@ -284,51 +287,41 @@ export type ClientHelpers = Readonly<{
 	): Promise<TMessage & TransactionMessageWithBlockhashLifetime>;
 }>;
 
-export type SolanaClient = Readonly<{
-	actions: ClientActions;
-	config: SolanaClientConfig;
-	connectors: WalletRegistry;
-	destroy(): void;
-	runtime: Readonly<SolanaClientRuntime>;
-	store: ClientStore;
-	watchers: ClientWatchers;
-	helpers: ClientHelpers;
-	solTransfer: SolTransferHelper;
-	SolTransfer: SolTransferHelper;
-	splToken(config: SplTokenHelperConfig): SplTokenHelper;
-	SplToken(config: SplTokenHelperConfig): SplTokenHelper;
-	SplHelper(config: SplTokenHelperConfig): SplTokenHelper;
-	stake: StakeHelper;
-	transaction: TransactionHelper;
-	wsol: WsolHelper;
-	prepareTransaction: ClientHelpers['prepareTransaction'];
-	registerPlugins: RegisterPluginsFn;
+/**
+ * Resolved configuration after applying defaults and cluster resolution.
+ */
+export type ResolvedClientConfig = Readonly<{
+	commitment: Commitment;
+	endpoint: ClusterUrl;
+	originalConfig: SolanaClientConfig;
+	websocketEndpoint?: ClusterUrl;
 }>;
 
 /**
- * A plugin function that transforms or extends a client with additional functionality.
- * This type matches Kit's `ClientPlugin` signature for forward compatibility.
- *
- * @typeParam TInput - The input client type (must extend object)
- * @typeParam TOutput - The output type: either a new client object or Promise resolving to one
+ * The fully-initialized Solana client with all plugins applied.
  */
-export type Plugin<TInput extends object, TOutput extends object | Promise<object>> = (input: TInput) => TOutput;
+export type SolanaClient = Readonly<{
+	actions: ClientActions;
+	config: ResolvedClientConfig;
+	connectors: WalletRegistry;
+	destroy(): void;
+	helpers: ClientHelpers;
+	prepareTransaction: ClientHelpers['prepareTransaction'];
+	runtime: Readonly<SolanaClientRuntime>;
+	solTransfer: SolTransferHelper;
+	SolTransfer: SolTransferHelper;
+	splToken(config: SplTokenHelperConfig): SplTokenHelper;
+	SplHelper(config: SplTokenHelperConfig): SplTokenHelper;
+	SplToken(config: SplTokenHelperConfig): SplTokenHelper;
+	stake: StakeHelper;
+	store: ClientStore;
+	transaction: TransactionHelper;
+	watchers: ClientWatchers;
+	wsol: WsolHelper;
+}>;
 
 /**
- * Helper type to infer the final client type after applying a chain of plugins.
+ * @deprecated Use `ClientPlugin` from `@solana/plugin-core` instead.
+ * This type is kept for backwards compatibility.
  */
-export type ApplyPlugins<TClient extends object, TPlugins extends readonly unknown[]> = TPlugins extends readonly [
-	infer TFirst,
-	...infer TRest,
-]
-	? TFirst extends Plugin<TClient, infer TOut>
-		? ApplyPlugins<Awaited<TOut> extends object ? Awaited<TOut> : never, TRest>
-		: never
-	: TClient;
-
-/**
- * The registerPlugins method signature. Returns a new frozen client with plugin extensions.
- */
-export type RegisterPluginsFn = <const TPlugins extends readonly Plugin<SolanaClient, object | Promise<object>>[]>(
-	plugins: TPlugins,
-) => Promise<ApplyPlugins<SolanaClient, TPlugins>>;
+export type Plugin<TInput extends object, TOutput extends object | Promise<object>> = ClientPlugin<TInput, TOutput>;

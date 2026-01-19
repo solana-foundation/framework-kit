@@ -9,6 +9,7 @@ catalogs:
   solana:
     "@solana/compat": "^5.0.0"
     "@solana/kit": "^5.0.0"
+    "@solana/plugin-core": "^5.0.0"
     "@solana/addresses": "^5.0.0"
     "@solana/codecs-core": "^5.0.0"
     "@solana/codecs-strings": "^5.0.0"

@@ -74,6 +74,7 @@
 		"@solana-program/stake": "^0.5.0",
 		"@solana/codecs-strings": "catalog:solana",
 		"@solana/kit": "catalog:solana",
+		"@solana/plugin-core": "catalog:solana",
 		"@solana/transactions": "catalog:solana",
 		"@solana/transaction-confirmation": "catalog:solana",
 		"@solana-program/system": "catalog:solana",

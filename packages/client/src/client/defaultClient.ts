@@ -1,4 +1,5 @@
 import type { ClusterUrl, Commitment } from '@solana/kit';
+import type { AsyncClient } from '@solana/plugin-core';
 
 import type { SolanaClient, SolanaClientConfig } from '../types';
 import { type ClusterMoniker, resolveCluster } from '../utils/cluster';
@@ -66,6 +67,18 @@ export function resolveClientConfig(config: CreateDefaultClientOptions | SolanaC
 	};
 }
 
-export function createDefaultClient(config: CreateDefaultClientOptions = {}): SolanaClient {
+/**
+ * Creates a default Solana client with standard wallet connectors.
+ * Returns an AsyncClient that can be awaited to get the fully initialized client.
+ *
+ * @param config - Configuration options for the client.
+ * @returns An AsyncClient that resolves to a fully initialized SolanaClient.
+ *
+ * @example
+ * ```ts
+ * const client = await createDefaultClient({ cluster: 'devnet' });
+ * ```
+ */
+export function createDefaultClient(config: CreateDefaultClientOptions = {}): AsyncClient<SolanaClient> {
 	return createClient(resolveClientConfig(config));
 }

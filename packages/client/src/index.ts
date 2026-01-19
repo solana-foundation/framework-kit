@@ -10,7 +10,7 @@ export {
 	sendTransaction,
 	setCluster,
 } from './actions';
-export { createClient } from './client/createClient';
+export { createClient, createEmptyClient, createMinimalClient, type FullSolanaClient } from './client/createClient';
 export { createClientStore, createDefaultClientStore, createInitialClientState } from './client/createClientStore';
 export {
 	type CreateDefaultClientOptions,
@@ -119,6 +119,31 @@ export {
 } from './numeric/math';
 export { type ApplyRatioOptions, applyRatio, createRatio, type Ratio, type RoundingMode } from './numeric/rational';
 export {
+	actionsPlugin,
+	aliasesPlugin,
+	type ClientWithActions,
+	type ClientWithAliases,
+	type ClientWithConfig,
+	type ClientWithConnectors,
+	type ClientWithHelpers,
+	type ClientWithLifetime,
+	type ClientWithRuntime,
+	type ClientWithStore,
+	type ClientWithWatchers,
+	type ConfigPluginOptions,
+	type ConnectorsPluginOptions,
+	clusterWarmupPlugin,
+	configPlugin,
+	connectorsPlugin,
+	helpersPlugin,
+	lifetimePlugin,
+	type ResolvedConfig,
+	runtimePlugin,
+	type StorePluginOptions,
+	storePlugin,
+	watchersPlugin,
+} from './plugins';
+export {
 	type CreateSolanaRpcClientConfig,
 	createSolanaRpcClient,
 	type SendAndConfirmTransactionOptions,
@@ -178,11 +203,13 @@ export type {
 	AccountCacheEntry,
 	AccountWatcherConfig,
 	AddressLookupTableData,
-	ApplyPlugins,
+	AsyncClient,
 	BalanceWatcherConfig,
+	Client,
 	ClientActions,
 	ClientHelpers,
 	ClientLogger,
+	ClientPlugin,
 	ClientState,
 	ClientStore,
 	ClientWatchers,
@@ -203,9 +230,9 @@ export type {
 	FetchNonceAccountReturnType,
 	NonceAccountData,
 	Plugin,
-	RegisterPluginsFn,
 	RequestAirdropParameters,
 	RequestAirdropReturnType,
+	ResolvedClientConfig,
 	SendTransactionParameters,
 	SendTransactionReturnType,
 	SerializableSolanaState,

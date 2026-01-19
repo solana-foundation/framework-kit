@@ -1,14 +1,15 @@
 // @vitest-environment jsdom
 
-import type { SolanaClientConfig } from '@solana/client';
+import type { SolanaClient, SolanaClientConfig } from '@solana/client';
 import { createClient } from '@solana/client';
-import { render, renderHook } from '@testing-library/react';
+import { act, render, renderHook, waitFor } from '@testing-library/react';
+import { useContext } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createMockSolanaClient } from '../test/mocks';
 import { renderHookWithClient } from '../test/utils';
 
-import { SolanaClientProvider, useSolanaClient } from './context';
+import { SolanaClientContext, SolanaClientProvider, useSolanaClient } from './context';
 
 vi.mock('@solana/client', async () => {
 	const actual = await vi.importActual<typeof import('@solana/client')>('@solana/client');
@@ -18,7 +19,11 @@ vi.mock('@solana/client', async () => {
 	};
 });
 
-const createClientMock = createClient as unknown as vi.MockedFunction<typeof createClient>;
+const createClientMock = createClient as unknown as ReturnType<typeof vi.fn>;
+
+function createAsyncClientMock(client: ReturnType<typeof createMockSolanaClient>) {
+	return Promise.resolve(client);
+}
 
 describe('SolanaClientProvider', () => {
 	beforeEach(() => {
@@ -40,19 +45,18 @@ describe('SolanaClientProvider', () => {
 		expect(client.destroy).not.toHaveBeenCalled();
 	});
 
-	it('creates a client from config and destroys it on unmount', () => {
+	it('creates a client from config and destroys it on unmount', async () => {
 		const client = createMockSolanaClient();
-		createClientMock.mockReturnValue(client);
+		createClientMock.mockReturnValue(createAsyncClientMock(client));
 
 		const config: SolanaClientConfig = {
 			endpoint: 'http://localhost:8899',
 		};
 
-		const { unmount } = render(
-			<SolanaClientProvider config={config}>
-				<TestConsumer />
-			</SolanaClientProvider>,
-		);
+		// Use useContext directly to avoid the throw in useSolanaClient when client is null
+		const { result, unmount } = renderHook(() => useContext(SolanaClientContext), {
+			wrapper: ({ children }) => <SolanaClientProvider config={config}>{children}</SolanaClientProvider>,
+		});
 
 		expect(createClientMock).toHaveBeenCalledWith(
 			expect.objectContaining({
@@ -61,19 +65,28 @@ describe('SolanaClientProvider', () => {
 			}),
 		);
 
-		unmount();
-		expect(client.destroy).toHaveBeenCalledTimes(1);
+		// Wait for async client to resolve
+		await waitFor(() => {
+			expect(result.current).toBe(client);
+		});
+
+		await act(async () => {
+			unmount();
+		});
+
+		await waitFor(() => {
+			expect(client.destroy).toHaveBeenCalledTimes(1);
+		});
 	});
 
-	it('creates a default client when neither client nor config is provided and cleans up on unmount', () => {
+	it('creates a default client when neither client nor config is provided and cleans up on unmount', async () => {
 		const client = createMockSolanaClient();
-		createClientMock.mockReturnValue(client);
+		createClientMock.mockReturnValue(createAsyncClientMock(client));
 
-		const { unmount } = render(
-			<SolanaClientProvider>
-				<TestConsumer />
-			</SolanaClientProvider>,
-		);
+		// Use useContext directly to avoid the throw in useSolanaClient when client is null
+		const { result, unmount } = renderHook(() => useContext(SolanaClientContext), {
+			wrapper: ({ children }) => <SolanaClientProvider>{children}</SolanaClientProvider>,
+		});
 
 		expect(createClientMock).toHaveBeenCalledWith(
 			expect.objectContaining({
@@ -82,8 +95,18 @@ describe('SolanaClientProvider', () => {
 			}),
 		);
 
-		unmount();
-		expect(client.destroy).toHaveBeenCalledTimes(1);
+		// Wait for async client to resolve
+		await waitFor(() => {
+			expect(result.current).toBe(client);
+		});
+
+		await act(async () => {
+			unmount();
+		});
+
+		await waitFor(() => {
+			expect(client.destroy).toHaveBeenCalledTimes(1);
+		});
 	});
 
 	it('throws when useSolanaClient is used outside of a provider', () => {
@@ -92,8 +115,3 @@ describe('SolanaClientProvider', () => {
 		);
 	});
 });
-
-function TestConsumer() {
-	useSolanaClient();
-	return null;
-}

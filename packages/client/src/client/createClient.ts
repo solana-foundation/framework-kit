@@ -1,122 +1,80 @@
-import { createLogger, formatError } from '../logging/logger';
-import { createSolanaRpcClient } from '../rpc/createSolanaRpcClient';
-import type { SolanaClientRuntime } from '../rpc/types';
+import { type AsyncClient, type Client, createEmptyClient } from '@solana/plugin-core';
+
+import { actionsPlugin } from '../plugins/actionsPlugin';
+import { aliasesPlugin } from '../plugins/aliasesPlugin';
+import { clusterWarmupPlugin } from '../plugins/clusterWarmupPlugin';
+import { configPlugin } from '../plugins/configPlugin';
+import { connectorsPlugin } from '../plugins/connectorsPlugin';
+import { helpersPlugin } from '../plugins/helpersPlugin';
+import { lifetimePlugin } from '../plugins/lifetimePlugin';
+import { runtimePlugin } from '../plugins/runtimePlugin';
+import { storePlugin } from '../plugins/storePlugin';
+import { watchersPlugin } from '../plugins/watchersPlugin';
 import { applySerializableState } from '../serialization/state';
-import type { ClientStore, Plugin, SolanaClient, SolanaClientConfig } from '../types';
-import { now } from '../utils';
-import { resolveCluster } from '../utils/cluster';
-import { createWalletRegistry } from '../wallet/registry';
-import { createActions } from './actions';
-import { applyPlugins } from './applyPlugins';
-import { createClientHelpers } from './createClientHelpers';
-import { createClientStore, createInitialClientState } from './createClientStore';
-import { createWatchers } from './watchers';
+import type { SolanaClient, SolanaClientConfig } from '../types';
+
+/**
+ * The full SolanaClient type after all plugins are applied.
+ * This is the resolved type that users receive after awaiting createClient().
+ */
+export type FullSolanaClient = Client<SolanaClient>;
 
 /**
  * Creates a Solana client instance using the provided configuration.
+ * Returns an AsyncClient that can be awaited to get the fully initialized client.
  *
  * @param config - High-level configuration supplied by integrators.
- * @returns Fully initialized {@link SolanaClient} instance.
+ * @returns An AsyncClient that resolves to a fully initialized {@link SolanaClient} instance.
+ *
+ * @example Basic usage
+ * ```ts
+ * const client = await createClient({ endpoint: 'https://api.devnet.solana.com' });
+ * const balance = await client.actions.fetchBalance(address);
+ * ```
+ *
+ * @example With wallet connectors
+ * ```ts
+ * const client = await createClient({
+ *   endpoint: 'https://api.mainnet-beta.solana.com',
+ *   walletConnectors: [...phantom(), ...solflare()],
+ * });
+ * ```
  */
-export function createClient(config: SolanaClientConfig): SolanaClient {
+export function createClient(config: SolanaClientConfig): AsyncClient<SolanaClient> {
 	const hydratedConfig = config.initialState ? applySerializableState(config, config.initialState) : config;
-	const resolvedCluster = resolveCluster({
-		endpoint: hydratedConfig.rpc ?? hydratedConfig.endpoint,
-		moniker: hydratedConfig.cluster,
-		websocketEndpoint: hydratedConfig.websocket ?? hydratedConfig.websocketEndpoint,
-	});
-	const commitment = hydratedConfig.commitment ?? 'confirmed';
-	const initialState = createInitialClientState({
-		commitment,
-		endpoint: resolvedCluster.endpoint,
-		websocketEndpoint: resolvedCluster.websocketEndpoint,
-	});
-	const store: ClientStore = config.createStore ? config.createStore(initialState) : createClientStore(initialState);
-	const rpcClient =
-		hydratedConfig.rpcClient ??
-		createSolanaRpcClient({
-			commitment,
-			endpoint: resolvedCluster.endpoint,
-			websocketEndpoint: resolvedCluster.websocketEndpoint,
-		});
-	const runtime: SolanaClientRuntime = {
-		rpc: rpcClient.rpc,
-		rpcSubscriptions: rpcClient.rpcSubscriptions,
-	};
-	const connectors = createWalletRegistry(hydratedConfig.walletConnectors ?? []);
-	const connectorsWithCleanup = hydratedConfig.walletConnectors as { destroy?: () => void } | undefined;
-	const connectorCleanup = (() => {
-		if (!connectorsWithCleanup) return undefined;
-		const destroy = connectorsWithCleanup.destroy;
-		if (typeof destroy !== 'function') return undefined;
-		return () => destroy();
-	})();
-	const logger = createLogger(hydratedConfig.logger);
-	const actions = createActions({ connectors, logger, runtime, store });
-	const watchers = createWatchers({ logger, runtime, store });
-	const helpers = createClientHelpers(runtime, store);
-	store.setState((state) => ({
-		...state,
-		cluster: {
-			...state.cluster,
-			status: { status: 'connecting' },
-		},
-		lastUpdatedAt: now(),
-	}));
-	actions
-		.setCluster(resolvedCluster.endpoint, {
-			commitment,
-			websocketEndpoint: resolvedCluster.websocketEndpoint,
-		})
-		.catch((error) =>
-			logger({
-				data: formatError(error),
-				level: 'error',
-				message: 'initial cluster setup failed',
-			}),
-		);
-	/**
-	 * Resets the client's store back to its initial state.
-	 *
-	 * @returns Nothing; resets store contents.
-	 */
-	function destroy(): void {
-		connectorCleanup?.();
-		store.setState(() => initialState);
-	}
-	const client: SolanaClient = {
-		actions,
-		config,
-		connectors,
-		destroy,
-		get helpers() {
-			return helpers;
-		},
-		runtime,
-		store,
-		get solTransfer() {
-			return helpers.solTransfer;
-		},
-		get SolTransfer() {
-			return helpers.solTransfer;
-		},
-		splToken: helpers.splToken,
-		SplToken: helpers.splToken,
-		SplHelper: helpers.splToken,
-		get stake() {
-			return helpers.stake;
-		},
-		get transaction() {
-			return helpers.transaction;
-		},
-		get wsol() {
-			return helpers.wsol;
-		},
-		prepareTransaction: helpers.prepareTransaction,
-		watchers,
-		registerPlugins: <const TPlugins extends readonly Plugin<SolanaClient, object | Promise<object>>[]>(
-			plugins: TPlugins,
-		) => applyPlugins(client, plugins),
-	};
-	return client;
+
+	return createEmptyClient()
+		.use(configPlugin(hydratedConfig))
+		.use(storePlugin())
+		.use(connectorsPlugin(hydratedConfig.walletConnectors))
+		.use(runtimePlugin())
+		.use(actionsPlugin())
+		.use(watchersPlugin())
+		.use(helpersPlugin())
+		.use(aliasesPlugin())
+		.use(lifetimePlugin())
+		.use(clusterWarmupPlugin()) as AsyncClient<SolanaClient>;
 }
+
+/**
+ * Creates a minimal client without aliases or cluster warmup.
+ * Useful for server-side use cases where wallet support is not needed.
+ *
+ * @param config - High-level configuration supplied by integrators.
+ * @returns A sync Client without helper aliases and cluster warmup.
+ */
+export function createMinimalClient(config: SolanaClientConfig) {
+	const hydratedConfig = config.initialState ? applySerializableState(config, config.initialState) : config;
+
+	return createEmptyClient()
+		.use(configPlugin(hydratedConfig))
+		.use(storePlugin())
+		.use(connectorsPlugin(hydratedConfig.walletConnectors))
+		.use(runtimePlugin())
+		.use(actionsPlugin())
+		.use(watchersPlugin())
+		.use(helpersPlugin())
+		.use(lifetimePlugin());
+}
+
+export { type AsyncClient, type Client, createEmptyClient } from '@solana/plugin-core';

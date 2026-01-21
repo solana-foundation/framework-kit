@@ -221,6 +221,181 @@ function NonceInfo({ address }: { address: string }) {
 }
 ```
 
+### useClassifiedTransactions
+
+Fetch and classify transactions for a wallet address with automatic spam filtering, protocol detection, and token metadata enrichment:
+
+```tsx
+import { useClassifiedTransactions } from "@solana/react-hooks";
+
+function TransactionHistory({ address }: { address: string }) {
+  const { transactions, isLoading, isError, hasMore, oldestSignature } =
+    useClassifiedTransactions({
+      address,
+      options: { limit: 10 },
+    });
+
+  if (isLoading) return <p>Loading...</p>;
+  if (isError) return <p>Error loading transactions</p>;
+
+  return (
+    <div>
+      {transactions.map((tx) => (
+        <div key={tx.tx.signature}>
+          <p><strong>{tx.classification.primaryType}</strong></p>
+          {tx.classification.primaryAmount && (
+            <p>
+              {tx.classification.primaryAmount.amountUi}{" "}
+              {tx.classification.primaryAmount.token.symbol}
+            </p>
+          )}
+          {tx.tx.protocol && <p>via {tx.tx.protocol.name}</p>}
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+**Pagination example:**
+
+```tsx
+function PaginatedHistory({ address }: { address: string }) {
+  const [cursor, setCursor] = useState<string>();
+
+  const { transactions, oldestSignature, hasMore, isLoading } =
+    useClassifiedTransactions({
+      address,
+      options: { limit: 20, before: cursor },
+    });
+
+  return (
+    <div>
+      {transactions.map((tx) => (
+        <TransactionCard key={tx.tx.signature} tx={tx} />
+      ))}
+      {hasMore && (
+        <button
+          onClick={() => setCursor(oldestSignature ?? undefined)}
+          disabled={isLoading}
+        >
+          Load More
+        </button>
+      )}
+    </div>
+  );
+}
+```
+
+**Rate-limited RPC configuration:**
+
+```tsx
+// Conservative settings for public RPCs (e.g., devnet)
+const { transactions } = useClassifiedTransactions({
+  address,
+  options: {
+    limit: 5,
+    overfetchMultiplier: 1,
+    transactionConcurrency: 1,
+  },
+  swr: {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+  },
+});
+```
+
+**Options:**
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `limit` | `10` | Max transactions per request |
+| `before` | — | Pagination cursor (oldest signature from previous request) |
+| `until` | — | Stop fetching at this signature |
+| `cluster` | auto | Override auto-detected cluster (`'mainnet-beta'` \| `'devnet'` \| `'testnet'`) |
+| `filterSpam` | `true` | Filter out spam/dust transactions |
+| `includeTokenAccounts` | `false` | Query ATAs for incoming token transfers |
+| `maxTokenAccounts` | `5` | Max ATAs to query when `includeTokenAccounts` is enabled |
+| `enrichTokenMetadata` | `true` | Add token symbols and names |
+| `enrichNftMetadata` | `true` | Add NFT metadata (requires DAS RPC) |
+| `overfetchMultiplier` | `1` | Signature overfetch multiplier (increase for high-spam wallets) |
+| `minPageSize` | `20` | Min signatures per iteration |
+| `transactionConcurrency` | `1` | Parallel transaction fetches |
+
+**Response Structure:**
+
+Each item in the `transactions` array is a `ClassifiedTransaction`:
+
+```ts
+interface ClassifiedTransaction {
+  // Raw transaction data
+  tx: {
+    signature: string;
+    slot: number | bigint;
+    blockTime: number | bigint | null;
+    fee?: number;
+    err: any | null;
+    programIds: string[];
+    protocol: {
+      id: string;
+      name: string;             // e.g. "Jupiter", "Raydium"
+      iconUrl?: string;
+    } | null;
+    memo?: string | null;
+  };
+
+  // High-level classification
+  classification: {
+    primaryType:
+      | "transfer" | "swap" | "nft_purchase" | "nft_sale"
+      | "nft_mint" | "stake_deposit" | "stake_withdraw"
+      | "airdrop" | "bridge_in" | "bridge_out"
+      | "privacy_deposit" | "privacy_withdraw"  // Privacy Cash
+      | "fee_only" | "other";
+    primaryAmount: MoneyAmount | null;    // Main amount
+    secondaryAmount?: MoneyAmount | null; // e.g., swap output
+    sender?: string | null;
+    receiver?: string | null;
+    counterparty: {
+      type: "person" | "merchant" | "exchange" | "protocol" | "own_wallet" | "unknown";
+      address: string;
+      name?: string;
+    } | null;
+    confidence: number;  // 0-1
+    metadata?: Record<string, any>;  // e.g., nft_mint, nft_name
+  };
+
+  // Individual token/SOL movements
+  legs: Array<{
+    accountId: string;
+    side: "debit" | "credit";    // debit = out, credit = in
+    amount: MoneyAmount;
+    role: "sent" | "received" | "fee" | "reward" | "protocol_deposit" | "protocol_withdraw" | "unknown";
+  }>;
+}
+
+interface MoneyAmount {
+  token: {
+    mint: string;
+    symbol: string;      // e.g. "SOL", "USDC"
+    name?: string;
+    decimals: number;
+    logoURI?: string;
+  };
+  amountRaw: string;     // Raw amount (e.g., "1000000000")
+  amountUi: number;      // Human-readable (e.g., 1.0)
+  fiat?: {
+    currency: "USD" | "EUR";
+    amount: number;
+    pricePerUnit: number;
+  };
+}
+```
+
+**Understanding Legs:**
+
+Legs are the individual token movements within a transaction. A simple SOL transfer has 2 legs (sender debit, receiver credit), while a swap has 4+ legs (token out, token in, fees). Use `classification.primaryAmount` for high-level summaries, and `legs` for granular movement details.
+
 ## Transfer Hooks
 
 ### useSolTransfer
@@ -646,6 +821,7 @@ export function App() {
 | `useAccount` | Fetch and watch account |
 | `useLookupTable` | Fetch lookup table |
 | `useNonceAccount` | Fetch nonce account |
+| `useClassifiedTransactions` | Fetch classified transaction history |
 | `useProgramAccounts` | Query program accounts |
 
 ### Transaction Hooks

@@ -5,6 +5,7 @@ import { Suspense } from 'react';
 import { AccountInspectorCard } from './components/AccountInspectorCard.tsx';
 import { AirdropCard } from './components/AirdropCard.tsx';
 import { BalanceCard } from './components/BalanceCard.tsx';
+import { ClassifiedTransactionsCard } from './components/ClassifiedTransactionsCard.tsx';
 import { ClusterStatusCard } from './components/ClusterStatusCard.tsx';
 import { LatestBlockhashCard } from './components/LatestBlockhashCard.tsx';
 import { ProgramAccountsCard } from './components/ProgramAccountsCard.tsx';
@@ -95,6 +96,7 @@ function DemoApp() {
 							fallback={<div className="log-panel text-sm text-muted-foreground">Loading queries…</div>}
 						>
 							<div className="grid gap-6 lg:grid-cols-2">
+								<ClassifiedTransactionsCard />
 								<LatestBlockhashCard />
 								<ProgramAccountsCard />
 								<SimulateTransactionCard />

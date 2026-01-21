@@ -44,17 +44,18 @@
 	},
 	"license": "MIT",
 	"dependencies": {
-		"@solana/client": "workspace:*",
 		"@solana/addresses": "catalog:solana",
+		"@solana/client": "workspace:*",
 		"@solana/codecs-core": "catalog:solana",
 		"@solana/errors": "catalog:solana",
 		"@solana/keys": "catalog:solana",
+		"@solana/kit": "catalog:solana",
 		"@solana/promises": "catalog:solana",
 		"@solana/signers": "catalog:solana",
 		"@solana/transaction-messages": "catalog:solana",
 		"@solana/transactions": "catalog:solana",
-		"@solana/kit": "catalog:solana",
 		"swr": "^2.3.6",
+		"tx-indexer": "^1.4.0",
 		"zustand": "catalog:utils"
 	},
 	"devDependencies": {

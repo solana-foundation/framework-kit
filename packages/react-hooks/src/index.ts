@@ -1,6 +1,15 @@
 'use client';
 
 export type { StakeAccount } from '@solana/client';
+export type { ClassifiedTransaction, Cluster } from 'tx-indexer';
+export type {
+	MoneyAmount,
+	RawTransaction,
+	TokenInfo,
+	TransactionClassification,
+	TxLeg,
+	TxPrimaryType,
+} from 'tx-indexer/types';
 export type {
 	SolanaClientProviderProps,
 	UseSolanaClientParameters,
@@ -96,6 +105,12 @@ export type {
 	WalletModalState,
 } from './ui';
 export { useWalletConnection, useWalletModalState, WalletConnectionManager } from './ui';
+export type {
+	UseClassifiedTransactionsOptions,
+	UseClassifiedTransactionsParameters,
+	UseClassifiedTransactionsReturnType,
+} from './useClassifiedTransactions';
+export { useClassifiedTransactions } from './useClassifiedTransactions';
 export type {
 	UseClientStoreParameters,
 	UseClientStoreReturnType,

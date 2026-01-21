@@ -248,6 +248,106 @@ function NonceInfo({ address }: { address: string }) {
 }
 ```
 
+### Fetch classified transactions
+
+Fetch and classify transactions for a wallet with automatic spam filtering, protocol detection, and token metadata:
+
+```tsx
+import { useClassifiedTransactions } from "@solana/react-hooks";
+
+function TransactionHistory({ address }: { address: string }) {
+  const { transactions, isLoading, isError, hasMore, oldestSignature } =
+    useClassifiedTransactions({
+      address,
+      options: { limit: 10 },
+    });
+
+  if (isLoading) return <p>Loading…</p>;
+  if (isError) return <p role="alert">Error loading transactions</p>;
+
+  return (
+    <ul>
+      {transactions.map((tx) => (
+        <li key={tx.tx.signature}>
+          <strong>{tx.classification.primaryType}</strong>
+          {tx.classification.primaryAmount && (
+            <>
+              : {tx.classification.primaryAmount.amountUi}{" "}
+              {tx.classification.primaryAmount.token.symbol}
+            </>
+          )}
+          {tx.tx.protocol && <span> via {tx.tx.protocol.name}</span>}
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+**Pagination example:**
+
+```tsx
+function PaginatedHistory({ address }: { address: string }) {
+  const [cursor, setCursor] = useState<string>();
+
+  const { transactions, oldestSignature, hasMore, isLoading } =
+    useClassifiedTransactions({
+      address,
+      options: { limit: 20, before: cursor },
+    });
+
+  return (
+    <div>
+      {transactions.map((tx) => (
+        <TransactionCard key={tx.tx.signature} tx={tx} />
+      ))}
+      {hasMore && (
+        <button
+          onClick={() => setCursor(oldestSignature ?? undefined)}
+          disabled={isLoading}
+        >
+          Load More
+        </button>
+      )}
+    </div>
+  );
+}
+```
+
+**Rate-limited RPC configuration (e.g., public devnet):**
+
+```tsx
+const { transactions } = useClassifiedTransactions({
+  address,
+  options: {
+    limit: 5,
+    overfetchMultiplier: 1,
+    transactionConcurrency: 1,
+  },
+  swr: {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+  },
+});
+```
+
+**Available options:**
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `limit` | `10` | Max transactions per request |
+| `before` | — | Pagination cursor (oldest signature from previous request) |
+| `until` | — | Stop fetching at this signature |
+| `cluster` | auto | Override auto-detected cluster (`'mainnet-beta'` \| `'devnet'` \| `'testnet'`) |
+| `filterSpam` | `true` | Filter out spam/dust transactions |
+| `includeTokenAccounts` | `false` | Query ATAs for incoming token transfers |
+| `maxTokenAccounts` | `5` | Max ATAs to query when `includeTokenAccounts` is enabled |
+| `enrichTokenMetadata` | `true` | Add token symbols and names |
+| `enrichNftMetadata` | `true` | Add NFT metadata (requires DAS RPC) |
+| `overfetchMultiplier` | `1` | Signature overfetch multiplier (increase for high-spam wallets) |
+| `minPageSize` | `20` | Min signatures per iteration |
+| `transactionConcurrency` | `1` | Parallel transaction fetches |
+
 ### Build and send arbitrary transactions
 
 ```tsx

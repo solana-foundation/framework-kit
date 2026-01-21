@@ -350,6 +350,7 @@ interface ClassifiedTransaction {
       | "transfer" | "swap" | "nft_purchase" | "nft_sale"
       | "nft_mint" | "stake_deposit" | "stake_withdraw"
       | "airdrop" | "bridge_in" | "bridge_out"
+      | "privacy_deposit" | "privacy_withdraw"  // Privacy Cash
       | "fee_only" | "other";
     primaryAmount: MoneyAmount | null;    // Main amount
     secondaryAmount?: MoneyAmount | null; // e.g., swap output

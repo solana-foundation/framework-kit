@@ -383,6 +383,8 @@ interface ClassifiedTransaction {
       | "airdrop"
       | "bridge_in"
       | "bridge_out"
+      | "privacy_deposit"   // Shielding funds into privacy pool
+      | "privacy_withdraw"  // Unshielding funds from pool
       | "fee_only"
       | "other";
     primaryAmount: MoneyAmount | null;    // Main amount (e.g., what you sent/received)

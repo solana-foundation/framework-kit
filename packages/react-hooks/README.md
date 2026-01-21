@@ -348,6 +348,88 @@ const { transactions } = useClassifiedTransactions({
 | `minPageSize` | `20` | Min signatures per iteration |
 | `transactionConcurrency` | `1` | Parallel transaction fetches |
 
+**Response structure:**
+
+Each item in the `transactions` array is a `ClassifiedTransaction` with the following shape:
+
+```ts
+interface ClassifiedTransaction {
+  // Raw transaction data
+  tx: {
+    signature: string;
+    slot: number | bigint;
+    blockTime: number | bigint | null;
+    fee?: number;
+    err: any | null;
+    programIds: string[];
+    protocol: {
+      id: string;
+      name: string;             // e.g. "Jupiter", "Raydium", "Marinade"
+      iconUrl?: string;
+    } | null;
+    memo?: string | null;
+  };
+
+  // High-level classification of what this transaction represents
+  classification: {
+    primaryType:
+      | "transfer"
+      | "swap"
+      | "nft_purchase"
+      | "nft_sale"
+      | "nft_mint"
+      | "stake_deposit"
+      | "stake_withdraw"
+      | "airdrop"
+      | "bridge_in"
+      | "bridge_out"
+      | "fee_only"
+      | "other";
+    primaryAmount: MoneyAmount | null;    // Main amount (e.g., what you sent/received)
+    secondaryAmount?: MoneyAmount | null; // Secondary amount (e.g., in a swap, what you got back)
+    sender?: string | null;
+    receiver?: string | null;
+    counterparty: {
+      type: "person" | "merchant" | "exchange" | "protocol" | "own_wallet" | "unknown";
+      address: string;
+      name?: string;
+    } | null;
+    confidence: number;  // 0-1, how confident the classifier is
+    metadata?: Record<string, any>;  // Extra data (e.g., nft_mint, nft_name, nft_image)
+  };
+
+  // Individual token/SOL movements within the transaction
+  legs: Array<{
+    accountId: string;           // The account involved
+    side: "debit" | "credit";    // Debit = out, Credit = in
+    amount: MoneyAmount;
+    role: "sent" | "received" | "fee" | "reward" | "protocol_deposit" | "protocol_withdraw" | "unknown";
+  }>;
+}
+
+// Token amount with metadata
+interface MoneyAmount {
+  token: {
+    mint: string;
+    symbol: string;      // e.g. "SOL", "USDC", "JUP"
+    name?: string;       // e.g. "Solana", "USD Coin"
+    decimals: number;
+    logoURI?: string;
+  };
+  amountRaw: string;     // Raw amount as string (e.g., "1000000000")
+  amountUi: number;      // Human-readable amount (e.g., 1.0 for 1 SOL)
+  fiat?: {
+    currency: "USD" | "EUR";
+    amount: number;
+    pricePerUnit: number;
+  };
+}
+```
+
+**Understanding legs:**
+
+Legs represent the individual token movements within a transaction. A simple transfer has 2 legs (sender debit, receiver credit), while a swap might have 4+ legs (token out, token in, fees, etc.). Use legs when you need granular detail about every movement, and use `classification.primaryAmount`/`secondaryAmount` for a high-level summary.
+
 ### Build and send arbitrary transactions
 
 ```tsx

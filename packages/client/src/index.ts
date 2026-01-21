@@ -46,6 +46,21 @@ export {
 	type WsolWrapInput,
 } from './controllers/wsolController';
 export {
+	ASSOCIATED_TOKEN_PROGRAM_ERRORS,
+	BUILTIN_PROGRAM_ERRORS,
+	COMPUTE_BUDGET_PROGRAM_ERRORS,
+	createProgramErrorRegistry,
+	type DecodedProgramError,
+	type ProgramErrorMapping,
+	type ProgramErrorRegistry,
+	type ProgramErrorRegistryConfig,
+	programErrors,
+	STAKE_PROGRAM_ERRORS,
+	SYSTEM_PROGRAM_ERRORS,
+	TOKEN_2022_PROGRAM_ERRORS,
+	TOKEN_PROGRAM_ERRORS,
+} from './errors';
+export {
 	createSolTransferHelper,
 	type SolTransferHelper,
 	type SolTransferPrepareConfig,

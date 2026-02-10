@@ -18,6 +18,7 @@ import {
 	createTransactionPlanner,
 	getBase64EncodedWireTransaction,
 	getMessagePackerInstructionPlanFromInstructions,
+	getSignatureFromTransaction,
 	isInstructionForProgram,
 	isInstructionWithData,
 	isTransactionSendingSigner,
@@ -433,11 +434,13 @@ export function createTransactionHelper(
 					: BigInt(options.maxRetries);
 		let latestSignature: ReturnType<typeof signature> | null = null;
 		const executor = createTransactionPlanExecutor({
-			async executeTransactionMessage(message, config = {}) {
+			async executeTransactionMessage(context, message, config = {}) {
 				const signed = await signTransactionMessageWithSigners(message as SignableTransactionMessage, {
 					abortSignal: config.abortSignal ?? options.abortSignal,
 					minContextSlot: options.minContextSlot,
 				});
+				context.transaction = signed;
+				context.signature = getSignatureFromTransaction(signed);
 				const wire = getBase64EncodedWireTransaction(signed);
 				const response = await runtime.rpc
 					.sendTransaction(wire, {
@@ -448,7 +451,7 @@ export function createTransactionHelper(
 					})
 					.send({ abortSignal: config.abortSignal ?? options.abortSignal });
 				latestSignature = signature(response);
-				return { transaction: signed };
+				return signed;
 			},
 		});
 		await executor(prepared.plan, { abortSignal: options.abortSignal });

@@ -10,6 +10,7 @@ import {
 	createTransactionPlanExecutor,
 	generateKeyPairSigner,
 	getBase64EncodedWireTransaction,
+	getSignatureFromTransaction,
 	isTransactionSendingSigner,
 	pipe,
 	type Slot,
@@ -493,11 +494,13 @@ export function createStakeHelper(runtime: SolanaClientRuntime): StakeHelper {
 					: BigInt(options.maxRetries);
 		let latestSignature: ReturnType<typeof signature> | null = null;
 		const executor = createTransactionPlanExecutor({
-			async executeTransactionMessage(message, config = {}) {
+			async executeTransactionMessage(context, message, config = {}) {
 				const signed = await signTransactionMessageWithSigners(message as SignableStakeTransactionMessage, {
 					abortSignal: config.abortSignal ?? options.abortSignal,
 					minContextSlot: options.minContextSlot,
 				});
+				context.transaction = signed;
+				context.signature = getSignatureFromTransaction(signed);
 				const wire = getBase64EncodedWireTransaction(signed);
 				const response = await runtime.rpc
 					.sendTransaction(wire, {
@@ -508,7 +511,7 @@ export function createStakeHelper(runtime: SolanaClientRuntime): StakeHelper {
 					})
 					.send({ abortSignal: config.abortSignal ?? options.abortSignal });
 				latestSignature = signature(response);
-				return { transaction: signed };
+				return signed;
 			},
 		});
 		await executor(prepared.plan ?? singleTransactionPlan(prepared.message), { abortSignal: options.abortSignal });
@@ -577,11 +580,13 @@ export function createStakeHelper(runtime: SolanaClientRuntime): StakeHelper {
 					: BigInt(options.maxRetries);
 		let latestSignature: ReturnType<typeof signature> | null = null;
 		const executor = createTransactionPlanExecutor({
-			async executeTransactionMessage(message, config = {}) {
+			async executeTransactionMessage(context, message, config = {}) {
 				const signed = await signTransactionMessageWithSigners(message as SignableStakeTransactionMessage, {
 					abortSignal: config.abortSignal ?? options.abortSignal,
 					minContextSlot: options.minContextSlot,
 				});
+				context.transaction = signed;
+				context.signature = getSignatureFromTransaction(signed);
 				const wire = getBase64EncodedWireTransaction(signed);
 				const response = await runtime.rpc
 					.sendTransaction(wire, {
@@ -592,7 +597,7 @@ export function createStakeHelper(runtime: SolanaClientRuntime): StakeHelper {
 					})
 					.send({ abortSignal: config.abortSignal ?? options.abortSignal });
 				latestSignature = signature(response);
-				return { transaction: signed };
+				return signed;
 			},
 		});
 		await executor(prepared.plan);
@@ -666,11 +671,13 @@ export function createStakeHelper(runtime: SolanaClientRuntime): StakeHelper {
 					: BigInt(options.maxRetries);
 		let latestSignature: ReturnType<typeof signature> | null = null;
 		const executor = createTransactionPlanExecutor({
-			async executeTransactionMessage(message, config = {}) {
+			async executeTransactionMessage(context, message, config = {}) {
 				const signed = await signTransactionMessageWithSigners(message as SignableStakeTransactionMessage, {
 					abortSignal: config.abortSignal ?? options.abortSignal,
 					minContextSlot: options.minContextSlot,
 				});
+				context.transaction = signed;
+				context.signature = getSignatureFromTransaction(signed);
 				const wire = getBase64EncodedWireTransaction(signed);
 				const response = await runtime.rpc
 					.sendTransaction(wire, {
@@ -681,7 +688,7 @@ export function createStakeHelper(runtime: SolanaClientRuntime): StakeHelper {
 					})
 					.send({ abortSignal: config.abortSignal ?? options.abortSignal });
 				latestSignature = signature(response);
-				return { transaction: signed };
+				return signed;
 			},
 		});
 		await executor(prepared.plan);

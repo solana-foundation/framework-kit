@@ -51,6 +51,7 @@ const setTransactionMessageLifetimeUsingBlockhashMock = vi.hoisted(() =>
 const signTransactionMessageWithSignersMock = vi.hoisted(() => vi.fn(async (message: unknown) => ({ message })));
 const signAndSendTransactionMessageWithSignersMock = vi.hoisted(() => vi.fn(async () => new Uint8Array([1, 2, 3])));
 const getBase64EncodedWireTransactionMock = vi.hoisted(() => vi.fn(() => 'wire-data'));
+const getSignatureFromTransactionMock = vi.hoisted(() => vi.fn(() => 'test-signature'));
 const signatureMock = vi.hoisted(() => vi.fn((value: unknown) => `signature:${String(value)}`));
 const pipeMock = vi.hoisted(() =>
 	vi.fn((initial: unknown, ...fns: Array<(value: unknown) => unknown>) => fns.reduce((acc, fn) => fn(acc), initial)),
@@ -80,6 +81,7 @@ vi.mock('@solana/kit', () => ({
 	createTransactionPlanExecutor: createTransactionPlanExecutorMock,
 	createTransactionPlanner: createTransactionPlannerMock,
 	getBase64EncodedWireTransaction: getBase64EncodedWireTransactionMock,
+	getSignatureFromTransaction: getSignatureFromTransactionMock,
 	getMessagePackerInstructionPlanFromInstructions: getMessagePackerInstructionPlanFromInstructionsMock,
 	isInstructionForProgram: isInstructionForProgramMock,
 	isInstructionWithData: isInstructionWithDataMock,

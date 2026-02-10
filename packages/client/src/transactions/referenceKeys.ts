@@ -1,9 +1,9 @@
-import type { Address, BaseTransactionMessage } from '@solana/kit';
+import type { Address, TransactionMessage } from '@solana/kit';
 import { AccountRole, SOLANA_ERROR__INSTRUCTION_ERROR__GENERIC_ERROR, SolanaError } from '@solana/kit';
 
 const MEMO_PROGRAM_ADDRESS = 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr';
 
-function ensureNonMemoInstructionIndex(instructions: BaseTransactionMessage['instructions']): number {
+function ensureNonMemoInstructionIndex(instructions: TransactionMessage['instructions']): number {
 	const index = instructions.findIndex((instruction) => instruction.programAddress !== MEMO_PROGRAM_ADDRESS);
 	if (instructions.length === 0 || index === -1) {
 		throw new SolanaError(SOLANA_ERROR__INSTRUCTION_ERROR__GENERIC_ERROR, {
@@ -17,14 +17,14 @@ function ensureNonMemoInstructionIndex(instructions: BaseTransactionMessage['ins
 /**
  * Appends reference address metadata to the first non-memo instruction in a transaction.
  */
-export function insertReferenceKey<T extends BaseTransactionMessage>(reference: Address, transaction: T): T {
+export function insertReferenceKey<T extends TransactionMessage>(reference: Address, transaction: T): T {
 	return insertReferenceKeys([reference], transaction);
 }
 
 /**
  * Appends multiple reference addresses to the first non-memo instruction in a transaction.
  */
-export function insertReferenceKeys<T extends BaseTransactionMessage>(references: Address[], transaction: T): T {
+export function insertReferenceKeys<T extends TransactionMessage>(references: Address[], transaction: T): T {
 	const index = ensureNonMemoInstructionIndex(transaction.instructions);
 	const targetInstruction = transaction.instructions[index];
 	const accounts = [
@@ -36,5 +36,5 @@ export function insertReferenceKeys<T extends BaseTransactionMessage>(references
 	return Object.freeze({
 		...transaction,
 		instructions: Object.freeze(updatedInstructions),
-	});
+	}) as T;
 }

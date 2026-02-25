@@ -1,5 +1,11 @@
 # @solana/client
 
+## 1.7.1
+
+### Patch Changes
+
+- [#158](https://github.com/solana-foundation/framework-kit/pull/158) [`5021c44`](https://github.com/solana-foundation/framework-kit/commit/5021c445e25199b7d773a732d1c11498487696e5) Thanks [@mcintyre94](https://github.com/mcintyre94)! - Bump `@solana/kit` dependency in `@solana/client`. Minor updates to `BaseTransactionMessage` usage with `TransactionMessage` and updates transaction plan execution to use the new context-aware executor flow.
+
 ## 1.7.0
 
 ### Minor Changes

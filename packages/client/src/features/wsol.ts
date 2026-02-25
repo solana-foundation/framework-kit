@@ -9,6 +9,7 @@ import {
 	createTransactionMessage,
 	createTransactionPlanExecutor,
 	getBase64EncodedWireTransaction,
+	getSignatureFromTransaction,
 	isSolanaError,
 	isTransactionSendingSigner,
 	pipe,
@@ -477,11 +478,13 @@ export function createWsolHelper(runtime: SolanaClientRuntime): WsolHelper {
 					: BigInt(options.maxRetries);
 		let latestSignature: ReturnType<typeof signature> | null = null;
 		const executor = createTransactionPlanExecutor({
-			async executeTransactionMessage(message, config = {}) {
+			async executeTransactionMessage(context, message, config = {}) {
 				const signed = await signTransactionMessageWithSigners(message as SignableWsolTransactionMessage, {
 					abortSignal: config.abortSignal ?? options.abortSignal,
 					minContextSlot: options.minContextSlot,
 				});
+				context.transaction = signed;
+				context.signature = getSignatureFromTransaction(signed);
 				const wire = getBase64EncodedWireTransaction(signed);
 				const response = await runtime.rpc
 					.sendTransaction(wire, {
@@ -492,7 +495,7 @@ export function createWsolHelper(runtime: SolanaClientRuntime): WsolHelper {
 					})
 					.send({ abortSignal: config.abortSignal ?? options.abortSignal });
 				latestSignature = signature(response);
-				return { transaction: signed };
+				return signed;
 			},
 		});
 		await executor(prepared.plan ?? singleTransactionPlan(prepared.message), { abortSignal: options.abortSignal });

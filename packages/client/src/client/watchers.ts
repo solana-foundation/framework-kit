@@ -99,7 +99,7 @@ export function createWatchers({ logger: inputLogger, runtime, store }: WatcherD
 		abortController: AbortController,
 	): Promise<void> {
 		const commitment = config.commitment ?? store.getState().cluster.commitment;
-		const plan = runtime.rpcSubscriptions.accountNotifications(config.address, { commitment });
+		const plan = runtime.rpcSubscriptions.accountNotifications(config.address, { commitment, encoding: 'base64' });
 		const key = config.address.toString();
 		setSubscriptionStatus('account', key, { status: 'activating' });
 		abortController.signal.addEventListener('abort', () => onAbort('account', key));
@@ -113,7 +113,7 @@ export function createWatchers({ logger: inputLogger, runtime, store }: WatcherD
 				const slot = notification.context?.slot ?? null;
 				const entry: AccountCacheEntry = {
 					address: config.address,
-					data: notification.value?.data,
+					data: notification.value,
 					error: undefined,
 					executable,
 					fetching: false,

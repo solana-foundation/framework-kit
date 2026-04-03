@@ -500,6 +500,9 @@ importers:
       '@solana/react-hooks':
         specifier: workspace:*
         version: link:../../packages/react-hooks
+      '@solana/web3-compat':
+        specifier: workspace:*
+        version: link:../../packages/web3-compat
       react:
         specifier: catalog:react
         version: 19.2.3

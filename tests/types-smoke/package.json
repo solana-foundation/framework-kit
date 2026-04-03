@@ -5,12 +5,13 @@
 	"type": "module",
 	"scripts": {
 		"test": "pnpm typecheck",
-		"pretypecheck": "pnpm --filter @solana/client build && pnpm --filter @solana/react-hooks build",
+		"pretypecheck": "pnpm --filter @solana/client build && pnpm --filter @solana/react-hooks build && pnpm --filter @solana/web3-compat build",
 		"typecheck": "tsc -p tsconfig.json"
 	},
 	"dependencies": {
 		"@solana/client": "workspace:*",
 		"@solana/react-hooks": "workspace:*",
+		"@solana/web3-compat": "workspace:*",
 		"react": "catalog:react"
 	},
 	"devDependencies": {

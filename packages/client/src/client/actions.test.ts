@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SolanaClientRuntime } from '../rpc/types';
 import type { ClientActions } from '../types';
 import { createWalletRegistry } from '../wallet/registry';
-import type { WalletConnector, WalletRegistry } from '../wallet/types';
+import type { WalletAccount, WalletConnector, WalletRegistry } from '../wallet/types';
 import { createActions } from './actions';
 import { createDefaultClientStore } from './createClientStore';
 
@@ -255,5 +255,58 @@ describe('client actions', () => {
 		const signature = await actions.requestAirdrop(ACCOUNT_ADDRESS, LAMPORT_AMOUNT);
 		expect(signature).toBe(AIRDROP_SIGNATURE);
 		expect(airdropFactoryMock).toHaveBeenCalled();
+	});
+
+	it('updates the store account when the user switches accounts in their wallet', async () => {
+		let accountsChangedListener: ((accounts: WalletAccount[]) => void) | undefined;
+		walletConnector.connect = vi.fn(async () => ({
+			account: { address: ACCOUNT_ADDRESS, publicKey: new Uint8Array(32) },
+			connector: { id: 'wallet-1', name: 'Wallet 1' },
+			disconnect: vi.fn(async () => undefined),
+			signTransaction: vi.fn(),
+			onAccountsChanged: (listener: (accounts: WalletAccount[]) => void) => {
+				accountsChangedListener = listener;
+				return () => {
+					accountsChangedListener = undefined;
+				};
+			},
+		}));
+
+		await actions.connectWallet('wallet-1');
+		expect(store.getState().wallet.status).toBe('connected');
+
+		const NEW_ADDRESS = 'new-addr' as Address;
+		accountsChangedListener?.([{ address: NEW_ADDRESS, publicKey: new Uint8Array(32) }]);
+
+		const state = store.getState();
+		expect(state.wallet.status).toBe('connected');
+		if (state.wallet.status === 'connected') {
+			expect(state.wallet.session.account.address).toBe(NEW_ADDRESS);
+		}
+	});
+
+	it('disconnects when the wallet reports no accounts via onAccountsChanged', async () => {
+		let accountsChangedListener: ((accounts: WalletAccount[]) => void) | undefined;
+		walletConnector.connect = vi.fn(async () => ({
+			account: { address: ACCOUNT_ADDRESS, publicKey: new Uint8Array(32) },
+			connector: { id: 'wallet-1', name: 'Wallet 1' },
+			disconnect: vi.fn(async () => undefined),
+			signTransaction: vi.fn(),
+			onAccountsChanged: (listener: (accounts: WalletAccount[]) => void) => {
+				accountsChangedListener = listener;
+				return () => {
+					accountsChangedListener = undefined;
+				};
+			},
+		}));
+
+		await actions.connectWallet('wallet-1');
+		expect(store.getState().wallet.status).toBe('connected');
+
+		accountsChangedListener?.([]);
+		// disconnectWallet is called with void — drain all pending microtasks
+		await new Promise<void>((resolve) => setTimeout(resolve));
+
+		expect(store.getState().wallet.status).toBe('disconnected');
 	});
 });

@@ -199,6 +199,20 @@ export function createActions({ connectors, logger: inputLogger, runtime, store 
 						walletEventsCleanup?.();
 						walletEventsCleanup = undefined;
 						void disconnectWallet();
+					} else {
+						updateState(store, {
+							wallet: {
+								autoConnect: autoConnectPreference,
+								connectorId: resolvedConnectorId,
+								session: { ...session, account: accounts[0] },
+								status: 'connected',
+							},
+						});
+						logger({
+							data: { address: accounts[0].address.toString(), connectorId: resolvedConnectorId },
+							level: 'info',
+							message: 'wallet account changed',
+						});
 					}
 				});
 			}

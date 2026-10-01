@@ -1,5 +1,12 @@
 # Framework-kit
 
+> [!WARNING]
+> Framework-kit is no longer maintained. For new projects, use one of these instead:
+>
+> - [Kit plugins](https://github.com/anza-xyz/kit-plugins): composable client plugins for Kit, and the closest replacement for Framework-kit.
+> - [Solana Kit](https://github.com/anza-xyz/kit): the Solana JavaScript SDK.
+> - [web3.js v3](https://github.com/solana-foundation/solana-web3.js): an upcoming wrapper around Kit that keeps the web3.js interfaces.
+
 <p align="center">
   <img src=".github/assets/hero.jpg" alt="Framework-kit Hero" width="800"/>
 </p>

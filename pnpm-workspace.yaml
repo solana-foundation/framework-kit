@@ -47,3 +47,8 @@ catalogs:
   utils:
     "bs58": "^6.0.0"
     "zustand": "^5.0.0"
+
+auditConfig:
+  ignoreGhsas:
+    # stream-json filter DoS; jayson 4 (via @solana/web3.js) needs stream-json 1.x and doesn't use the filters
+    - GHSA-528h-pc64-c93x

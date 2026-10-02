@@ -113,8 +113,14 @@ export type WalletStandardSessionOptions = Readonly<{
 
 export function createWalletStandardSession(options: WalletStandardSessionOptions): WalletSession {
 	const { account, defaultChain, disconnect, metadata, onAccountsChanged, wallet } = options;
-	let currentAccount = account;
-	let sessionAccount = toSessionAccount(currentAccount);
+
+	// Mutable session state: updated by account change listeners.
+	// All signing operations read from this object to ensure they always
+	// use the most recent account after a wallet-side account switch.
+	const sessionState = {
+		currentAccount: account,
+		sessionAccount: toSessionAccount(account),
+	};
 
 	const signMessageFeature = wallet.features[SolanaSignMessage] as
 		| SolanaSignMessageFeature[typeof SolanaSignMessage]
@@ -126,12 +132,12 @@ export function createWalletStandardSession(options: WalletStandardSessionOption
 		| SolanaSignAndSendTransactionFeature[typeof SolanaSignAndSendTransaction]
 		| undefined;
 
-	const resolvedChain = defaultChain ?? getChain(currentAccount);
+	const resolvedChain = defaultChain ?? getChain(sessionState.currentAccount);
 
 	const signMessage = signMessageFeature
 		? async (message: Uint8Array) => {
 				const [output] = await signMessageFeature.signMessage({
-					account: currentAccount,
+					account: sessionState.currentAccount,
 					message,
 				});
 				return output.signature;
@@ -143,12 +149,12 @@ export function createWalletStandardSession(options: WalletStandardSessionOption
 				const wireBytes = new Uint8Array(transactionEncoder.encode(transaction));
 				const request = resolvedChain
 					? {
-							account: currentAccount,
+							account: sessionState.currentAccount,
 							chain: resolvedChain,
 							transaction: wireBytes,
 						}
 					: {
-							account: currentAccount,
+							account: sessionState.currentAccount,
 							transaction: wireBytes,
 						};
 				const [output] = await signTransactionFeature.signTransaction(request);
@@ -159,9 +165,9 @@ export function createWalletStandardSession(options: WalletStandardSessionOption
 	const sendTransaction = signAndSendFeature
 		? async (transaction: SendableTransaction & Transaction, config?: Readonly<{ commitment?: Commitment }>) => {
 				const wireBytes = new Uint8Array(transactionEncoder.encode(transaction));
-				const chain: IdentifierString = defaultChain ?? getChain(currentAccount) ?? 'solana:mainnet-beta';
+				const chain: IdentifierString = defaultChain ?? getChain(sessionState.currentAccount) ?? 'solana:mainnet-beta';
 				const [output] = await signAndSendFeature.signAndSendTransaction({
-					account: currentAccount,
+					account: sessionState.currentAccount,
 					chain,
 					options: {
 						commitment: mapCommitment(config?.commitment),
@@ -187,8 +193,8 @@ export function createWalletStandardSession(options: WalletStandardSessionOption
 						listener([]);
 						return;
 					}
-					currentAccount = accounts[0];
-					sessionAccount = toSessionAccount(currentAccount);
+					sessionState.currentAccount = accounts[0];
+					sessionState.sessionAccount = toSessionAccount(sessionState.currentAccount);
 					listener(accounts.map(toSessionAccount));
 				});
 				changeUnsubscribe = off;
@@ -200,7 +206,9 @@ export function createWalletStandardSession(options: WalletStandardSessionOption
 		: undefined;
 
 	return {
-		account: sessionAccount,
+		get account() {
+			return sessionState.sessionAccount;
+		},
 		connector: metadata,
 		disconnect: disconnectSession,
 		onAccountsChanged: handleAccountsChanged,

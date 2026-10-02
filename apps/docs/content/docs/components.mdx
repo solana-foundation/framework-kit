@@ -1,0 +1,914 @@
+---
+title: "UI Components"
+description: Pre-built React components for Solana applications
+---
+
+Ready-to-use React components for displaying Solana data, transaction feedback, and loading states. Built with Tailwind CSS and fully themeable.
+
+## Installation
+
+<Tabs groupId="pkg" items={['npm', 'pnpm', 'yarn', 'bun']} persist>
+  <Tab value="npm">
+```bash
+npm install @solana/components
+```
+  </Tab>
+  <Tab value="pnpm">
+```bash
+pnpm add @solana/components
+```
+  </Tab>
+  <Tab value="yarn">
+```bash
+yarn add @solana/components
+```
+  </Tab>
+  <Tab value="bun">
+```bash
+bun add @solana/components
+```
+  </Tab>
+</Tabs>
+
+## Setup
+
+### Tailwind CSS Configuration
+
+The components use Tailwind CSS v4. Add the package source to your CSS file:
+
+```css
+@import "tailwindcss";
+@source "./node_modules/@solana/components/**/*.{ts,tsx}";
+```
+
+## Display Components
+
+### AddressDisplay
+
+Displays a truncated Solana address with copy-to-clipboard and Explorer link:
+
+```tsx
+import { AddressDisplay } from "@solana/components";
+
+function WalletAddress({ address }) {
+  return (
+    <AddressDisplay
+      address={address}
+      network="mainnet-beta"
+      theme="light"
+      onCopy={() => console.log("Copied!")}
+    />
+  );
+}
+```
+
+The address is truncated to `6DMh...1DkK` format with a tooltip showing the full address on hover.
+
+**Props:**
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `address` | `Address` | required | Solana public key in base58 format |
+| `theme` | `'light' \| 'dark'` | `'light'` | Color theme |
+| `network` | `ClusterMoniker` | `'mainnet-beta'` | Network for Explorer URL |
+| `showExplorerLink` | `boolean` | `true` | Show link to Solana Explorer |
+| `showTooltip` | `boolean` | `true` | Show full address tooltip on hover |
+| `onCopy` | `() => void` | - | Callback after address is copied |
+| `className` | `string` | - | Additional CSS classes |
+
+## Wallet Components
+
+### ConnectWalletButton
+
+A fully composable wallet connection button with dropdown. Handles all connection states (disconnected, connecting, and connected) with an integrated wallet dropdown that includes address display, balance toggle, network switching, and disconnect.
+
+```tsx
+import { ConnectWalletButton } from "@solana/components";
+
+function App() {
+  const { status, wallet, currentConnector, disconnect, isReady } = useWalletConnection();
+  const { lamports, fetching } = useBalance(wallet?.address);
+
+  return (
+    <ConnectWalletButton
+      status={status}
+      isReady={isReady}
+      wallet={wallet ? { address: wallet.address } : undefined}
+      currentConnector={currentConnector}
+      balance={lamports}
+      balanceLoading={fetching}
+      onConnect={openModal}
+      onDisconnect={disconnect}
+      selectedNetwork="mainnet-beta"
+      onNetworkChange={(network) => console.log("Switched to:", network)}
+      theme="dark"
+    />
+  );
+}
+```
+
+The dropdown composes `AddressDisplay` for the wallet address and `NetworkSwitcher` sub-components for network selection, using `className` overrides to adapt them to the dropdown layout, just as any consumer would.
+
+**Props:**
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `status` | `'disconnected' \| 'connecting' \| 'connected' \| 'error'` | required | Current connection status |
+| `isReady` | `boolean` | `true` | Whether the hook has hydrated (SSR) |
+| `wallet` | `{ address: Address }` | - | Connected wallet session |
+| `currentConnector` | `{ id: string; name: string; icon?: string }` | - | Current wallet connector info |
+| `balance` | `Lamports` | - | Wallet balance in lamports |
+| `balanceLoading` | `boolean` | `false` | Whether balance is still loading |
+| `onConnect` | `() => void` | - | Callback when connect button is clicked |
+| `onDisconnect` | `() => Promise<void> \| void` | - | Callback to disconnect wallet. When omitted, the disconnect row is hidden. |
+| `selectedNetwork` | `ClusterMoniker` | - | Currently selected network |
+| `networkStatus` | `WalletStatus['status']` | - | Network connection status |
+| `onNetworkChange` | `(network: ClusterMoniker) => void` | - | Callback when network is changed |
+| `theme` | `'light' \| 'dark'` | `'dark'` | Color theme |
+| `labels` | `{ connect?: string; connecting?: string; disconnect?: string }` | - | Custom labels |
+| `className` | `string` | - | Additional CSS classes |
+
+### NetworkSwitcher
+
+A dropdown component for switching between Solana networks. Use standalone, or compose its sub-components (`NetworkTrigger`, `NetworkDropdown`, `NetworkHeader`, `NetworkOption`) for custom layouts.
+
+```tsx
+import { NetworkSwitcher } from "@solana/components";
+
+// Standalone usage
+<NetworkSwitcher
+  selectedNetwork="mainnet-beta"
+  status="connected"
+  onNetworkChange={(network) => console.log("Switched to:", network)}
+  theme="dark"
+/>
+
+// Controlled open state
+<NetworkSwitcher
+  selectedNetwork={currentNetwork}
+  status="connected"
+  open={isOpen}
+  onOpenChange={setIsOpen}
+  onNetworkChange={handleNetworkChange}
+  theme="dark"
+/>
+```
+
+**Props:**
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `selectedNetwork` | `ClusterMoniker` | required | Currently selected network |
+| `status` | `WalletStatus['status']` | `'connected'` | Connection status indicator |
+| `onNetworkChange` | `(network: ClusterMoniker) => void` | - | Callback when network is selected |
+| `open` | `boolean` | - | Controlled open state |
+| `onOpenChange` | `(open: boolean) => void` | - | Callback when open state changes |
+| `networks` | `Network[]` | `DEFAULT_NETWORKS` | List of available networks |
+| `disabled` | `boolean` | `false` | Disable the switcher |
+| `theme` | `'light' \| 'dark'` | `'dark'` | Color theme |
+| `className` | `string` | - | Additional CSS classes |
+
+**Default Networks:** Mainnet Beta, Testnet, Localnet, Devnet.
+
+### BalanceCard
+
+Your users connected their wallet. Now show them what's in it. BalanceCard displays a wallet's total balance with an expandable breakdown of individual tokens.
+
+**What you get:**
+
+- Wallet address with copy functionality (uses `AddressDisplay` under the hood)
+- Total balance in fiat (USD, EUR, etc.) or raw crypto units
+- Expandable token list showing individual holdings
+- Built-in loading skeleton and error states
+- Three visual variants (`default`, `dark`, `light`) and three sizes (`sm`, `md`, `lg`)
+
+**Basic usage:**
+
+```tsx
+import { BalanceCard } from "@solana/components";
+
+function WalletOverview({ address, balance }) {
+  return (
+    <BalanceCard
+      walletAddress={address}
+      totalBalance={balance}
+      isFiatBalance
+      variant="dark"
+    />
+  );
+}
+```
+
+That gives you a dark card with the wallet address and a formatted USD balance.
+
+**Adding tokens:**
+
+Pass a `tokens` array and users can expand the list to see individual holdings:
+
+```tsx
+<BalanceCard
+  walletAddress={address}
+  totalBalance={balance}
+  isFiatBalance
+  tokens={[
+    { symbol: "USDC", balance: 15.5, fiatValue: 15.5 },
+    { symbol: "USDT", balance: 10.18, fiatValue: 10.18 },
+    { symbol: "USDG", balance: 9.13, fiatValue: 9.13 },
+  ]}
+  defaultExpanded
+  variant="dark"
+/>
+```
+
+The token list starts collapsed by default. Use `defaultExpanded` to open it, or control it yourself with `isExpanded` and `onExpandedChange`.
+
+**Displaying crypto instead of fiat:**
+
+Not everything is denominated in dollars. For raw token balances:
+
+```tsx
+<BalanceCard
+  walletAddress={address}
+  totalBalance={balance}
+  isFiatBalance={false}
+  tokenDecimals={9}
+  displayDecimals={4}
+  variant="light"
+/>
+```
+
+This displays the balance in SOL (9 decimals) with 4 decimal places shown.
+
+**Loading and error states:**
+
+Both are handled for you. Pass `isLoading` and the card renders a skeleton. Pass `error` and it shows an error message with an optional retry button:
+
+```tsx
+// Loading
+<BalanceCard walletAddress={address} totalBalance={0n} isLoading />
+
+// Error with retry
+<BalanceCard
+  walletAddress={address}
+  totalBalance={0n}
+  error="Failed to fetch balance"
+  onRetry={() => refetch()}
+  variant="dark"
+/>
+```
+
+**Props:**
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `walletAddress` | `Address` | - | Wallet address to display |
+| `totalBalance` | `Lamports` | required | Total balance in lamports (bigint) |
+| `tokenDecimals` | `number` | `9` | Decimals for the token (9 for SOL, 6 for USDC) |
+| `isFiatBalance` | `boolean` | `true` | Display as fiat with currency symbol |
+| `currency` | `string` | `'USD'` | Currency code for fiat display |
+| `displayDecimals` | `number` | `2` | Decimal places to show |
+| `tokens` | `TokenInfo[]` | `[]` | Tokens for the expandable list |
+| `isLoading` | `boolean` | `false` | Show loading skeleton |
+| `error` | `string \| Error` | - | Error message to display |
+| `onRetry` | `() => void` | - | Callback for retry button in error state |
+| `onCopyAddress` | `(address: Address) => void` | - | Callback when address is copied |
+| `defaultExpanded` | `boolean` | `false` | Whether token list starts expanded |
+| `isExpanded` | `boolean` | - | Controlled expanded state |
+| `onExpandedChange` | `(expanded: boolean) => void` | - | Callback when expansion toggles |
+| `variant` | `'default' \| 'dark' \| 'light'` | `'default'` | Visual variant |
+| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Size variant |
+| `className` | `string` | - | Additional CSS classes |
+| `locale` | `string` | `'en-US'` | Locale for number formatting |
+
+**TokenInfo shape:**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `symbol` | `string` | Yes | Token symbol (e.g., "USDC") |
+| `name` | `string` | No | Token name (e.g., "USD Coin") |
+| `balance` | `number \| string` | Yes | Token balance |
+| `icon` | `string \| ReactNode` | No | Token icon URL or component |
+| `fiatValue` | `number \| string` | No | Fiat value of the holding |
+| `mintAddress` | `Address` | No | Token mint address |
+
+BalanceCard also exports its internal pieces as standalone components: `BalanceAmount` for formatted balance display, `TokenList` for the expandable token breakdown, `BalanceCardSkeleton` for loading states, and `ErrorState` for error messages with retry.
+
+### TransactionTable
+
+Your users want to see where their SOL went. TransactionTable displays a list of classified transactions with built-in filtering by date and type.
+
+**What you get:**
+
+- Table with columns for type (sent/received), time, counterparty address, and amount
+- Built-in date filter (All time, 7 days, 30 days, 90 days)
+- Built-in type filter (All, Sent, Received)
+- Token icons and fiat values alongside token amounts
+- Row action button for viewing transactions on Explorer
+- Loading skeleton and empty states
+- Light and dark themes, three sizes (`sm`, `md`, `lg`)
+
+**Basic usage:**
+
+```tsx
+import { TransactionTable } from "@solana/components";
+
+function RecentActivity({ transactions, walletAddress }) {
+  return (
+    <TransactionTable
+      transactions={transactions}
+      walletAddress={walletAddress}
+      theme="dark"
+    />
+  );
+}
+```
+
+Pass your classified transactions and the current wallet address. The table handles filtering, formatting, and direction labels (sent vs received) based on the wallet address you provide.
+
+**Opening transactions in Explorer:**
+
+Add `onViewTransaction` and each row gets a view icon on hover:
+
+```tsx
+<TransactionTable
+  transactions={transactions}
+  walletAddress={walletAddress}
+  onViewTransaction={(tx) => {
+    window.open(
+      `https://explorer.solana.com/tx/${tx.tx.signature}`,
+      "_blank"
+    );
+  }}
+  theme="dark"
+/>
+```
+
+**Controlling filters externally:**
+
+The filters work out of the box with internal state, but you can control them yourself if you need to sync with URL params or other UI:
+
+```tsx
+const [dateFilter, setDateFilter] = useState("all");
+const [typeFilter, setTypeFilter] = useState("all");
+
+<TransactionTable
+  transactions={transactions}
+  walletAddress={walletAddress}
+  dateFilter={dateFilter}
+  onDateFilterChange={setDateFilter}
+  typeFilter={typeFilter}
+  onTypeFilterChange={setTypeFilter}
+  theme="dark"
+/>
+```
+
+**Custom row actions:**
+
+Need something other than the default view icon? Use `renderRowAction` to render your own:
+
+```tsx
+<TransactionTable
+  transactions={transactions}
+  walletAddress={walletAddress}
+  renderRowAction={(tx) => (
+    <button onClick={() => copySignature(tx.tx.signature)}>
+      Copy
+    </button>
+  )}
+  theme="light"
+/>
+```
+
+**Loading and empty states:**
+
+Same pattern as BalanceCard. Pass `isLoading` for a skeleton, or let the empty state show when there are no transactions:
+
+```tsx
+// Loading
+<TransactionTable
+  transactions={[]}
+  walletAddress={walletAddress}
+  isLoading
+  theme="dark"
+/>
+```
+
+The empty state message defaults to "No transactions yet" but you can customize it with the `emptyMessage` prop.
+
+**Props:**
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `transactions` | `ReadonlyArray<ClassifiedTransaction>` | required | Classified transactions to display |
+| `walletAddress` | `Address` | - | Wallet address for determining sent vs received |
+| `isLoading` | `boolean` | `false` | Show loading skeleton |
+| `theme` | `'light' \| 'dark'` | `'dark'` | Visual theme |
+| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Row density |
+| `dateFilter` | `'all' \| '7d' \| '30d' \| '90d'` | `'all'` | Controlled date filter |
+| `onDateFilterChange` | `(value) => void` | - | Callback when date filter changes |
+| `dateFilterOptions` | `FilterDropdownOption[]` | All time / 7d / 30d / 90d | Custom date filter options |
+| `typeFilter` | `'all' \| 'sent' \| 'received'` | `'all'` | Controlled type filter |
+| `onTypeFilterChange` | `(value) => void` | - | Callback when type filter changes |
+| `typeFilterOptions` | `FilterDropdownOption[]` | All / Sent / Received | Custom type filter options |
+| `emptyMessage` | `string` | `'No transactions yet'` | Message when no transactions match |
+| `onViewTransaction` | `(tx: ClassifiedTransaction) => void` | - | Callback when row view icon is clicked |
+| `renderRowAction` | `(tx: ClassifiedTransaction) => ReactNode` | - | Custom row action renderer (overrides view icon) |
+| `className` | `string` | - | Additional CSS classes |
+| `locale` | `string` | `'en-US'` | Locale for date and number formatting |
+
+Transactions use the `ClassifiedTransaction` type from the `tx-indexer` package, which provides structured data including sender, receiver, token amounts, and fiat values.
+
+TransactionTable also exports its internal pieces as standalone components: `TransactionRow` for rendering individual rows, `TransactionTableSkeleton` for custom loading layouts, and `FilterDropdown` for reusable filter controls.
+
+### WalletModal
+
+When a user clicks "Connect Wallet", they need to pick which wallet to use. WalletModal handles that selection flow, including the connecting and error states.
+
+**What you get:**
+
+- A wallet selection list with icons and status labels (Recent, Detected, Installed)
+- A connecting view with animated spinner while the wallet approves
+- An error view with retry when connection fails
+- "I don't have a wallet" link pointing to Solana's wallet explorer
+- Light and dark themes
+
+**Note:** WalletModal renders the panel content only, not a backdrop or overlay. Wrap it in your own modal system (a `<dialog>`, a portal with overlay, or whatever your app uses).
+
+**Basic usage:**
+
+```tsx
+import { WalletModal } from "@solana/components";
+
+function WalletSelector({ wallets, onSelect, onClose }) {
+  return (
+    <WalletModal
+      wallets={wallets}
+      view="list"
+      onSelectWallet={onSelect}
+      onClose={onClose}
+      theme="dark"
+    />
+  );
+}
+```
+
+That shows the wallet list. When a user taps a wallet, `onSelectWallet` fires with the wallet metadata.
+
+**Managing the connection flow:**
+
+The modal has three views you control with the `view` prop. Here's a realistic example wiring up the full flow from selection to connection to error handling:
+
+```tsx
+import { WalletModal } from "@solana/components";
+import { useState } from "react";
+
+function ConnectFlow({ wallets, connect, onClose }) {
+  const [view, setView] = useState("list");
+  const [selectedWallet, setSelectedWallet] = useState(null);
+  const [error, setError] = useState(null);
+
+  const handleSelect = async (wallet) => {
+    setSelectedWallet(wallet);
+    setView("connecting");
+    setError(null);
+
+    try {
+      await connect(wallet);
+      onClose();
+    } catch (err) {
+      setError({
+        title: "Connection failed",
+        message: err.message || "Unable to connect. Please try again.",
+      });
+      setView("error");
+    }
+  };
+
+  return (
+    <WalletModal
+      wallets={wallets}
+      view={view}
+      connectingWallet={selectedWallet}
+      error={error}
+      onSelectWallet={handleSelect}
+      onBack={() => setView("list")}
+      onRetry={() => handleSelect(selectedWallet)}
+      onClose={onClose}
+      theme="dark"
+    />
+  );
+}
+```
+
+The flow goes: user picks a wallet (`list`) → modal shows spinner (`connecting`) → connection succeeds and modal closes, or fails and shows retry (`error`). The back button returns to the wallet list.
+
+**Hiding the "no wallet" link:**
+
+The "I don't have a wallet" link shows by default and opens the Solana wallet explorer. You can hide it or point it somewhere else:
+
+```tsx
+// Hide it
+<WalletModal wallets={wallets} showNoWalletLink={false} />
+
+// Custom URL
+<WalletModal wallets={wallets} walletGuideUrl="https://yoursite.com/wallet-guide" />
+```
+
+**Props:**
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `wallets` | `WalletConnectorMetadata[]` | required | Available wallets to display |
+| `view` | `'list' \| 'connecting' \| 'error'` | `'list'` | Current modal view |
+| `connectingWallet` | `WalletConnectorMetadata` | - | Wallet being connected (for connecting view) |
+| `error` | `{ title?: string; message?: string }` | - | Error info (for error view) |
+| `theme` | `'light' \| 'dark'` | `'dark'` | Visual theme |
+| `onSelectWallet` | `(wallet: WalletConnectorMetadata) => void` | - | Callback when a wallet is selected |
+| `onBack` | `() => void` | - | Callback for back button |
+| `onClose` | `() => void` | - | Callback for close button |
+| `onRetry` | `() => void` | - | Callback for retry button (error view) |
+| `showNoWalletLink` | `boolean` | `true` | Show "I don't have a wallet" link |
+| `walletGuideUrl` | `string` | Solana wallet explorer | Custom URL for wallet guide link |
+| `className` | `string` | - | Additional CSS classes |
+
+Wallets use the `WalletConnectorMetadata` type from `@solana/client`, which provides the wallet's `id`, `name`, and `icon`.
+
+WalletModal also exports its internal pieces as standalone components: `WalletList` for the wallet selection list, `WalletCard` for individual wallet rows, `ConnectingView` for the loading state, `ErrorView` for the error state with retry, `ModalHeader` for the header with back/close buttons, `NoWalletLink` for the wallet guide link, and `WalletLabel` for status badges.
+
+## Feedback Components
+
+### TransactionToast
+
+Displays transaction status notifications with Explorer link:
+
+```tsx
+import { TransactionToast } from "@solana/components";
+
+function TransactionStatus({ signature, status }) {
+  return (
+    <TransactionToast
+      signature={signature}
+      status={status}
+      type="sent"
+      network="devnet"
+    />
+  );
+}
+```
+
+**Props:**
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `signature` | `string` | required | Transaction signature |
+| `status` | `'pending' \| 'success' \| 'error'` | required | Transaction status |
+| `type` | `'sent' \| 'received' \| 'swapped'` | `'sent'` | Transaction type (affects message) |
+| `theme` | `'light' \| 'dark'` | `'light'` | Color theme |
+| `network` | `ClusterMoniker` | `'mainnet-beta'` | Network for Explorer URL |
+| `className` | `string` | - | Additional CSS classes |
+
+**Status Messages:**
+
+| Type | Pending | Success | Error |
+| --- | --- | --- | --- |
+| `sent` | Transaction pending... | Transaction sent successfully | Transaction failed |
+| `received` | Transaction pending... | Transaction received successfully | Transaction failed |
+| `swapped` | Swap pending... | Swap completed successfully | Swap failed |
+
+### TransactionToastProvider
+
+For managing multiple toasts, wrap your app with the provider:
+
+```tsx
+import {
+  TransactionToastProvider,
+  useTransactionToast,
+} from "@solana/components";
+
+function App() {
+  return (
+    <TransactionToastProvider theme="light">
+      <YourApp />
+    </TransactionToastProvider>
+  );
+}
+
+function SendButton() {
+  const { toast, update, dismiss } = useTransactionToast();
+
+  const handleSend = async () => {
+    // Show pending toast
+    const id = toast({
+      signature: "5UfDuX7h...",
+      status: "pending",
+      type: "sent",
+    });
+
+    try {
+      // Wait for confirmation...
+      await confirmTransaction();
+
+      // Update to success
+      update(id, { status: "success" });
+    } catch (error) {
+      // Update to error
+      update(id, { status: "error" });
+    }
+  };
+
+  return <button onClick={handleSend}>Send</button>;
+}
+```
+
+**Provider Props:**
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `children` | `ReactNode` | required | Child components |
+| `theme` | `'light' \| 'dark'` | `'light'` | Theme for all toasts |
+
+**Hook Return:**
+
+| Method | Description |
+| --- | --- |
+| `toast(data)` | Show a toast, returns ID |
+| `update(id, data)` | Update an existing toast |
+| `dismiss(id)` | Remove a toast |
+
+### Skeleton
+
+Loading placeholder that mimics content shape:
+
+```tsx
+import { Skeleton } from "@solana/components";
+
+function LoadingCard() {
+  return (
+    <div className="flex items-center gap-4">
+      <Skeleton className="h-12 w-12 rounded-full" />
+      <div className="space-y-2">
+        <Skeleton className="h-4 w-32" />
+        <Skeleton className="h-3 w-24" />
+      </div>
+    </div>
+  );
+}
+```
+
+Use `className` to define dimensions and shape (e.g., `rounded-full` for avatars).
+
+**Props:**
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `theme` | `'light' \| 'dark'` | `'light'` | Color theme |
+| `className` | `string` | - | Size and shape classes |
+
+## Layout Components
+
+### DashboardShell
+
+Every Solana dApp needs a consistent layout, a place for your logo, wallet button, and main content. DashboardShell handles this structure so you can focus on building features.
+
+**What you get:**
+
+- Full-screen container with proper background colors
+- Header area (your logo on the left, wallet button on the right)
+- Main content area that fills the remaining space
+- Subtle dot grid pattern that matches modern dApp aesthetics
+- Light and dark theme support
+
+**Basic usage:**
+
+```tsx
+import { DashboardShell } from "@solana/components";
+
+function App() {
+  return (
+    <DashboardShell>
+      <h1>Welcome to my dApp</h1>
+    </DashboardShell>
+  );
+}
+```
+
+That's it. You now have a full-screen layout with the dot grid background.
+
+**Adding a header:**
+
+The `header` prop accepts any React content. It renders in a row with space-between alignment:
+
+```tsx
+<DashboardShell
+  header={
+    <>
+      <span className="font-semibold text-zinc-700">My Wallet</span>
+      <button className="px-4 py-2 bg-zinc-900 text-white rounded-lg">
+        Connect
+      </button>
+    </>
+  }
+>
+  <p>Your dashboard content here</p>
+</DashboardShell>
+```
+
+The header appears at the top. Your logo/title sits on the left, actions on the right.
+
+**Dark theme:**
+
+```tsx
+<DashboardShell theme="dark">
+  {/* Dark background (#18181b), lighter dot grid */}
+</DashboardShell>
+```
+
+**Hiding the dot grid:**
+
+Some designs call for a solid background:
+
+```tsx
+<DashboardShell showDotGrid={false}>
+  {/* Clean, solid background */}
+</DashboardShell>
+```
+
+**Props:**
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `theme` | `'light' \| 'dark'` | `'light'` | Background and dot grid colors |
+| `header` | `ReactNode` | - | Content for the header area |
+| `children` | `ReactNode` | required | Your main content |
+| `showDotGrid` | `boolean` | `true` | Toggle the dot grid pattern |
+| `className` | `string` | - | Additional CSS classes |
+
+**Real-world example with other components:**
+
+```tsx
+import { DashboardShell, AddressDisplay, Skeleton } from "@solana/components";
+
+function WalletDashboard({ address, isLoading }) {
+  return (
+    <DashboardShell
+      theme="light"
+      header={
+        <>
+          <span className="font-semibold">Solana Wallet</span>
+          <AddressDisplay address={address} network="mainnet-beta" />
+        </>
+      }
+    >
+      {isLoading ? (
+        <div className="space-y-4">
+          <Skeleton className="h-32 w-full rounded-xl" />
+          <Skeleton className="h-32 w-full rounded-xl" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-4">
+          {/* Your balance cards, transaction lists, etc. */}
+        </div>
+      )}
+    </DashboardShell>
+  );
+}
+```
+
+## Theming
+
+All components support `light` and `dark` themes via the `theme` prop:
+
+```tsx
+// Individual component
+<AddressDisplay address={addr} theme="dark" />
+
+// Or via provider for toasts
+<TransactionToastProvider theme="dark">
+  <App />
+</TransactionToastProvider>
+```
+
+Components use the `zinc` color palette from Tailwind:
+- Light: `bg-zinc-50`, `text-zinc-700`
+- Dark: `bg-zinc-700`, `text-zinc-50`
+
+## Shadcn Compatibility
+
+Framework Kit components follow [shadcn/ui](https://ui.shadcn.com) patterns. If you're familiar with shadcn, you'll feel at home.
+
+### What This Means
+
+- **Radix UI primitives**: Components are built on [Radix](https://www.radix-ui.com/) for accessibility out of the box
+- **Tailwind styling**: All styles use Tailwind utilities, no CSS files to import
+- **`cn()` utility**: Class merging with [clsx](https://github.com/lukeed/clsx) + [tailwind-merge](https://github.com/dcastil/tailwind-merge)
+
+### The `cn()` Utility
+
+Components use `cn()` to merge classNames safely:
+
+```tsx
+import { cn } from "@solana/components";
+
+// Merges classes, handles conflicts automatically
+<div className={cn(
+  "flex items-center gap-2",
+  isDark && "bg-zinc-800",
+  className // your overrides win
+)} />
+```
+
+### Customizing Components
+
+Override styles via `className`:
+
+```tsx
+// Default styling
+<Skeleton className="h-4 w-32" />
+
+// Custom styling - your classes merge with defaults
+<Skeleton className="h-4 w-32 bg-blue-200 rounded-lg" />
+```
+
+### Using with Existing Shadcn Projects
+
+Framework Kit components work alongside your existing shadcn setup:
+
+```tsx
+import { Button } from "@/components/ui/button"; // your shadcn button
+import { AddressDisplay } from "@solana/components"; // framework kit
+
+function WalletButton({ address }) {
+  return (
+    <Button variant="outline">
+      <AddressDisplay address={address} theme="light" />
+    </Button>
+  );
+}
+```
+
+No conflicts. Same patterns. They compose naturally.
+
+## Integration with React Hooks
+
+These components work seamlessly with `@solana/react-hooks`:
+
+```tsx
+import { useWallet, useBalance } from "@solana/react-hooks";
+import { AddressDisplay, Skeleton } from "@solana/components";
+
+function WalletCard() {
+  const { wallet, status } = useWallet();
+  const { lamports, fetching } = useBalance(wallet?.account.address);
+
+  if (status !== "connected") return null;
+
+  return (
+    <div>
+      <AddressDisplay address={wallet.account.address} />
+      {fetching ? (
+        <Skeleton className="h-4 w-24" />
+      ) : (
+        <p>{(lamports / 1e9).toFixed(4)} SOL</p>
+      )}
+    </div>
+  );
+}
+```
+
+## Components Reference
+
+### Display Components
+
+| Component | Description |
+| --- | --- |
+| `AddressDisplay` | Truncated address with copy and Explorer link |
+
+### Wallet Components
+
+| Component | Description |
+| --- | --- |
+| `ConnectWalletButton` | Full wallet connection button with dropdown (address, balance, network, disconnect) |
+| `NetworkSwitcher` | Network selection dropdown with composable sub-components |
+| `BalanceCard` | Wallet balance display with expandable token list, loading, and error states |
+| `TransactionTable` | Transaction history with date and type filtering, loading, and empty states |
+| `WalletModal` | Wallet selection modal with connecting and error states |
+
+### Feedback Components
+
+| Component | Description |
+| --- | --- |
+| `TransactionToast` | Transaction status notification |
+| `TransactionToastProvider` | Provider for managing multiple toasts |
+| `Skeleton` | Loading placeholder |
+
+### Layout Components
+
+| Component | Description |
+| --- | --- |
+| `DashboardShell` | Full-screen layout with header, content area, and dot grid background |
+
+### Hooks
+
+| Hook | Description |
+| --- | --- |
+| `useTransactionToast` | Toast management within provider |

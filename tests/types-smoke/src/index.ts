@@ -12,4 +12,13 @@ type ProviderComponent = typeof import('@solana/react-hooks')['SolanaClientProvi
 type ProviderProps = Parameters<ProviderComponent>[0];
 const providerProps: ProviderProps = { client, children: null as unknown as ReactNode };
 
-export const _smokeTest: [ClientInstance, UseAccountResult, ProviderProps] = [client, hookResult, providerProps];
+type ConnectionClass = typeof import('@solana/web3-compat')['Connection'];
+type ConnectionInstance = InstanceType<ConnectionClass>;
+const connection = null as unknown as ConnectionInstance;
+
+export const _smokeTest: [ClientInstance, UseAccountResult, ProviderProps, ConnectionInstance] = [
+	client,
+	hookResult,
+	providerProps,
+	connection,
+];

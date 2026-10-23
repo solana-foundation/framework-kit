@@ -23,10 +23,10 @@ export function Hero() {
 					transition={{ duration: 0.5 }}
 				>
 					<Link
-						href="/docs/getting-started"
+						href="https://www.solanakit.com"
 						className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-8 border border-primary/20 hover:bg-primary/20 transition-colors"
 					>
-						<span>V1 is now available</span>
+						<span>No longer maintained. Use Solana Kit instead</span>
 						<ArrowRight className="w-4 h-4" />
 					</Link>
 				</motion.div>

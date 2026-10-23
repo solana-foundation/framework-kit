@@ -1,4 +1,5 @@
 import { Analytics } from '@vercel/analytics/next';
+import { Banner } from 'fumadocs-ui/components/banner';
 import type { Metadata } from 'next';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
@@ -29,6 +30,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 	return (
 		<html lang="en" suppressHydrationWarning>
 			<body className={jakarta.className}>
+				<Banner>
+					<span>
+						Framework Kit is no longer maintained. Use{' '}
+						<a className="underline" href="https://www.solanakit.com">
+							Solana Kit
+						</a>{' '}
+						and{' '}
+						<a className="underline" href="https://github.com/anza-xyz/kit-plugins">
+							Kit plugins
+						</a>{' '}
+						instead.
+					</span>
+				</Banner>
 				<Provider>{children}</Provider>
 				<Analytics />
 			</body>

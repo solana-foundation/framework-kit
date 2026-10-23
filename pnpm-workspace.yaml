@@ -52,3 +52,8 @@ auditConfig:
   ignoreGhsas:
     # stream-json filter DoS; jayson 4 (via @solana/web3.js) needs stream-json 1.x and doesn't use the filters
     - GHSA-528h-pc64-c93x
+    # stream-json JSONC rescan and Assembler prototype pollution; @solana/web3.js only loads jayson's browser client, which never imports stream-json
+    - GHSA-hqr4-qq8f-hg3x
+    - GHSA-mjw6-4jj6-33hc
+    # braces stack exhaustion; advisory withdrawn and no patched release exists
+    - GHSA-vfj7-8cjw-p6xm

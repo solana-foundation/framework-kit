@@ -4,9 +4,9 @@
 > Framework-kit is no longer maintained. For new projects, use one of these instead:
 >
 > - [Kit plugins](https://github.com/anza-xyz/kit-plugins): composable client plugins for Kit, and the closest replacement for Framework-kit.
+> - [`@solana/react`](https://github.com/anza-xyz/kit/tree/main/packages/react): React hooks for Kit, replacing `@solana/react-hooks`.
 > - [Solana Kit](https://github.com/anza-xyz/kit): the Solana JavaScript SDK.
->
-> Not released yet: [web3.js v3](https://github.com/solana-foundation/solana-web3.js), a wrapper around Kit that keeps the web3.js interfaces.
+> - [web3.js v3](https://github.com/solana-foundation/solana-web3.js): a wrapper around Kit that keeps the web3.js interfaces, replacing `@solana/web3-compat`. See the [v1 to v3 migration guide](https://github.com/solana-foundation/solana-web3.js/blob/main/docs/web3js-v1-to-v3-migration.md).
 
 <p align="center">
   <img src=".github/assets/hero.jpg" alt="Framework-kit Hero" width="800"/>

@@ -1,5 +1,9 @@
 # `@solana/web3-compat`
 
+> [!WARNING]
+> `@solana/web3-compat` is no longer maintained. Use [web3.js v3](https://github.com/solana-foundation/solana-web3.js) instead: it wraps Kit while keeping the web3.js interfaces.
+> See the [web3.js v1 to v3 migration guide](https://github.com/solana-foundation/solana-web3.js/blob/main/docs/web3js-v1-to-v3-migration.md).
+
 Phase 0 of a backwards‑compatible surface that lets existing `@solana/web3.js`
 code run on top of Kit primitives.
 

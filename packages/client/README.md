@@ -1,5 +1,8 @@
 # @solana/client
 
+> [!WARNING]
+> `@solana/client` is no longer maintained. Use [Kit plugins](https://github.com/anza-xyz/kit-plugins) instead: composable client plugins for [Solana Kit](https://github.com/anza-xyz/kit).
+
 Framework-agnostic building blocks for Solana RPC, subscriptions, wallets, and transactions. Works
 in any runtime (React, Svelte, API routes, workers, etc.).
 

@@ -1,5 +1,8 @@
 # @solana/react-hooks
 
+> [!WARNING]
+> `@solana/react-hooks` is no longer maintained. Use [`@solana/react`](https://github.com/anza-xyz/kit/tree/main/packages/react) instead: React hooks for [Solana Kit](https://github.com/anza-xyz/kit).
+
 React hooks for `@solana/client`. Wrap your app once and reach for hooks instead of wiring RPC, wallets, and stores by hand.
 
 ## Install

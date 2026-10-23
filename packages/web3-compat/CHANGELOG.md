@@ -1,5 +1,14 @@
 # @solana/web3-compat
 
+## 0.0.22
+
+### Patch Changes
+
+- [#174](https://github.com/solana-foundation/framework-kit/pull/174) [`4350d72`](https://github.com/solana-foundation/framework-kit/commit/4350d72825212fbb6399470e65a6d4652ea1fdfc) Thanks [@amilz](https://github.com/amilz)! - Add deprecation notices to package READMEs pointing to Kit plugins, `@solana/react`, and web3.js v3.
+
+- Updated dependencies [[`4350d72`](https://github.com/solana-foundation/framework-kit/commit/4350d72825212fbb6399470e65a6d4652ea1fdfc), [`5021c44`](https://github.com/solana-foundation/framework-kit/commit/5021c445e25199b7d773a732d1c11498487696e5)]:
+  - @solana/client@1.7.1
+
 ## 0.0.21
 
 ### Patch Changes

@@ -1,4 +1,4 @@
 {
 	"title": "Documentation",
-	"pages": ["index", "getting-started", "client", "react-hooks", "web3-compat", "api-reference"]
+	"pages": ["index", "getting-started", "client", "react-hooks", "components", "web3-compat", "api-reference"]
 }
